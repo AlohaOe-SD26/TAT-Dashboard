@@ -380,7 +380,8 @@ if sys.platform.startswith('win'):
 # ============================================================================
 # SELF-INITIALIZATION & MULTI-ACCOUNT SYSTEM
 # ============================================================================
-BASE_DIR = Path.cwd()
+# Hardened Path: Anchors to the project root regardless of execution method
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Directory structure for multi-account support
 CONFIG_DIR = BASE_DIR / 'config'
