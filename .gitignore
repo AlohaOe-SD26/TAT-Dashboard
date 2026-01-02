@@ -1,0 +1,23 @@
+# --- SECRETS (NEVER UPLOAD) ---
+/config/google_credentials/
+/config/tokens/
+/config/blaze_configs/
+*.json
+secrets/
+secrets.py
+
+# --- PYTHON ---
+__pycache__/
+*.pyc
+*.log
+venv/
+
+# --- LOCAL DATA ---
+chrome_profiles/
+chrome_profiles1/
+reports/
+old_*/
+*.tmp
+.DS_Store
+Thumbs.db
+migration_log.txt
