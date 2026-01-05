@@ -8,6 +8,7 @@
 #     * Full library searchable by name
 #     * Drag-and-drop queue to order selected titles
 #     * Multiple discounts can be linked to single sheet row
+#     * Auto-fetches Blaze data if not already synced (shows loading spinner)
 #   - NEW: Three separate Apply buttons in ID Matcher
 #     * "Apply MIS IDs" - Only writes MIS IDs to Google Sheet
 #     * "Apply Blaze Titles" - Only writes Blaze Discount Titles to sheet
@@ -10460,7 +10461,7 @@ HTML_TEMPLATE = r"""
             allPromotions: []
         };
         
-        function openBlazeModal(rowIdx) {
+        async function openBlazeModal(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) return;
             
@@ -10471,8 +10472,47 @@ HTML_TEMPLATE = r"""
             const existingData = approvedMatches[match.google_row];
             blazeModalData.selectedTitles = existingData?.blaze_titles ? [...existingData.blaze_titles] : [];
             
-            // Get all Blaze promotions from blazeData (global from Blaze tab)
-            blazeModalData.allPromotions = window.blazeData?.currentRows || [];
+            // Get all Blaze promotions - check if already loaded
+            blazeModalData.allPromotions = blazeData.currentRows || [];
+            
+            // If no Blaze data loaded, try to fetch it
+            if (blazeModalData.allPromotions.length === 0) {
+                // Show loading indicator
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'blaze-loading-overlay';
+                loadingOverlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background-color: rgba(0, 0, 0, 0.6); z-index: 9998;
+                    display: flex; justify-content: center; align-items: center;
+                `;
+                loadingOverlay.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 8px; text-align: center;">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p style="margin-top: 15px; margin-bottom: 0;">Loading Blaze Promotions...</p>
+                    </div>
+                `;
+                document.body.appendChild(loadingOverlay);
+                
+                try {
+                    const response = await fetch('/api/blaze/refresh');
+                    const data = await response.json();
+                    if (data.success && data.promotions) {
+                        // Store globally so Blaze tab also has it
+                        blazeData.currentRows = data.promotions;
+                        blazeModalData.allPromotions = data.promotions;
+                        console.log('[BLAZE-MODAL] Fetched ' + data.promotions.length + ' promotions');
+                    } else {
+                        throw new Error(data.error || 'Failed to fetch Blaze data');
+                    }
+                } catch (e) {
+                    console.error('[BLAZE-MODAL] Error fetching Blaze data:', e);
+                    loadingOverlay.remove();
+                    alert('Could not load Blaze promotions.\n\nPlease go to the Blaze tab and click "Refresh / Sync Data" first, then try again.\n\nError: ' + e.message);
+                    return;
+                }
+                
+                loadingOverlay.remove();
+            }
             
             // Generate suggestions based on brand name
             const suggestions = generateBlazeSuggestions(match, blazeModalData.allPromotions);
