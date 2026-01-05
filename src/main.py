@@ -1,4 +1,30 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.4
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.5
+# v12.5 CHANGELOG (BLAZE DISCOUNT TITLE INTEGRATION):
+#   - NEW: Blaze Discount Title selection in ID Matcher
+#     * Blue "Blaze" button added to Actions column for each row
+#     * Opens modal popup for selecting Blaze discounts to link to Google Sheet row
+#     * Modal shows current row details, suggested matches, and full library
+#     * Suggested matches scored by brand name appearing in Blaze promo title
+#     * Full library searchable by name
+#     * Drag-and-drop queue to order selected titles
+#     * Multiple discounts can be linked to single sheet row
+#   - NEW: Three separate Apply buttons in ID Matcher
+#     * "Apply MIS IDs" - Only writes MIS IDs to Google Sheet
+#     * "Apply Blaze Titles" - Only writes Blaze Discount Titles to sheet
+#     * "Apply All" - Writes both MIS IDs and Blaze Titles
+#   - NEW: Blaze Discount Title column support
+#     * Auto-detects "Blaze Discount Title" column in Google Sheet
+#     * Writes newline-separated titles preserving queue order
+#     * Supports editing existing values before applying
+#   - VISUAL: Smaller Approve/Deny buttons to fit Blaze button
+#     * Approve/Deny buttons now use compact styling
+#     * Blaze button shows blue outline when empty, solid blue with count when selected
+#   - ENHANCED: approvedMatches now tracks both MIS IDs and Blaze titles
+#     * Format: {mis_ids: [...], brands: [...], blaze_titles: [...], section: '...'}
+#     * Approve/Deny buttons affect both MIS and Blaze selections
+#   - NEW: /api/mis/apply-blaze-titles endpoint
+#     * Writes Blaze titles to Google Sheet "Blaze Discount Title" column
+#     * Preserves order from selection queue
 # v12.4 CHANGELOG (MULTI-DAY REFERENCE SYSTEM):
 #   - NEW: Multi-day deals now show yellow reference rows on subsequent weekdays
 #     * First weekday: Full group with all members (yellow background)
@@ -22,7 +48,7 @@
 #   - LOGIC: Multi-day detection now collects ALL unique weekdays from ALL member rows
 #     * Handles complex groups where members have different weekdays
 #     * Correctly identifies Monday + Thursday groups even with 2+ brands
-#     * Sorts weekdays in calendar order (Mon → Sun)
+#     * Sorts weekdays in calendar order (Mon â†’ Sun)
 #   - FIXED: Deal count now includes yellow reference rows
 #     * Monday shows: 21 deals (includes groups + singles)
 #     * Thursday shows: 15 deals (includes yellow refs + regular deals)
@@ -32,8 +58,8 @@
 #     * BUG: Cell count check (cells.length <= 3) ran BEFORE weekday extraction
 #     * Result: All group headers exited early with "Not enough cells" error
 #     * Solution: Move cell count check INSIDE single row branch only
-#     * Group headers now: Extract groupId → Find members → Get weekday from first member
-#     * Single rows now: Check cell count → Get weekday from row
+#     * Group headers now: Extract groupId â†’ Find members â†’ Get weekday from first member
+#     * Single rows now: Check cell count â†’ Get weekday from row
 #     * Multi-day groups appear under first weekday with all members
 #     * Notes appear on subsequent weekdays with clickable row buttons
 #   - FIXED: Case sensitivity bug (MONDAY vs Monday)
@@ -47,7 +73,7 @@
 # v12.2 CHANGELOG (WEEKDAY BREAKDOWN LIST):
 #   - NEW: Weekly Deals Breakdown List View
 #     * Toggle between "Full List" (original) and "Breakdown List" (organized by weekday)
-#     * Breakdown List organizes deals by weekday sections (Monday → Sunday)
+#     * Breakdown List organizes deals by weekday sections (Monday â†’ Sunday)
 #     * Each weekday header shows: deal count, brands list (tooltip), multi-day notes
 #     * Multi-day deals: Full group appears under first weekday only
 #     * Other weekdays show notes with clickable row buttons
@@ -62,7 +88,7 @@
 # v12.2 CHANGELOG (CONTINUE ELIGIBILITY FIX):
 #   - FIXED: ID Matcher Continue/Recycle eligibility now handles unparseable tab names gracefully
 #     * Added cannotDetermineDate flag to checkContinueEligibility()
-#     * When tab name can't be parsed → shows "? UNDETERMINED" instead of "NEW ENTRY"
+#     * When tab name can't be parsed â†’ shows "? UNDETERMINED" instead of "NEW ENTRY"
 #     * No longer adds "Cannot parse tab name for date" to mismatches list
 #     * Prevents false "NEW ENTRY" when tab name format is non-standard
 #     * Only calculates new end date when tab can be successfully parsed
@@ -135,9 +161,9 @@
 #   - enhanced_match_mis_ids(): Added 'section' field to each match object
 #   - Frontend approveSingleMatch(): Now stores {mis_id, section} for each approval
 #   - /api/mis/apply-matches: Updated to detect section and use correct tag prefix
-#     * Weekly deals Ã¢â€ â€™ W1:
-#     * Monthly deals Ã¢â€ â€™ M1:
-#     * Sale deals Ã¢â€ â€™ S1:
+#     * Weekly deals ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ W1:
+#     * Monthly deals ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ M1:
+#     * Sale deals ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ S1:
 #   - /api/mis/apply-split-id: Updated to use section-based tags
 #     * Accepts 'section' parameter to determine prefix
 #     * Converts legacy tags (part1, part2, gap, patch) to new format
@@ -380,7 +406,6 @@ if sys.platform.startswith('win'):
 # ============================================================================
 # SELF-INITIALIZATION & MULTI-ACCOUNT SYSTEM
 # ============================================================================
-# Hardened Path: Anchors to the project root regardless of execution method
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Directory structure for multi-account support
@@ -1042,9 +1067,9 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         # Check if we have any credentials at all
         if not username or not password:
             if tab_type == 'mis':
-                raise Exception("[!] [EMOJI]Â[EMOJI]Â MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
+                raise Exception("[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
             elif tab_type == 'blaze':
-                raise Exception("[!] [EMOJI]Â[EMOJI]Â Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
+                raise Exception("[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
         
         # Attempt login
         if tab_type == 'mis':
@@ -1086,7 +1111,7 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         
         elif tab_type == 'blaze':
             # For Blaze, just raise exception - token-based login handled elsewhere
-            raise Exception("[!] [EMOJI]Â[EMOJI]Â Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
+            raise Exception("[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
     
     # Unknown state - proceed cautiously
     return True
@@ -1430,7 +1455,7 @@ def get_api_data(token_input):
             sample = list(colls.items())[:3]
             print(f"[API] Sample collections: {sample}")
         else:
-            print("[API] [!] [EMOJI]Â[EMOJI]Â WARNING: Zero collections returned!")
+            print("[API] [!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â WARNING: Zero collections returned!")
             
     except Exception as e:
         print(f"[API] [ERROR] Collections fetch failed: {e}")
@@ -2309,7 +2334,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         is_logged_in = len(driver.find_elements(By.ID, "daily-discount")) > 0
         
         if is_logged_in:
-            print(f"[MIS-READY] ✓ Already logged in to MIS")
+            print(f"[MIS-READY] âœ“ Already logged in to MIS")
             return True
         
         if is_logged_out:
@@ -2331,7 +2356,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
             # Verify we have credentials
             if not username or not password:
                 raise Exception(
-                    "⚠️ MIS Login Required\n\n"
+                    "âš ï¸ MIS Login Required\n\n"
                     "MIS session has expired and no credentials are saved.\n\n"
                     "Please enter your MIS credentials in the Setup tab and try again."
                 )
@@ -2365,7 +2390,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                     EC.presence_of_element_located((By.ID, "daily-discount"))
                 )
                 
-                print(f"[MIS-READY] ✓ Login successful!")
+                print(f"[MIS-READY] âœ“ Login successful!")
                 
                 # Set table to show all records
                 try:
@@ -2379,7 +2404,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                 
             except Exception as login_error:
                 raise Exception(
-                    f"❌ MIS Login Failed\n\n"
+                    f"âŒ MIS Login Failed\n\n"
                     f"Could not log in to MIS. Please check your credentials in the Setup tab.\n\n"
                     f"Error: {str(login_error)}"
                 )
@@ -2391,13 +2416,13 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         
         # Check again
         if len(driver.find_elements(By.ID, "daily-discount")) > 0:
-            print(f"[MIS-READY] ✓ MIS is ready")
+            print(f"[MIS-READY] âœ“ MIS is ready")
             return True
         elif len(driver.find_elements(By.NAME, "email")) > 0:
             # Recursively call self to handle login
             return ensure_mis_ready(driver, gui_username, gui_password)
         else:
-            raise Exception("❌ Could not determine MIS page state. Please try Initialize again.")
+            raise Exception("âŒ Could not determine MIS page state. Please try Initialize again.")
             
     except Exception as e:
         print(f"[MIS-READY] Error: {e}")
@@ -2924,7 +2949,7 @@ def get_all_weekdays_for_multiday_group(group_data: Dict, section_df: pd.DataFra
     weekdays = group_data.get('weekdays', [])
     
     for weekday in weekdays:
-        if weekday and weekday != '[!] [EMOJI]Â  MISSING':
+        if weekday and weekday != '[!] [EMOJI]Ã‚Â  MISSING':
             dates = expand_weekday_to_dates(weekday, target_month, target_year)
             all_dates.extend(dates)
     
@@ -2976,7 +3001,7 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
             }
         
         groups[group_id]['rows'].append(true_sheet_row)
-        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] [EMOJI]Â  MISSING')
+        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] [EMOJI]Ã‚Â  MISSING')
         
         if has_missing_weekday:
             groups[group_id]['has_missing_weekday'] = True
@@ -3326,7 +3351,7 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 elif match_type == 'fuzzy_partial':
                     reasoning_parts.append("(fuzzy - similar name)")
                 if linked_brand_match:
-                    reasoning_parts.append("[LB✓]")  # Linked Brand matched
+                    reasoning_parts.append("[LBâœ“]")  # Linked Brand matched
             
                 suggestions.append({
                     'mis_id': clean_mis_id,
@@ -3894,7 +3919,7 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
             ref_row = google_df[google_df['_SHEET_ROW_NUM'] == ref_row_num].iloc[0]
             
             # Combine weekdays
-            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] [EMOJI]Â  MISSING']
+            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] [EMOJI]Ã‚Â  MISSING']
             # For sale dates, sort by date logic? For now, keep simple sort.
             unique_weekdays = sorted(list(set(raw_weekdays)), key=get_weekday_sort_key)
             weekday_val = ', '.join(unique_weekdays)
@@ -4195,11 +4220,11 @@ class BlazeInventoryReporter:
                     if start > total_server and total_server > 0:
                         break
                 else:
-                    self.log(f"[!] [EMOJI]Â API Error {r.status_code}: {r.text[:50]}")
+                    self.log(f"[!] [EMOJI]Ã‚Â API Error {r.status_code}: {r.text[:50]}")
                     break
                     
             except Exception as e:
-                self.log(f"[!] [EMOJI]Â Connection Error: {e}")
+                self.log(f"[!] [EMOJI]Ã‚Â Connection Error: {e}")
                 break
                 
         return all_products
@@ -4516,9 +4541,11 @@ HTML_TEMPLATE = r"""
         .btn:hover { transform: translateY(-2px); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         
-        .btn-approve { background: #28a745; padding: 8px 16px; }
-        .btn-reject { background: #dc3545; padding: 8px 16px; }
-        .btn-review { background: #17a2b8; padding: 8px 16px; }
+        /* v12.5: Updated button styles - compact versions used in ID Matcher */
+        .btn-approve { background: #28a745; padding: 8px 16px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-reject { background: #dc3545; padding: 8px 16px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-review { background: #17a2b8; padding: 8px 16px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-blaze { color: #0d6efd; }
         
         .input-group {
             margin-bottom: 20px;
@@ -5853,7 +5880,17 @@ HTML_TEMPLATE = r"""
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
                                 <button class="btn" onclick="runMatcher()">Run Matcher</button>
-                                <button id="apply-btn" class="btn btn-success" style="display:none;" onclick="applyMatches()">Apply Approved Matches to Sheet</button>
+                                <div id="apply-btns-container" style="display:none;">
+                                    <button id="apply-mis-btn" class="btn btn-success btn-sm" onclick="applyMatches('mis')" title="Apply only MIS IDs to Google Sheet">
+                                        <i class="bi bi-file-earmark-plus"></i> Apply MIS IDs
+                                    </button>
+                                    <button id="apply-blaze-btn" class="btn btn-primary btn-sm" onclick="applyMatches('blaze')" title="Apply only Blaze Titles to Google Sheet">
+                                        <i class="bi bi-lightning-charge"></i> Apply Blaze Titles
+                                    </button>
+                                    <button id="apply-all-btn" class="btn btn-warning btn-sm" onclick="applyMatches('all')" title="Apply both MIS IDs and Blaze Titles">
+                                        <i class="bi bi-check2-all"></i> Apply All
+                                    </button>
+                                </div>
                                 <span id="matcher-status" style="color: #666; font-style: italic; font-size: 0.9em;"></span>
                             </div>
                         </div>
@@ -5887,7 +5924,7 @@ HTML_TEMPLATE = r"""
                 </div>
                 <div id="conflict-section" class="sub-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2>[!] [EMOJI]Â Conflict Audit</h2>
+                        <h2>[!] [EMOJI]Ã‚Â Conflict Audit</h2>
                         <div>
                             <span id="conflict-stats" class="badge bg-secondary fs-6 me-2">Ready to Scan</span>
                             <button class="btn btn-warning fw-bold" onclick="runConflictAudit()">
@@ -6347,7 +6384,7 @@ HTML_TEMPLATE = r"""
                                         <input class="form-check-input" type="checkbox" id="invHideZeroQty" 
                                                onchange="applyInventoryFilters()">
                                         <label class="form-check-label small" for="invHideZeroQty">
-                                            &#x261E;[EMOJI]Â Hide 0 Qty
+                                            &#x261E;[EMOJI]Ã‚Â Hide 0 Qty
                                         </label>
                                     </div>
                                 </div>
@@ -6395,7 +6432,7 @@ HTML_TEMPLATE = r"""
     <div id="brand-sticky-popup" class="brand-popup">
         <div class="brand-popup-header">
             <span>Select Brand</span>
-            <span class="brand-popup-close" onclick="closeBrandPopup()">X[EMOJI]Â</span>
+            <span class="brand-popup-close" onclick="closeBrandPopup()">X[EMOJI]Ã‚Â</span>
         </div>
         <div class="brand-popup-body" id="brand-popup-list"></div>
     </div>
@@ -6792,7 +6829,7 @@ HTML_TEMPLATE = r"""
                             element: row,
                             members: memberRows
                         });
-                        console.log(`[BREAKDOWN]   ✓ Added group to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   âœ“ Added group to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -6840,7 +6877,7 @@ HTML_TEMPLATE = r"""
                                     days: abbrDays,
                                     brandRowMap: brandRowMap
                                 });
-                                console.log(`[BREAKDOWN]   ✓ Added header note to ${day} bucket`);
+                                console.log(`[BREAKDOWN]   âœ“ Added header note to ${day} bucket`);
                             }
                         });
                         
@@ -6861,7 +6898,7 @@ HTML_TEMPLATE = r"""
                                         members: dayMembers,
                                         firstWeekday: firstWeekday
                                     });
-                                    console.log(`[BREAKDOWN]   ✓ Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
+                                    console.log(`[BREAKDOWN]   âœ“ Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
                                 }
                             }
                         });
@@ -6893,7 +6930,7 @@ HTML_TEMPLATE = r"""
                             type: 'dom',
                             element: row
                         });
-                        console.log(`[BREAKDOWN]   ✓ Added single row to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   âœ“ Added single row to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -8531,7 +8568,7 @@ HTML_TEMPLATE = r"""
                         // Badge text: show days and brands info for multi-brand
                         let badgeText = '';
                         if (isMultiBrandGroup) {
-                            badgeText = `[EMOJI] ${groupData.total_days}-Day × ${totalBrands}-Brand Deal`;
+                            badgeText = `[EMOJI] ${groupData.total_days}-Day Ã— ${totalBrands}-Brand Deal`;
                         } else {
                             badgeText = `[EMOJI] ${groupData.total_days}-Day Deal`;
                         }
@@ -8728,9 +8765,17 @@ HTML_TEMPLATE = r"""
             if (hasMissingWeekday && (!m.weekday || m.weekday.trim() === '')) {
                 actionHtml = '<span style="color:#999; font-style:italic;">N/A</span>';
             } else {
+                // v12.5: Smaller Approve/Deny buttons + Blue Blaze button
+                const existingBlazeTitles = approvedMatches[m.google_row]?.blaze_titles || [];
+                const blazeBtnClass = existingBlazeTitles.length > 0 ? 'btn-primary' : 'btn-outline-primary';
+                const blazeBtnText = existingBlazeTitles.length > 0 ? '<i class="bi bi-lightning-charge-fill"></i> ' + existingBlazeTitles.length : '<i class="bi bi-lightning-charge"></i>';
+                
                 actionHtml = `
-                    <button class="btn-approve" onclick="approveSingleMatch(${idx})">[OK]</button>
-                    <button class="btn-reject" onclick="rejectMatch(${idx})">[X]</button>`;
+                    <div style="display:flex; gap:2px; align-items:center; flex-wrap:nowrap;">
+                        <button class="btn btn-success btn-sm btn-approve" style="padding:1px 4px; font-size:0.7rem;" onclick="approveSingleMatch(${idx})" title="Approve">[OK]</button>
+                        <button class="btn btn-danger btn-sm btn-reject" style="padding:1px 4px; font-size:0.7rem;" onclick="rejectMatch(${idx})" title="Deny">[X]</button>
+                        <button class="btn ${blazeBtnClass} btn-sm btn-blaze" style="padding:1px 5px; font-size:0.7rem;" onclick="openBlazeModal(${idx})" title="Select Blaze Discount">${blazeBtnText}</button>
+                    </div>`;
             }
 
             const rowClass = groupId ? `group-member-row group-${groupId}` : '';
@@ -9061,7 +9106,7 @@ HTML_TEMPLATE = r"""
                 input.style.color = '#155724';
             });
             
-            document.getElementById('apply-btn').style.display = 'block';
+            updateApplyButtonsVisibility();
             return true; // Return true to indicate success
         }
 
@@ -9583,7 +9628,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠ Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">âš  Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -9601,7 +9646,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠ Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">âš  Needs Linked Brand</span>';
                     }
                 }
                 
@@ -9650,7 +9695,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">✕</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">âœ•</button>
                                 </div>
                             </div>
                         </td>
@@ -9851,7 +9896,7 @@ HTML_TEMPLATE = r"""
                     // Update the display
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        const savedIcon = data.saved ? '✓✓' : '✓';
+                        const savedIcon = data.saved ? 'âœ“âœ“' : 'âœ“';
                         const savedColor = data.saved ? '#155724' : '#856404';
                         displayEl.innerHTML = `<span style="color:${savedColor}; font-weight:bold;">${savedIcon} ${newDate}</span>`;
                         displayEl.style.display = 'block';
@@ -9860,9 +9905,9 @@ HTML_TEMPLATE = r"""
                     editorEl.innerHTML = originalHtml;
                     
                     if (data.saved) {
-                        alert('✓ End date updated to ' + newDate + ' and SAVED successfully!');
+                        alert('âœ“ End date updated to ' + newDate + ' and SAVED successfully!');
                     } else {
-                        alert('✓ End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
+                        alert('âœ“ End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
                     }
                 } else {
                     editorEl.innerHTML = originalHtml;
@@ -10094,9 +10139,9 @@ HTML_TEMPLATE = r"""
                 document.getElementById('create-deal-loading')?.remove();
                 
                 if (data.success) {
-                    let message = '✓ Deal created in MIS!\\n\\n';
+                    let message = 'âœ“ Deal created in MIS!\\n\\n';
                     if (data.warnings && data.warnings.length > 0) {
-                        message += '⚠ Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
+                        message += 'âš  Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
                     }
                     message += 'Please review and click Save in MIS if everything looks correct.';
                     alert(message);
@@ -10188,112 +10233,576 @@ HTML_TEMPLATE = r"""
             if (overlay) overlay.remove();
         }
 
-        async function applyMatches() {
-            if (Object.keys(approvedMatches).length === 0) {
+        // v12.5: Enhanced applyMatches with mode parameter (mis, blaze, all)
+        async function applyMatches(mode = 'all') {
+            // Check if there's anything to apply based on mode
+            const hasMisIds = Object.keys(approvedMatches).some(row => {
+                const data = approvedMatches[row];
+                return data.mis_ids && data.mis_ids.length > 0;
+            });
+            const hasBlazeTitles = Object.keys(approvedMatches).some(row => {
+                const data = approvedMatches[row];
+                return data.blaze_titles && data.blaze_titles.length > 0;
+            });
+            
+            if (mode === 'mis' && !hasMisIds) {
+                alert('No MIS IDs approved yet');
+                return;
+            }
+            if (mode === 'blaze' && !hasBlazeTitles) {
+                alert('No Blaze Titles selected yet');
+                return;
+            }
+            if (mode === 'all' && !hasMisIds && !hasBlazeTitles) {
                 alert('No matches approved yet');
                 return;
             }
             
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = 'Applying...';
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Applying...';
             
             try {
-                const response = await fetch('/api/mis/apply-matches', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({matches: approvedMatches})
-                });
-                const data = await response.json();
+                let misUpdated = 0, blazeUpdated = 0;
                 
-                if (data.success) {
-                    // v12.1: Update table in place instead of re-running matcher
-                    
-                    // Build a map of google_row to ALL indices (for multi-brand support)
-                    const rowToIndices = {};
-                    matchesData.forEach((m, idx) => {
-                        if (!rowToIndices[m.google_row]) {
-                            rowToIndices[m.google_row] = [];
-                        }
-                        rowToIndices[m.google_row].push(idx);
+                // Apply MIS IDs if mode is 'mis' or 'all'
+                if ((mode === 'mis' || mode === 'all') && hasMisIds) {
+                    const response = await fetch('/api/mis/apply-matches', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({matches: approvedMatches})
                     });
+                    const data = await response.json();
+                    if (data.success) {
+                        misUpdated = data.updated || 0;
+                    } else {
+                        throw new Error('MIS ID Apply Error: ' + data.error);
+                    }
+                }
+                
+                // Apply Blaze Titles if mode is 'blaze' or 'all'
+                if ((mode === 'blaze' || mode === 'all') && hasBlazeTitles) {
+                    const blazeResponse = await fetch('/api/mis/apply-blaze-titles', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({matches: approvedMatches})
+                    });
+                    const blazeData = await blazeResponse.json();
+                    if (blazeData.success) {
+                        blazeUpdated = blazeData.updated || 0;
+                    } else {
+                        throw new Error('Blaze Title Apply Error: ' + blazeData.error);
+                    }
+                }
+                
+                // Update table visually
+                const rowToIndices = {};
+                matchesData.forEach((m, idx) => {
+                    if (!rowToIndices[m.google_row]) {
+                        rowToIndices[m.google_row] = [];
+                    }
+                    rowToIndices[m.google_row].push(idx);
+                });
+                
+                Object.keys(approvedMatches).forEach(googleRow => {
+                    const approvedData = approvedMatches[googleRow];
+                    const indices = rowToIndices[googleRow] || [];
                     
-                    // Update each applied row visually
-                    Object.keys(approvedMatches).forEach(googleRow => {
-                        const approvedData = approvedMatches[googleRow];
+                    // Get applied IDs
+                    let appliedIds = [];
+                    if (approvedData.mis_ids && Array.isArray(approvedData.mis_ids)) {
+                        appliedIds = approvedData.mis_ids;
+                    } else if (approvedData.mis_id) {
+                        appliedIds = [approvedData.mis_id];
+                    }
+                    
+                    const appliedIdDisplay = appliedIds.join(', ');
+                    
+                    indices.forEach((idx, i) => {
+                        const specificId = appliedIds[i] || appliedIdDisplay;
                         
-                        // v12.1: Handle new multi-brand format (mis_ids array) or legacy format
-                        let appliedIds;
-                        if (approvedData.mis_ids && Array.isArray(approvedData.mis_ids)) {
-                            appliedIds = approvedData.mis_ids;
-                        } else if (approvedData.mis_id) {
-                            appliedIds = [approvedData.mis_id];
-                        } else if (typeof approvedData === 'string') {
-                            appliedIds = [approvedData];
-                        } else {
-                            appliedIds = [];
-                        }
-                        
-                        const appliedIdDisplay = appliedIds.join(', ');
-                        const indices = rowToIndices[googleRow] || [];
-                        
-                        // Update ALL rows that share this google_row (multi-brand support)
-                        indices.forEach((idx, i) => {
-                            // Get the specific MIS ID for this brand if available
-                            const specificId = appliedIds[i] || appliedIdDisplay;
-                            
-                            // Update matchesData
-                            if (matchesData[idx]) {
+                        if (matchesData[idx]) {
+                            if (mode === 'mis' || mode === 'all') {
                                 matchesData[idx].current_sheet_id = specificId;
                                 matchesData[idx].matched_mis_id = specificId;
                             }
+                            if (mode === 'blaze' || mode === 'all') {
+                                matchesData[idx].blaze_titles = approvedData.blaze_titles || [];
+                            }
+                        }
+                        
+                        const row = document.getElementById('match-row-' + idx);
+                        if (row) {
+                            row.style.backgroundColor = '#d4edda';
+                            row.style.borderLeft = '4px solid #28a745';
+                            row.classList.add('row-applied');
                             
-                            // Find and update the row in the table
-                            const row = document.getElementById('match-row-' + idx);
-                            if (row) {
-                                // Set green background to indicate applied
-                                row.style.backgroundColor = '#d4edda';
-                                row.style.borderLeft = '4px solid #28a745';
-                                row.classList.add('row-applied');
-                                
-                                // Update the Current ID column (12th column, index 11 - after adding Linked Brand column)
+                            // Update Current ID column if MIS was applied
+                            if ((mode === 'mis' || mode === 'all') && specificId) {
                                 const cells = row.getElementsByTagName('td');
                                 if (cells.length >= 12) {
-                                    const currentIdCell = cells[11]; // Current ID column
+                                    const currentIdCell = cells[11];
                                     currentIdCell.innerHTML = `<span style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; 
                                         background:#d4edda; color:#155724; border:1px solid #28a745;
                                         text-decoration:underline; display:inline-block; margin:2px;"
                                         onclick="lookupMisId('${specificId}')">${specificId}</span>
                                         <span class="badge bg-success ms-1">Applied</span>`;
                                 }
-                                
-                                // Disable the action buttons for this row
-                                const approveBtn = row.querySelector('.btn-approve');
-                                const rejectBtn = row.querySelector('.btn-reject');
-                                if (approveBtn) {
-                                    approveBtn.disabled = true;
-                                    approveBtn.style.opacity = '0.5';
-                                }
-                                if (rejectBtn) {
-                                    rejectBtn.disabled = true;
-                                    rejectBtn.style.opacity = '0.5';
+                            }
+                            
+                            // Update Blaze button indicator if Blaze was applied
+                            if ((mode === 'blaze' || mode === 'all') && approvedData.blaze_titles && approvedData.blaze_titles.length > 0) {
+                                const blazeBtn = row.querySelector('.btn-blaze');
+                                if (blazeBtn) {
+                                    blazeBtn.classList.remove('btn-outline-primary');
+                                    blazeBtn.classList.add('btn-success');
+                                    blazeBtn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> ' + approvedData.blaze_titles.length;
                                 }
                             }
-                        });
+                            
+                            // Disable action buttons
+                            const approveBtn = row.querySelector('.btn-approve');
+                            const rejectBtn = row.querySelector('.btn-reject');
+                            if (approveBtn) {
+                                approveBtn.disabled = true;
+                                approveBtn.style.opacity = '0.5';
+                            }
+                            if (rejectBtn) {
+                                rejectBtn.disabled = true;
+                                rejectBtn.style.opacity = '0.5';
+                            }
+                        }
                     });
-                    
-                    alert('[OK] Matches applied successfully!\nUpdated: ' + data.updated + ' rows');
+                });
+                
+                // Build result message
+                let resultMsg = '[OK] Applied successfully!\n';
+                if (mode === 'mis') resultMsg += 'MIS IDs updated: ' + misUpdated + ' rows';
+                else if (mode === 'blaze') resultMsg += 'Blaze Titles updated: ' + blazeUpdated + ' rows';
+                else resultMsg += 'MIS IDs: ' + misUpdated + ' rows\nBlaze Titles: ' + blazeUpdated + ' rows';
+                
+                alert(resultMsg);
+                
+                // Clear applied entries from approvedMatches based on mode
+                if (mode === 'all') {
                     approvedMatches = {};
-                    btn.style.display = 'none';
                 } else {
-                    alert('Error: ' + data.error);
+                    // Only clear the part that was applied
+                    Object.keys(approvedMatches).forEach(row => {
+                        if (mode === 'mis') {
+                            approvedMatches[row].mis_ids = [];
+                            approvedMatches[row].brands = [];
+                        } else if (mode === 'blaze') {
+                            approvedMatches[row].blaze_titles = [];
+                        }
+                        // If both are empty, remove the entry
+                        const d = approvedMatches[row];
+                        if ((!d.mis_ids || d.mis_ids.length === 0) && (!d.blaze_titles || d.blaze_titles.length === 0)) {
+                            delete approvedMatches[row];
+                        }
+                    });
                 }
+                
+                updateApplyButtonsVisibility();
+                
             } catch (error) {
                 alert('Error: ' + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Apply Approved Matches to Sheet';
+                btn.innerHTML = originalText;
             }
+        }
+        
+        // v12.5: Update visibility of apply buttons based on approved data
+        function updateApplyButtonsVisibility() {
+            const container = document.getElementById('apply-btns-container');
+            if (!container) return;
+            
+            const hasMisIds = Object.keys(approvedMatches).some(row => {
+                const data = approvedMatches[row];
+                return data.mis_ids && data.mis_ids.length > 0;
+            });
+            const hasBlazeTitles = Object.keys(approvedMatches).some(row => {
+                const data = approvedMatches[row];
+                return data.blaze_titles && data.blaze_titles.length > 0;
+            });
+            
+            container.style.display = (hasMisIds || hasBlazeTitles) ? 'flex' : 'none';
+            container.style.gap = '5px';
+            
+            // Enable/disable individual buttons
+            const misBtn = document.getElementById('apply-mis-btn');
+            const blazeBtn = document.getElementById('apply-blaze-btn');
+            const allBtn = document.getElementById('apply-all-btn');
+            
+            if (misBtn) {
+                misBtn.disabled = !hasMisIds;
+                misBtn.style.opacity = hasMisIds ? '1' : '0.5';
+            }
+            if (blazeBtn) {
+                blazeBtn.disabled = !hasBlazeTitles;
+                blazeBtn.style.opacity = hasBlazeTitles ? '1' : '0.5';
+            }
+            if (allBtn) {
+                allBtn.disabled = !(hasMisIds || hasBlazeTitles);
+            }
+        }
+
+        // ============================================================================
+        // v12.5: BLAZE DISCOUNT SELECTION MODAL
+        // ============================================================================
+        
+        // Global state for Blaze modal
+        let blazeModalData = {
+            rowIdx: null,
+            selectedTitles: [],
+            allPromotions: []
+        };
+        
+        function openBlazeModal(rowIdx) {
+            const match = matchesData[rowIdx];
+            if (!match) return;
+            
+            // Initialize modal data
+            blazeModalData.rowIdx = rowIdx;
+            
+            // Get existing selections from approvedMatches
+            const existingData = approvedMatches[match.google_row];
+            blazeModalData.selectedTitles = existingData?.blaze_titles ? [...existingData.blaze_titles] : [];
+            
+            // Get all Blaze promotions from blazeData (global from Blaze tab)
+            blazeModalData.allPromotions = window.blazeData?.currentRows || [];
+            
+            // Generate suggestions based on brand name
+            const suggestions = generateBlazeSuggestions(match, blazeModalData.allPromotions);
+            
+            // Create modal overlay
+            const existing = document.getElementById('blaze-modal-overlay');
+            if (existing) existing.remove();
+            
+            const overlay = document.createElement('div');
+            overlay.id = 'blaze-modal-overlay';
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background-color: rgba(0, 0, 0, 0.6); z-index: 9998;
+                display: flex; justify-content: center; align-items: center;
+            `;
+            overlay.onclick = function(e) {
+                if(e.target === overlay) overlay.remove();
+            };
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: #fff; padding: 20px; border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+                width: 900px; max-width: 95%; max-height: 90vh;
+                overflow-y: auto; z-index: 9999; position: relative;
+            `;
+            
+            // Build modal HTML
+            modal.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #0d6efd; padding-bottom: 10px;">
+                    <h4 style="margin: 0; color: #0d6efd;"><i class="bi bi-lightning-charge-fill"></i> Select Blaze Discounts</h4>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('blaze-modal-overlay').remove()">
+                        <i class="bi bi-x-lg"></i> Close
+                    </button>
+                </div>
+                
+                <!-- Current Row Details -->
+                <div style="background: #e7f1ff; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <h6 style="margin: 0 0 8px 0; color: #0d6efd;"><i class="bi bi-info-circle"></i> Google Sheet Row ${match.google_row}</h6>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; font-size: 0.9em;">
+                        <div><strong>Brand:</strong> ${match.brand || '-'}</div>
+                        <div><strong>Discount:</strong> ${match.discount !== null ? match.discount + '%' : '-'}</div>
+                        <div><strong>Weekday:</strong> ${match.weekday || '-'}</div>
+                        <div><strong>Locations:</strong> ${(match.locations || '-').substring(0, 30)}${(match.locations || '').length > 30 ? '...' : ''}</div>
+                    </div>
+                </div>
+                
+                <!-- Selection Queue -->
+                <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px; min-height: 60px;">
+                    <h6 style="margin: 0 0 8px 0; color: #856404;"><i class="bi bi-list-ol"></i> Selected Queue (drag to reorder)</h6>
+                    <div id="blaze-queue-container" style="display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px;">
+                        ${blazeModalData.selectedTitles.length === 0 ? '<span style="color: #999; font-style: italic;">No discounts selected</span>' : ''}
+                    </div>
+                </div>
+                
+                <!-- Suggested Matches -->
+                <div style="margin-bottom: 15px;">
+                    <h6 style="color: #198754; border-bottom: 1px solid #198754; padding-bottom: 5px;">
+                        <i class="bi bi-stars"></i> Suggested Matches (${suggestions.length})
+                    </h6>
+                    <div id="blaze-suggestions-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                        ${renderBlazePromoList(suggestions, 'suggestion')}
+                    </div>
+                </div>
+                
+                <!-- Full Library -->
+                <div style="margin-bottom: 15px;">
+                    <h6 style="color: #6c757d; border-bottom: 1px solid #6c757d; padding-bottom: 5px;">
+                        <i class="bi bi-collection"></i> Full Library (${blazeModalData.allPromotions.length})
+                    </h6>
+                    <div style="margin-bottom: 8px;">
+                        <input type="text" id="blaze-library-search" class="form-control form-control-sm" 
+                               placeholder="Search by name..." oninput="filterBlazeLibrary(this.value)">
+                    </div>
+                    <div id="blaze-library-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                        ${renderBlazePromoList(blazeModalData.allPromotions.slice(0, 50), 'library')}
+                    </div>
+                    ${blazeModalData.allPromotions.length > 50 ? '<small class="text-muted">Showing first 50. Use search to find more.</small>' : ''}
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #dee2e6; padding-top: 15px;">
+                    <button class="btn btn-outline-secondary" onclick="document.getElementById('blaze-modal-overlay').remove()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmBlazeSelection()">
+                        <i class="bi bi-check-lg"></i> Confirm Selection
+                    </button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Render initial queue
+            renderBlazeQueue();
+        }
+        
+        function generateBlazeSuggestions(match, allPromos) {
+            if (!allPromos || allPromos.length === 0) return [];
+            
+            const brand = (match.brand || '').toLowerCase();
+            const brandWords = brand.split(/[\s,]+/).filter(w => w.length > 2);
+            
+            // Score each promotion
+            const scored = allPromos.map(promo => {
+                const name = (promo.Name || '').toLowerCase();
+                let score = 0;
+                
+                // Check for brand word matches in title
+                brandWords.forEach(word => {
+                    if (name.includes(word)) {
+                        score += 30;
+                    }
+                });
+                
+                // Exact brand name match
+                if (name.includes(brand)) {
+                    score += 50;
+                }
+                
+                // Active status bonus
+                if (promo.Status === 'Active') {
+                    score += 10;
+                }
+                
+                return { promo, score };
+            });
+            
+            // Filter and sort by score
+            return scored
+                .filter(s => s.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .map(s => s.promo);
+        }
+        
+        function renderBlazePromoList(promos, type) {
+            if (!promos || promos.length === 0) {
+                return '<div style="padding: 10px; text-align: center; color: #999;">No promotions found</div>';
+            }
+            
+            return promos.map(promo => {
+                const isSelected = blazeModalData.selectedTitles.includes(promo.Name);
+                const statusColor = promo.Status === 'Active' ? '#198754' : '#dc3545';
+                const bgColor = isSelected ? '#d4edda' : '#fff';
+                
+                return `
+                    <div style="padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: ${bgColor}; cursor: pointer;"
+                         onclick="toggleBlazeSelection('${escapeHtml(promo.Name)}')"
+                         onmouseover="this.style.background='${isSelected ? '#c3e6cb' : '#f8f9fa'}'"
+                         onmouseout="this.style.background='${bgColor}'">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(promo.Name)}">
+                                ${escapeHtml(promo.Name)}
+                            </div>
+                            <div style="font-size: 0.8em; color: #6c757d;">
+                                <span style="color: ${statusColor};">${promo.Status}</span>
+                                ${promo['Discount Value'] ? ' | ' + promo['Discount Value'] + ' ' + (promo['Discount Value Type'] || '') : ''}
+                                ${promo['Start Date'] ? ' | ' + promo['Start Date'] : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+        
+        function toggleBlazeSelection(promoName) {
+            const idx = blazeModalData.selectedTitles.indexOf(promoName);
+            if (idx >= 0) {
+                blazeModalData.selectedTitles.splice(idx, 1);
+            } else {
+                blazeModalData.selectedTitles.push(promoName);
+            }
+            
+            // Re-render lists
+            renderBlazeQueue();
+            
+            const match = matchesData[blazeModalData.rowIdx];
+            const suggestions = generateBlazeSuggestions(match, blazeModalData.allPromotions);
+            document.getElementById('blaze-suggestions-container').innerHTML = renderBlazePromoList(suggestions, 'suggestion');
+            
+            // Re-render library with current search
+            const searchVal = document.getElementById('blaze-library-search')?.value || '';
+            filterBlazeLibrary(searchVal);
+        }
+        
+        function renderBlazeQueue() {
+            const container = document.getElementById('blaze-queue-container');
+            if (!container) return;
+            
+            if (blazeModalData.selectedTitles.length === 0) {
+                container.innerHTML = '<span style="color: #999; font-style: italic;">No discounts selected</span>';
+                return;
+            }
+            
+            container.innerHTML = blazeModalData.selectedTitles.map((title, idx) => `
+                <div class="blaze-queue-item" draggable="true" data-idx="${idx}"
+                     style="background: #fff; border: 1px solid #ffc107; border-radius: 4px; padding: 4px 8px; 
+                            display: flex; align-items: center; gap: 5px; cursor: move;">
+                    <span style="font-weight: bold; color: #856404;">${idx + 1}.</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title="${escapeHtml(title)}">
+                        ${escapeHtml(title)}
+                    </span>
+                    <button class="btn btn-sm" style="padding: 0 4px; color: #dc3545;" onclick="event.stopPropagation(); removeFromBlazeQueue(${idx})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `).join('');
+            
+            // Add drag-and-drop handlers
+            const items = container.querySelectorAll('.blaze-queue-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleQueueDragStart);
+                item.addEventListener('dragover', handleQueueDragOver);
+                item.addEventListener('drop', handleQueueDrop);
+                item.addEventListener('dragend', handleQueueDragEnd);
+            });
+        }
+        
+        let queueDraggedItem = null;
+        
+        function handleQueueDragStart(e) {
+            queueDraggedItem = this;
+            this.style.opacity = '0.5';
+        }
+        
+        function handleQueueDragOver(e) {
+            e.preventDefault();
+            this.style.borderLeft = '3px solid #0d6efd';
+        }
+        
+        function handleQueueDrop(e) {
+            e.preventDefault();
+            this.style.borderLeft = '';
+            
+            if (queueDraggedItem === this) return;
+            
+            const fromIdx = parseInt(queueDraggedItem.dataset.idx);
+            const toIdx = parseInt(this.dataset.idx);
+            
+            // Reorder array
+            const [removed] = blazeModalData.selectedTitles.splice(fromIdx, 1);
+            blazeModalData.selectedTitles.splice(toIdx, 0, removed);
+            
+            renderBlazeQueue();
+        }
+        
+        function handleQueueDragEnd(e) {
+            this.style.opacity = '1';
+            document.querySelectorAll('.blaze-queue-item').forEach(item => {
+                item.style.borderLeft = '';
+            });
+        }
+        
+        function removeFromBlazeQueue(idx) {
+            blazeModalData.selectedTitles.splice(idx, 1);
+            renderBlazeQueue();
+            
+            // Update checkboxes in lists
+            const match = matchesData[blazeModalData.rowIdx];
+            const suggestions = generateBlazeSuggestions(match, blazeModalData.allPromotions);
+            document.getElementById('blaze-suggestions-container').innerHTML = renderBlazePromoList(suggestions, 'suggestion');
+            
+            const searchVal = document.getElementById('blaze-library-search')?.value || '';
+            filterBlazeLibrary(searchVal);
+        }
+        
+        function filterBlazeLibrary(searchTerm) {
+            const container = document.getElementById('blaze-library-container');
+            if (!container) return;
+            
+            const term = (searchTerm || '').toLowerCase();
+            let filtered = blazeModalData.allPromotions;
+            
+            if (term) {
+                filtered = blazeModalData.allPromotions.filter(p => 
+                    (p.Name || '').toLowerCase().includes(term)
+                );
+            }
+            
+            container.innerHTML = renderBlazePromoList(filtered.slice(0, 50), 'library');
+        }
+        
+        function confirmBlazeSelection() {
+            const match = matchesData[blazeModalData.rowIdx];
+            if (!match) return;
+            
+            // Update approvedMatches
+            if (!approvedMatches[match.google_row]) {
+                approvedMatches[match.google_row] = {
+                    mis_ids: [],
+                    brands: [],
+                    section: match.section || 'weekly',
+                    blaze_titles: []
+                };
+            }
+            
+            approvedMatches[match.google_row].blaze_titles = [...blazeModalData.selectedTitles];
+            
+            // Update the Blaze button in the table
+            const row = document.getElementById('match-row-' + blazeModalData.rowIdx);
+            if (row) {
+                const blazeBtn = row.querySelector('.btn-blaze');
+                if (blazeBtn) {
+                    if (blazeModalData.selectedTitles.length > 0) {
+                        blazeBtn.classList.remove('btn-outline-primary');
+                        blazeBtn.classList.add('btn-primary');
+                        blazeBtn.innerHTML = '<i class="bi bi-lightning-charge-fill"></i> ' + blazeModalData.selectedTitles.length;
+                        blazeBtn.title = blazeModalData.selectedTitles.join('\\n');
+                    } else {
+                        blazeBtn.classList.remove('btn-primary');
+                        blazeBtn.classList.add('btn-outline-primary');
+                        blazeBtn.innerHTML = '<i class="bi bi-lightning-charge"></i>';
+                        blazeBtn.title = 'Select Blaze Discount';
+                    }
+                }
+            }
+            
+            // Update visibility of apply buttons
+            updateApplyButtonsVisibility();
+            
+            // Close modal
+            document.getElementById('blaze-modal-overlay').remove();
         }
 
         function displayAuditResults(resultsObj) {
@@ -10341,13 +10850,13 @@ HTML_TEMPLATE = r"""
                             renderedGroups.add(groupId);
                             const groupData = r.multi_day_group;
                             const hasMissingWeekday = groupData.has_missing_weekday;
-                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] [EMOJI]Â </span>' : '';
+                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] [EMOJI]Ã‚Â </span>' : '';
                             
                             sectionHtml += `<tr class="group-header-row" onclick="toggleGroup('${groupId}')" title="Click to collapse/expand">`;
                             sectionHtml += `<td colspan="13">`;
                             sectionHtml += `<span class="group-toggle-icon" id="toggle-${groupId}">->[EMOJI]</span>`;
                             sectionHtml += `${warningIcon}<strong>${r.brand}</strong>`;
-                            sectionHtml += `<span class="multi-day-badge">&#x3030;[EMOJI]Â[EMOJI]Â ${groupData.total_days}-Day Deal</span>`;
+                            sectionHtml += `<span class="multi-day-badge">&#x3030;[EMOJI]Ã‚Â[EMOJI]Ã‚Â ${groupData.total_days}-Day Deal</span>`;
                             sectionHtml += ` (Rows: ${groupData.row_numbers.join(', ')})`;
                             sectionHtml += `</td></tr>`;
                             
@@ -10545,7 +11054,7 @@ async function autoAuthenticateGoogle() {
                     document.getElementById('auth-status').innerHTML = '<p class="alert alert-success">[OK] Auto-authenticated successfully!</p>';
                     console.log('[AUTO-AUTH] Google Sheets authenticated');
                 } else {
-                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] [EMOJI]Â  Auto-auth failed. Please authenticate manually.</p>';
+                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] [EMOJI]Ã‚Â  Auto-auth failed. Please authenticate manually.</p>';
                     console.log('[AUTO-AUTH] Failed:', data.error);
                 }
             } catch (error) {
@@ -10599,7 +11108,7 @@ async function autoAuthenticateGoogle() {
             
             let weekdayDisplay = r.weekday || '-';
             if (!r.weekday || r.weekday.trim() === '') {
-                weekdayDisplay = '<span class="weekday-missing-icon">[!] [EMOJI]Â </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
+                weekdayDisplay = '<span class="weekday-missing-icon">[!] [EMOJI]Ã‚Â </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
             }
             
             const hasDiscrepancies = r.discrepancies && r.discrepancies.length > 0;
@@ -10871,7 +11380,7 @@ function handleMISCSV(input) {
                     document.getElementById('mis-csv').value = ''; 
                     document.getElementById('mis-csv-status').innerHTML = `
                         <div class="alert alert-success p-2 mb-0" style="font-size: 0.9rem;">
-                            <strong>[OK][EMOJI]Â[EMOJI]Â Active CSV:</strong> ${data.filename}
+                            <strong>[OK][EMOJI]Ã‚Â[EMOJI]Ã‚Â Active CSV:</strong> ${data.filename}
                             <br><small class="text-muted">This CSV will be automatically used by ID Matcher and Audit tabs</small>
                         </div>
                     `;
@@ -11062,7 +11571,7 @@ function handleMISCSV(input) {
                         }
 
                         const flagBadge = isMultiDay 
-                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;[EMOJI]Â[EMOJI]Â ${flagContent}</span>`
+                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;[EMOJI]Ã‚Â[EMOJI]Ã‚Â ${flagContent}</span>`
                             : '<span style="color:#999;">-</span>';
                         
                         const displayCat = r.DISPLAY_CATEGORY || r.Category || '-';
@@ -11070,9 +11579,9 @@ function handleMISCSV(input) {
                         let warningEmoji = '';
                         const rebateType = r.UI_REBATE_DISPLAY || r['Rebate type'] || '';
                         if (rebateType === 'Retail') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">[EMOJI]Â[EMOJI]Â</span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">[EMOJI]Ã‚Â[EMOJI]Ã‚Â</span>';
                         } else if (!rebateType || rebateType.trim() === '') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] [EMOJI]Â </span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] [EMOJI]Ã‚Â </span>';
                         }
 
                         sectionHtml += `<tr style="${bgStyle}">`;
@@ -11241,7 +11750,9 @@ function handleMISCSV(input) {
                 if (data.success) {
                     matchesData = data.matches; 
                     displayMatchResults(data.matches);
-                    document.getElementById('apply-btn').style.display = 'block';
+                    // v12.5: Reset apply buttons visibility after new matcher run
+                    approvedMatches = {};
+                    updateApplyButtonsVisibility();
                 } else {
                     alert('Error: ' + data.error);
                 }
@@ -11588,7 +12099,7 @@ async function runGSheetConflictAudit() {
             const conflictCount = data.conflicts ? data.conflicts.length : 0;
             if (conflictCount > 0) {
                 document.getElementById('gsheet-audit-stats').innerText = 
-                    `[!] [EMOJI]Â ${conflictCount} Cross-Section Conflicts Found`;
+                    `[!] [EMOJI]Ã‚Â ${conflictCount} Cross-Section Conflicts Found`;
                 document.getElementById('gsheet-audit-stats').className = 'badge bg-warning text-dark fs-6 me-2';
             } else {
                 document.getElementById('gsheet-audit-stats').innerText = 
@@ -11850,7 +12361,7 @@ function displayGSheetConflictResults(data) {
                     <td style="${wrapStyle}">${locDisplay}</td>
                     <td style="${wrapStyle}">${notes}</td>
                     <td style="${cellStyle}">${misLink}</td>
-                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row ->[EMOJI][EMOJI]Â</button></td>
+                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row ->[EMOJI][EMOJI]Ã‚Â</button></td>
                 </tr>`;
             });
             table += `</tbody></table>`;
@@ -12348,7 +12859,7 @@ function showOtdModal(rowIndex) {
                     } else if (diff <= 0.019) {
                         // Penny Variance (Orange)
                         rowColor = "color:#fd7e14;";
-                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] [EMOJI]Â Target: $${targetOtd.toFixed(2)})</span>`;
+                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] [EMOJI]Ã‚Â Target: $${targetOtd.toFixed(2)})</span>`;
                     } else {
                         // Mismatch (Red)
                         rowColor = "color:#dc3545; font-weight:bold;";
@@ -12675,11 +13186,11 @@ function showOtdModal(rowIndex) {
                         if (maxDiff >= 0.02) {
                             // Mismatch (> 2 cents): RED TEXT + CAUTION
                             btnStyle = "color:#dc3545; border:1px solid #dc3545;"; 
-                            btnEmoji = "[!] [EMOJI]Â";
+                            btnEmoji = "[!] [EMOJI]Ã‚Â";
                         } else if (maxDiff > 0.009) {
                             // Penny Variance: ORANGE TEXT + CAUTION
                             btnStyle = "color:#fd7e14; border:1px solid #fd7e14;"; 
-                            btnEmoji = "[!] [EMOJI]Â";
+                            btnEmoji = "[!] [EMOJI]Ã‚Â";
                         }
                     }
                     // --- AUDIT LOGIC END ---
@@ -13083,13 +13594,13 @@ async function runAutoCleanup() {
             if (!result.success) {
                 console.error(`Failed to disable ${promoId}: ${result.error}`);
                 document.getElementById('zombieProgressText').textContent = 
-                    `[!] [EMOJI]Â Error on ID ${promoId}: ${result.error}. Continuing...`;
+                    `[!] [EMOJI]Ã‚Â Error on ID ${promoId}: ${result.error}. Continuing...`;
                 await new Promise(r => setTimeout(r, 2000));
             }
         } catch (e) {
             console.error(`Error disabling ${promoId}:`, e);
             document.getElementById('zombieProgressText').textContent = 
-                `[!] [EMOJI]Â Network error on ID ${promoId}. Continuing...`;
+                `[!] [EMOJI]Ã‚Â Network error on ID ${promoId}. Continuing...`;
             await new Promise(r => setTimeout(r, 2000));
         }
         
@@ -13267,7 +13778,7 @@ function finishZombieCleanup() {
                         console.log("[AUTO] Sync failed: " + errorMsg);
                         // Notify user in the setup tab without popup
                         if(statusDiv) {
-                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] [EMOJI]Â[EMOJI]Â ${errorMsg}</span>`;
+                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â ${errorMsg}</span>`;
                         }
                     } else {
                         alert("Sync Failed: " + errorMsg);
@@ -13416,7 +13927,7 @@ function showDetailModal(row, isPinned = false) {
     bodyHTML += `<div class="data-row"><span class="data-label">Get/Target:</span> ${row.target_type || 'N/A'} - ${row.target_value || 'N/A'}</div>`;
     
     // ADVANCED SECTION
-    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;[EMOJI]Â ADVANCED</div>';
+    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;[EMOJI]Ã‚Â ADVANCED</div>';
     bodyHTML += `<div class="data-row"><span class="data-label">Auto Apply:</span> ${row.auto_apply ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Stackable:</span> ${row.stackable ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Lowest Price First:</span> ${row.apply_lowest_price_first ? 'Yes' : 'No'}</div>`;
@@ -13529,7 +14040,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="detailModalBackdrop"></div>
     <div id="detailModal">
         <div class="modal-header">
-            <button class="close-btn" onclick="closeDetailModal()">X[EMOJI]Â</button>
+            <button class="close-btn" onclick="closeDetailModal()">X[EMOJI]Ã‚Â</button>
             <div class="modal-title" id="detailModalTitle"></div>
             <div class="modal-id" id="detailModalId"></div>
             <div class="modal-type" id="detailModalType"></div>
@@ -13573,7 +14084,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="calc-content">
             <div class="calc-header">
                 <h2> Tax Calculator</h2>
-                <button class="calc-close" onclick="toggleCalcModal()">X[EMOJI]Â</button>
+                <button class="calc-close" onclick="toggleCalcModal()">X[EMOJI]Ã‚Â</button>
             </div>
             
             <div class="store-selector">
@@ -13656,7 +14167,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div id="calc-reprice" class="calc-section" style="display:none;">
-                <h3>[!][EMOJI]Â Reprice / Stack Fixer</h3>
+                <h3>[!][EMOJI]Ã‚Â Reprice / Stack Fixer</h3>
                 <p style="color: #6c757d; font-size: 0.9em; margin-bottom: 10px;">
                     Calculate required flat discount to bridge the gap between current price and desired % off. (Example: Is 45% Off but needs to be 50% Off)<br>
                     <strong>(PRE-TAX VALUES ONLY)</strong>
@@ -13751,8 +14262,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <ol class="mb-0">
                                 <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
                                 <li>Create a project and enable <strong>Google Sheets API</strong></li>
-                                <li>Go to <strong>OAuth Consent Screen</strong> â†’ Add your email as a Test User</li>
-                                <li>Go to <strong>Credentials</strong> â†’ Create <strong>OAuth Client ID</strong> (Desktop App)</li>
+                                <li>Go to <strong>OAuth Consent Screen</strong> Ã¢â€ â€™ Add your email as a Test User</li>
+                                <li>Go to <strong>Credentials</strong> Ã¢â€ â€™ Create <strong>OAuth Client ID</strong> (Desktop App)</li>
                                 <li>Download the JSON and rename it as shown above</li>
                                 <li>Place it in the <code>config/google_credentials/</code> folder</li>
                             </ol>
@@ -13980,24 +14491,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h5 class="text-primary border-bottom pb-2"><i class="bi bi-folder2-open"></i> Directory Structure</h5>
                             <p class="text-muted">The script automatically creates this structure on first run:</p>
                             <pre class="bg-dark text-light p-3 rounded" style="font-size: 0.85em;">project_folder/
-â”œâ”€â”€ DASHBOARD.py                    # Main script
-â”œâ”€â”€ config/
-â”‚   â”œâ”€â”€ google_credentials/         # OAuth JSON files
-â”‚   â”‚   â”œâ”€â”€ credentials_john.doe.json
-â”‚   â”‚   â””â”€â”€ credentials_jane.smith.json
-â”‚   â”œâ”€â”€ tokens/                     # Google auth tokens (auto-generated)
-â”‚   â”‚   â”œâ”€â”€ token_john.doe.json
-â”‚   â”‚   â””â”€â”€ token_jane.smith.json
-â”‚   â””â”€â”€ blaze_configs/              # MIS/Blaze credentials per profile
-â”‚       â”œâ”€â”€ blaze_config_john.doe.json
-â”‚       â””â”€â”€ blaze_config_jane.smith.json
-â”œâ”€â”€ chrome_profiles/                # Isolated browser profiles
-â”‚   â”œâ”€â”€ chrome_john.doe/
-â”‚   â””â”€â”€ chrome_jane.smith/
-â””â”€â”€ reports/
-    â”œâ”€â”€ MIS_CSV_REPORTS/            # Downloaded MIS exports
-    â””â”€â”€ BLAZE_CSV_REPORTS/
-        â””â”€â”€ INVENTORY/              # Inventory scan results</pre>
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ DASHBOARD.py                    # Main script
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ config/
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ google_credentials/         # OAuth JSON files
+Ã¢â€â€š   Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ credentials_john.doe.json
+Ã¢â€â€š   Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ credentials_jane.smith.json
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ tokens/                     # Google auth tokens (auto-generated)
+Ã¢â€â€š   Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ token_john.doe.json
+Ã¢â€â€š   Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ token_jane.smith.json
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ blaze_configs/              # MIS/Blaze credentials per profile
+Ã¢â€â€š       Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ blaze_config_john.doe.json
+Ã¢â€â€š       Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ blaze_config_jane.smith.json
+Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ chrome_profiles/                # Isolated browser profiles
+Ã¢â€â€š   Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ chrome_john.doe/
+Ã¢â€â€š   Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ chrome_jane.smith/
+Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ reports/
+    Ã¢â€Å“Ã¢â€â‚¬Ã¢â€â‚¬ MIS_CSV_REPORTS/            # Downloaded MIS exports
+    Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ BLAZE_CSV_REPORTS/
+        Ã¢â€â€Ã¢â€â‚¬Ã¢â€â‚¬ INVENTORY/              # Inventory scan results</pre>
 
                             <h5 class="text-success mt-4 border-bottom pb-2">Files You Provide</h5>
                             <table class="table table-sm table-bordered">
@@ -14642,7 +15153,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 async function runTierUpdate(btn) {
-        if (!confirm("[!] [EMOJI]Â[EMOJI]Â This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
+        if (!confirm("[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
         
         btn.disabled = true;
         const originalHtml = btn.innerHTML;
@@ -14931,7 +15442,7 @@ async function fetchInventoryData() {
         const fetchData = await fetchResponse.json();
 
         if (!fetchData.success) {
-            addDebugLog(`[OK][EMOJI]Â Error: ${fetchData.error || 'Unknown error'}`, 'error');
+            addDebugLog(`[OK][EMOJI]Ã‚Â Error: ${fetchData.error || 'Unknown error'}`, 'error');
             alert(`Failed to fetch data: ${fetchData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
             return;
@@ -14969,12 +15480,12 @@ async function fetchInventoryData() {
             addDebugLog('[OK] All done!', 'success');
             setTimeout(() => hideDebugLog(), 3000);
         } else {
-            addDebugLog(`[OK][EMOJI]Â Error loading from cache: ${loadData.error}`, 'error');
+            addDebugLog(`[OK][EMOJI]Ã‚Â Error loading from cache: ${loadData.error}`, 'error');
             alert(`Failed to load data: ${loadData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
         }
     } catch (err) {
-        addDebugLog(`[OK][EMOJI]Â Network error: ${err.message}`, 'error');
+        addDebugLog(`[OK][EMOJI]Ã‚Â Network error: ${err.message}`, 'error');
         alert(`Network error: ${err.message}`);
         setTimeout(() => hideDebugLog(), 5000);
     } finally {
@@ -16943,7 +17454,7 @@ def diagnose_issue(summary, results):
     else:
         count = results.get('collections', {}).get('count', 0)
         if count == 0:
-            diagnosis.append("[!] [EMOJI]Â[EMOJI]Â Collections endpoint works but returns 0 items")
+            diagnosis.append("[!] [EMOJI]Ã‚Â[EMOJI]Ã‚Â Collections endpoint works but returns 0 items")
             diagnosis.append("   Check: Are there actually Smart Collections in Blaze admin?")
         else:
             diagnosis.append(f"[SUCCESS] Collections working correctly ({count} items found)")
@@ -17161,6 +17672,110 @@ def api_mis_apply_matches():
             body=body
         ).execute()
         
+        return jsonify({'success': True, 'updated': len(updates)})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# v12.5: New endpoint to apply Blaze Discount Titles to Google Sheet
+@app.route('/api/mis/apply-blaze-titles', methods=['POST'])
+def api_mis_apply_blaze_titles():
+    """
+    Apply Blaze Discount Titles from ID MATCHER tab to Google Sheet.
+    Writes to the "Blaze Discount Title" column (typically column 28/AC).
+    
+    v12.5: Writes newline-separated titles to preserve order.
+    """
+    try:
+        data = request.get_json()
+        matches = data.get('matches', {})
+        if not matches:
+            return jsonify({'success': False, 'error': 'No matches'})
+        
+        service = GLOBAL_DATA['sheets_service']
+        spreadsheet_id = GLOBAL_DATA['mis']['spreadsheet_id']
+        sheet_name = GLOBAL_DATA['mis']['current_sheet']
+        
+        if not service or not spreadsheet_id or not sheet_name:
+            return jsonify({'success': False, 'error': 'Not configured'})
+        
+        # Get headers to find Blaze Discount Title column
+        result = service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{sheet_name}'!A1:BZ20"
+        ).execute()
+        values = result.get('values', [])
+        if not values:
+            return jsonify({'success': False, 'error': 'Sheet empty'})
+        
+        header_row_idx = detect_header_row(values)
+        headers = values[header_row_idx]
+        
+        # Find "Blaze Discount Title" column
+        blaze_col = None
+        for idx, header in enumerate(headers):
+            header_clean = str(header).strip().lower()
+            if 'blaze' in header_clean and ('discount' in header_clean or 'title' in header_clean):
+                blaze_col = idx
+                break
+        
+        if blaze_col is None:
+            # Try exact match
+            for idx, header in enumerate(headers):
+                if str(header).strip() == 'Blaze Discount Title':
+                    blaze_col = idx
+                    break
+        
+        if blaze_col is None:
+            return jsonify({'success': False, 'error': 'Blaze Discount Title column not found in headers'})
+        
+        def get_col_letter(n):
+            string = ""
+            while n >= 0:
+                string = chr((n % 26) + 65) + string
+                n = (n // 26) - 1
+            return string
+        
+        target_col_letter = get_col_letter(blaze_col)
+        print(f"[APPLY-BLAZE] Found Blaze Discount Title at column {target_col_letter} (index {blaze_col})")
+        
+        # Build updates
+        updates = []
+        for google_row, match_data in matches.items():
+            sheet_row = int(google_row)
+            
+            # Get blaze_titles from match_data
+            blaze_titles = []
+            if isinstance(match_data, dict):
+                blaze_titles = match_data.get('blaze_titles', [])
+            
+            if not blaze_titles:
+                continue  # Skip rows with no Blaze titles selected
+            
+            # Join titles with newlines (preserving order from queue)
+            new_value = '\n'.join(blaze_titles)
+            
+            updates.append({
+                'range': f"'{sheet_name}'!{target_col_letter}{sheet_row}",
+                'values': [[new_value]]
+            })
+            
+            print(f"[APPLY-BLAZE] Row {sheet_row}: {len(blaze_titles)} titles")
+        
+        if not updates:
+            return jsonify({'success': True, 'updated': 0, 'message': 'No Blaze titles to apply'})
+        
+        body = {
+            'valueInputOption': 'RAW',
+            'data': updates
+        }
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body=body
+        ).execute()
+        
+        print(f"[APPLY-BLAZE] Successfully updated {len(updates)} rows")
         return jsonify({'success': True, 'updated': len(updates)})
     except Exception as e:
         traceback.print_exc()
@@ -18609,7 +19224,7 @@ def api_mis_create_deal():
                         actions.move_to_element(option)
                         actions.click()
                         actions.perform()
-                        log(f"  [{field_name}] ✓ Selected '{value}'", "SUCCESS")
+                        log(f"  [{field_name}] âœ“ Selected '{value}'", "SUCCESS")
                     else:
                         raise Exception(f"Could not find option '{value}'")
                         
@@ -18623,7 +19238,7 @@ def api_mis_create_deal():
                         ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
                         time.sleep(0.1)
                         ActionChains(driver).send_keys(Keys.ENTER).perform()
-                    log(f"  [{field_name}] ✓ Selected '{value}' via keyboard", "SUCCESS")
+                    log(f"  [{field_name}] âœ“ Selected '{value}' via keyboard", "SUCCESS")
                 
                 time.sleep(0.1)
                 
@@ -18783,7 +19398,7 @@ def api_mis_create_deal():
                         actions.click()
                         actions.perform()
                         selected_count += 1
-                        log(f"  [{field_name}] ✓ Selected '{value}'", "SUCCESS")
+                        log(f"  [{field_name}] âœ“ Selected '{value}'", "SUCCESS")
                         time.sleep(0.08)  # Very short pause between selections
                 
                 # Step 5: Close the dropdown after ALL selections
@@ -18984,7 +19599,7 @@ def api_mis_create_deal():
                 val_str = str(val).strip().upper()
                 log(f"Found wholesale column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
                 # Google Sheets checkboxes return TRUE/FALSE as strings
-                if val_str in ['TRUE', 'YES', '1', 'X', '✓', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', 'âœ“', 'CHECKED']:
                     wholesale_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     wholesale_checked = False
@@ -18992,7 +19607,7 @@ def api_mis_create_deal():
                 retail_col_found = True
                 val_str = str(val).strip().upper()
                 log(f"Found retail column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
-                if val_str in ['TRUE', 'YES', '1', 'X', '✓', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', 'âœ“', 'CHECKED']:
                     retail_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     retail_checked = False
@@ -19009,7 +19624,7 @@ def api_mis_create_deal():
         rebate_type_error = False
         
         if wholesale_checked and retail_checked:
-            warnings.append('⚠ REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
+            warnings.append('âš  REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
             log("REBATE TYPE ERROR: Both checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -19026,7 +19641,7 @@ def api_mis_create_deal():
                 pass
                 
         elif not wholesale_checked and not retail_checked:
-            warnings.append('⚠ REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
+            warnings.append('âš  REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
             log("REBATE TYPE ERROR: Neither checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -19079,67 +19694,67 @@ def api_mis_create_deal():
         # 1. WEEKDAY (multi-select)
         if weekdays_to_select:
             if not atomic_multi_select("Weekday", weekdays_to_select, "Weekday"):
-                warnings.append('⚠ Could not fill Weekday')
+                warnings.append('âš  Could not fill Weekday')
         
         # 2. STORE (multi-select) - only if specific stores needed
         if stores_to_select:
             if not atomic_multi_select("Store", stores_to_select, "Store"):
-                warnings.append('⚠ Could not fill Store')
+                warnings.append('âš  Could not fill Store')
         
         # 3. BRAND (single-select)
         if primary_brand:
             if not atomic_single_select("Brand", primary_brand, "Brand"):
-                warnings.append('⚠ Could not fill Brand')
+                warnings.append('âš  Could not fill Brand')
         
         # 4. LINKED BRAND (single-select)
         if linked_brand:
             if not atomic_single_select("Linked Brand", linked_brand, "Linked Brand"):
-                warnings.append('⚠ Could not fill Linked Brand')
+                warnings.append('âš  Could not fill Linked Brand')
         
         # 5. CATEGORY (multi-select)
         if categories_to_select:
             if not atomic_multi_select("Category", categories_to_select, "Category"):
-                warnings.append('⚠ Could not fill Category')
+                warnings.append('âš  Could not fill Category')
         
         # 6. DISCOUNT RATE (text input)
         if discount is not None and str(discount).strip() != '':
             if not atomic_text_input("discount_rate", discount, "Discount Rate"):
-                warnings.append('⚠ Could not fill Discount Rate')
+                warnings.append('âš  Could not fill Discount Rate')
         
         # 7. REBATE TYPE (single-select)
         if rebate_type:
             if not atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
-                warnings.append('⚠ Could not fill Rebate Type')
+                warnings.append('âš  Could not fill Rebate Type')
         
         # 8. VENDOR REBATE % (text input)
         if vendor_contrib is not None and str(vendor_contrib).strip() != '':
             if not atomic_text_input("rebate_percent", vendor_contrib, "Vendor Rebate"):
-                warnings.append('⚠ Could not fill Vendor Rebate')
+                warnings.append('âš  Could not fill Vendor Rebate')
         
         # 9. TOGGLE: After Wholesale
         if after_wholesale:
             if not atomic_toggle("rebate_wholesale_discount", True, "After Wholesale"):
-                warnings.append('⚠ Could not toggle After Wholesale')
+                warnings.append('âš  Could not toggle After Wholesale')
         
         # 10. START DATE (text input)
         if start_date:
             if not atomic_text_input("date_start", start_date, "Start Date"):
-                warnings.append('⚠ Could not fill Start Date')
+                warnings.append('âš  Could not fill Start Date')
         
         # 11. END DATE (text input)
         if end_date:
             if not atomic_text_input("date_end", end_date, "End Date"):
-                warnings.append('⚠ Could not fill End Date')
+                warnings.append('âš  Could not fill End Date')
         
         # 12. MIN WEIGHT (text input)
         if min_weight is not None:
             if not atomic_text_input("min_weight", min_weight, "Min Weight"):
-                warnings.append('⚠ Could not fill Min Weight')
+                warnings.append('âš  Could not fill Min Weight')
         
         # 13. MAX WEIGHT (text input)
         if max_weight is not None:
             if not atomic_text_input("max_weight", max_weight, "Max Weight"):
-                warnings.append('⚠ Could not fill Max Weight')
+                warnings.append('âš  Could not fill Max Weight')
         
         # ============================================
         # FORM FILL COMPLETE
@@ -19317,7 +19932,7 @@ def api_gsheet_conflict_audit():
                 row_detail = {
                     'section': section_key,
                     'row_num': true_row,
-                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] [EMOJI]Â  MISSING' else '-',
+                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] [EMOJI]Ã‚Â  MISSING' else '-',
                     'discount': discount,
                     'vendor_contrib': vendor_contrib,
                     'locations': locations,
@@ -21651,7 +22266,7 @@ def api_blaze_zombie_disable():
                 # Verify it's now unchecked
                 is_checked_after = status_toggle.get_attribute('checked')
                 if is_checked_after:
-                    print("[ZOMBIE] [!] [EMOJI]Â Toggle may not have changed - trying direct input click")
+                    print("[ZOMBIE] [!] [EMOJI]Ã‚Â Toggle may not have changed - trying direct input click")
                     driver.execute_script("arguments[0].click();", status_toggle)
                     time.sleep(0.5)
             else:
@@ -21748,7 +22363,7 @@ def api_blaze_zombie_disable():
             print("[ZOMBIE] [OK] Save completed")
             
         except Exception as e:
-            print(f"[ZOMBIE] [!] [EMOJI]Â Save wait issue: {e}, but proceeding...")
+            print(f"[ZOMBIE] [!] [EMOJI]Ã‚Â Save wait issue: {e}, but proceeding...")
         
         # Small delay before next operation
         time.sleep(1)
@@ -22627,7 +23242,7 @@ def navigate_to_product():
                                 print(f"[NAVIGATE] [OK] Store changed successfully to: '{current_store}'")
                                 break
                             else:
-                                print(f"[NAVIGATE] [OK][EMOJI]Â Store change failed, retrying...")
+                                print(f"[NAVIGATE] [OK][EMOJI]Ã‚Â Store change failed, retrying...")
                                 
                         except NoSuchElementException:
                             return jsonify({
