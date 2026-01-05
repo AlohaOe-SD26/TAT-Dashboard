@@ -2595,14 +2595,17 @@ def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
             
             # --- SECTION SWITCHING LOGIC ---
             if "END420" in row_str:
+                print(f"[SHEET-PARSE] Found END420 at row {i+1}, stopping parse")
                 break # Stop parsing completely
             
             if "MONTHLYSTART" in row_str:
+                print(f"[SHEET-PARSE] Found MONTHLYSTART at row {i+1}, switching to monthly section")
                 current_section = 'monthly'
                 i += 2 # Skip this flag row AND the next row (the new header)
                 continue
                 
             if "SALESTART" in row_str:
+                print(f"[SHEET-PARSE] Found SALESTART at row {i+1}, switching to sale section")
                 current_section = 'sale'
                 i += 2 # Skip this flag row AND the next row (the new header)
                 continue
@@ -2623,6 +2626,7 @@ def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
             i += 1
             
         # Convert lists to DataFrames
+        print(f"[SHEET-PARSE] Section summary: weekly={len(sections['weekly'])}, monthly={len(sections['monthly'])}, sale={len(sections['sale'])}")
         final_dfs = {}
         for sec, rows in sections.items():
             if rows:
@@ -8492,13 +8496,21 @@ HTML_TEMPLATE = r"""
             const containerId = 'match-results';
             const titles = {'weekly': ' WEEKLY DEALS', 'monthly': ' MONTHLY DEALS', 'sale': ' SALE DEALS'};
             
+            // DEBUG: Log what we received
+            console.log('[DISPLAY] Received matchesObj:', Object.keys(matchesObj));
+            console.log('[DISPLAY] Weekly count:', (matchesObj.weekly || []).length);
+            console.log('[DISPLAY] Monthly count:', (matchesObj.monthly || []).length);
+            console.log('[DISPLAY] Sale count:', (matchesObj.sale || []).length);
+            
             // 1. Flatten Matches for Global Indexing (Source of Truth)
             matchesData = [];
             ['weekly', 'monthly', 'sale'].forEach(key => {
                 if (matchesObj[key]) {
+                    console.log(`[DISPLAY] Adding ${matchesObj[key].length} ${key} matches to matchesData`);
                     matchesData = matchesData.concat(matchesObj[key]);
                 }
             });
+            console.log('[DISPLAY] Total matchesData:', matchesData.length);
 
             // Count items per section
             const counts = {
@@ -8534,10 +8546,15 @@ HTML_TEMPLATE = r"""
             let globalIdx = 0;
             ['weekly', 'monthly', 'sale'].forEach(sectionKey => {
                 const sectionMatches = matchesObj[sectionKey] || [];
-                if (sectionMatches.length === 0) return;
+                console.log(`[DISPLAY] Processing section ${sectionKey}: ${sectionMatches.length} matches`);
+                if (sectionMatches.length === 0) {
+                    console.log(`[DISPLAY] Skipping empty section: ${sectionKey}`);
+                    return;
+                }
 
                 // Add section header row
                 unifiedHtml += `<tr class="section-header-row" data-section="${sectionKey}"><td colspan="14" style="background:#e9ecef; font-weight:bold; padding:10px;">${titles[sectionKey]} <small class="text-muted">(${sectionMatches.length} Items)</small></td></tr>`;
+                console.log(`[DISPLAY] Added section header for ${sectionKey}`);
 
                 const renderedGroups = new Set();
 
@@ -17564,11 +17581,14 @@ def api_mis_match():
                 # PASS section_type HERE
                 matches = enhanced_match_mis_ids(df, mis_df, brand_list, brand_settings, section_type=section)
                 all_matches[section] = matches
+                print(f"[MATCHER] Section {section}: {len(matches)} matches generated")
             else:
                 all_matches[section] = []
+                print(f"[MATCHER] Section {section}: DataFrame is empty")
                 
         GLOBAL_DATA['mis']['match_results'] = all_matches
         
+        print(f"[MATCHER] Final response: weekly={len(all_matches.get('weekly', []))}, monthly={len(all_matches.get('monthly', []))}, sale={len(all_matches.get('sale', []))}")
         return jsonify({'success': True, 'matches': all_matches})
     except Exception as e:
         traceback.print_exc()
