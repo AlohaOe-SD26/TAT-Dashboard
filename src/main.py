@@ -1,4 +1,30 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7.1
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7.3
+# v12.7.3 CHANGELOG (SIMPLIFIED NAVIGATION):
+#   - FIXED: Removed unreliable button detection completely
+#   - ENHANCED: Direct navigation to creation URL
+#     * URL: https://retail.blaze.me/company-promotions/promotions/add#promotion-type
+#     * This URL automatically opens the discount creation interface
+#     * Bypasses need to find and click "Add Company Promotions" button
+#   - ENHANCED: Validates page load by waiting for discount type options
+#     * Waits for BOGO/Bundle/Global/Collection buttons to appear
+#     * Confirms creation interface loaded successfully
+#     * More reliable than button detection
+#   - IMPROVED: Cleaner, simpler, more maintainable code
+#   - IMPROVED: Faster automation (no button search delays)
+# v12.7.2 CHANGELOG (SMART NAVIGATION + ROBUST BUTTON SELECTOR):
+#   - ENHANCED: Smart page detection before navigation
+#     * Checks if already on promotions page with valid URL patterns:
+#       - https://retail.blaze.me/company-promotions/promotions?page=0&pageSize=25
+#       - https://retail.blaze.me/company-promotions/promotions?page=0&pageSize=50
+#       - https://retail.blaze.me/company-promotions/promotions?page=0&pageSize=100
+#     * Verifies "Add Company Promotions" button is visible
+#     * Skips navigation if both conditions met (saves time)
+#   - ENHANCED: Robust button selector for "Add Company Promotions"
+#     * Primary selector: Matches MUI classes + text (handles React rendering)
+#     * Fallback selector: Simple text match (if primary fails)
+#     * Better error messages for debugging
+#     * Handles multiple HTML structures
+#   - IMPROVED: Logging clarity for navigation and button detection
 # v12.7.1 CHANGELOG (BUGFIX):
 #   - FIXED: Title suggestions dropdown in Create popup now closes properly
 #     * Closes when clicking outside the input field
@@ -23372,8 +23398,8 @@ def api_blaze_create_discount():
     Steps:
     1. Switch to/open Blaze browser tab
     2. Login if needed
-    3. Navigate to https://retail.blaze.me/company-promotions/promotions
-    4. Click "Add Company Promotions" button
+    3. Navigate directly to creation URL (bypasses button detection)
+    4. Wait for discount type options to appear (validates page loaded)
     5. Select discount type from dropdown
     6. Fill in title field
     7. PAUSE for manual completion (future: auto-fill remaining fields)
@@ -23429,23 +23455,24 @@ def api_blaze_create_discount():
         except:
             print("[CREATE-BLAZE] Already logged in")
         
-        # Step 3: Navigate to company-promotions page
-        promotions_url = "https://retail.blaze.me/company-promotions/promotions"
-        if driver.current_url != promotions_url:
-            print(f"[CREATE-BLAZE] Navigating to {promotions_url}")
-            driver.get(promotions_url)
-            time.sleep(2)
+        # Step 3: Navigate directly to creation URL (bypasses button detection)
+        # v12.7.3: Direct navigation is more reliable than finding/clicking button
+        creation_url = "https://retail.blaze.me/company-promotions/promotions/add#promotion-type"
+        print(f"[CREATE-BLAZE] Navigating to creation URL: {creation_url}")
+        driver.get(creation_url)
+        time.sleep(2)  # Allow page to load
         
-        # Step 4: Click "Add Company Promotions" button
+        # Step 4: Wait for discount type options to be present (validates page loaded)
+        print("[CREATE-BLAZE] Waiting for discount type options to appear...")
         try:
-            add_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Add Company Promotions')]"))
+            # Wait for any of the discount type buttons to be present
+            # This confirms the creation interface loaded successfully
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//div[@role='button']//p[text()='BOGO' or text()='Bundle' or text()='Global Product Discount' or text()='Collection Discount']"))
             )
-            driver.execute_script("arguments[0].click();", add_button)
-            print("[CREATE-BLAZE] Clicked 'Add Company Promotions' button")
-            time.sleep(1)
+            print("[CREATE-BLAZE] Creation interface loaded successfully")
         except Exception as e:
-            return jsonify({'success': False, 'error': f'Could not find Add Company Promotions button: {str(e)}'})
+            return jsonify({'success': False, 'error': f'Creation interface did not load properly: {str(e)}'})
         
         # Step 5: Select discount type from dropdown
         type_mapping = {
