@@ -1,4 +1,12 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7.1
+# v12.7.1 CHANGELOG (BUGFIX):
+#   - FIXED: Title suggestions dropdown in Create popup now closes properly
+#     * Closes when clicking outside the input field
+#     * Closes when tabbing to another field
+#     * Closes when clicking on another part of the form
+#     * Uses 150ms delay to ensure click events on suggestions register first
+#   - Added: hideTitleSuggestions() helper function
+#   - Added: onblur handler to title input field
 # v12.7 CHANGELOG (CREATE BLAZE AUTOMATION + ENHANCED UX):
 #   - NEW: Auto-load existing Blaze selections from Google Sheet
 #     * When opening modal, parses "Blaze Discount Title" column
@@ -11483,7 +11491,8 @@ HTML_TEMPLATE = r"""
                     <div style="position: relative;">
                         <input type="text" id="create-blaze-title" class="form-control" placeholder="Enter discount title..."
                                onfocus="showTitleSuggestions()"
-                               oninput="handleTitleInput(event)">
+                               oninput="handleTitleInput(event)"
+                               onblur="setTimeout(() => hideTitleSuggestions(), 150)">
                         <div id="title-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; 
                                 background: white; border: 1px solid #ccc; border-top: none; max-height: 150px; overflow-y: auto; z-index: 1000;">
                             ${suggestions.map(s => `
@@ -11558,6 +11567,11 @@ HTML_TEMPLATE = r"""
         function showTitleSuggestions() {
             const dropdown = document.getElementById('title-suggestions');
             if (dropdown) dropdown.style.display = 'block';
+        }
+        
+        function hideTitleSuggestions() {
+            const dropdown = document.getElementById('title-suggestions');
+            if (dropdown) dropdown.style.display = 'none';
         }
         
         function handleTitleInput(event) {
