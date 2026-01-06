@@ -1,4 +1,28 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.5
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.6
+# v12.6 CHANGELOG (UX ENHANCEMENTS + CRITICAL BUG FIX):
+#   - CRITICAL BUGFIX: OK button no longer clears Blaze Discount selections
+#     * approveSingleMatch() now preserves existing blaze_titles array
+#     * Both multi-brand and first-approval cases updated
+#     * User can now approve MIS IDs without losing Blaze discount selections
+#   - NEW: Collapsible Weekday Headers in Breakdown List (default: collapsed)
+#     * Cleaner view - weekday sections start collapsed
+#     * Click weekday header to expand/collapse
+#     * Shows deal count even when collapsed
+#   - NEW: Pink Multi-Day Reference sections (default: collapsed)
+#     * Multi-day deal references now have PINK background (#ffe6f0)
+#     * Collapsed by default showing "Multi Day Deals Present: [brands]"
+#     * Click to expand and see full reference rows
+#     * Helps reduce clutter in Breakdown view
+#   - ENHANCED: Scrollable Queue in Blaze Modal
+#     * Queue section now scrolls after 2 visible rows
+#     * Header shows counter: "Selected Queue (X items)"
+#     * Prevents modal from becoming too tall
+#   - ENHANCED: Full Library section now collapsible (default: collapsed)
+#     * Click "Full Library" header to expand/collapse
+#     * Starts collapsed to reduce initial modal height
+#   - FIXED: Filter dropdown now strictly filters by brand name
+#     * All filter options (NONE/BOGO/B2G1/BULK) respect brand name + alternates
+#     * No more irrelevant promotions appearing in filtered results
 # v12.5 CHANGELOG (BLAZE DISCOUNT TITLE INTEGRATION + BUG FIX):
 #   - BUGFIX: Breakdown view now preserves Monthly and Sale sections
 #     * Previously, switching to Breakdown mode deleted non-weekly rows
@@ -7017,13 +7041,45 @@ HTML_TEMPLATE = r"""
                 tbody.appendChild(headerRow);
                 console.log(`[BREAKDOWN] Added header for ${day}`);
                 
-                // Append multi-day reference rows FIRST (with border around entire group)
+                // v12.6: Wrap multi-day reference rows in collapsible section with summary
                 if (greyRefs.length > 0) {
+                    // Collect brands from all reference rows
+                    const refBrands = new Set();
+                    greyRefs.forEach(item => {
+                        if (item.members) {
+                            item.members.forEach(member => {
+                                const memberCells = member.getElementsByTagName('td');
+                                const memberBrand = memberCells[1] ? memberCells[1].textContent.trim() : '';
+                                if (memberBrand) refBrands.add(memberBrand);
+                            });
+                        }
+                    });
+                    
+                    const brandsList = Array.from(refBrands).join(', ');
+                    
+                    // Create collapsible header for multi-day references
+                    const multiDayHeader = document.createElement('tr');
+                    multiDayHeader.classList.add('multi-day-ref-header');
+                    multiDayHeader.setAttribute('data-weekday', day);
+                    multiDayHeader.innerHTML = `
+                        <td colspan="14" style="padding:6px 10px; background:#ffe6f0; cursor:pointer; border:2px solid #ff69b4;" 
+                            onclick="toggleMultiDayRefs('${day}')">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span id="multi-day-toggle-${day}" style="font-size:1em; color:#c2185b;">▶</span>
+                                <strong style="color:#c2185b; font-size:0.95em;">Multi Day Deals Present:</strong>
+                                <span style="color:#c2185b; font-size:0.85em;">${brandsList}</span>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(multiDayHeader);
+                    
+                    // Append all multi-day reference rows
                     const allGreyRows = [];
                     greyRefs.forEach(item => {
                         if (item.members) {
                             item.members.forEach(member => {
                                 const greyRow = createMultiDayReferenceRow(member, item.firstWeekday);
+                                greyRow.classList.add(`multi-day-ref-${day}`);
                                 allGreyRows.push(greyRow);
                             });
                         }
@@ -7031,11 +7087,11 @@ HTML_TEMPLATE = r"""
                     
                     // Add border styling to first and last reference rows
                     if (allGreyRows.length > 0) {
-                        allGreyRows[0].style.borderTop = '3px solid #ff9800';
-                        allGreyRows[allGreyRows.length - 1].style.borderBottom = '3px solid #ff9800';
+                        allGreyRows[0].style.borderTop = '2px solid #ff69b4';
+                        allGreyRows[allGreyRows.length - 1].style.borderBottom = '2px solid #ff69b4';
                         allGreyRows.forEach((row, idx) => {
-                            row.style.borderLeft = '3px solid #ff9800';
-                            row.style.borderRight = '3px solid #ff9800';
+                            row.style.borderLeft = '2px solid #ff69b4';
+                            row.style.borderRight = '2px solid #ff69b4';
                             tbody.appendChild(row);
                             console.log(`[BREAKDOWN] Added multi-day reference row to ${day}`);
                         });
@@ -7062,10 +7118,50 @@ HTML_TEMPLATE = r"""
                 saleRows.forEach(row => tbody.appendChild(row));
             }
             
+            // v12.6: Collapse all weekday sections by default
+            console.log('[BREAKDOWN] Collapsing all weekday sections by default...');
+            weekdayOrder.forEach(day => {
+                const allRows = Array.from(tbody.querySelectorAll('tr'));
+                const headerIndex = allRows.findIndex(r => 
+                    r.classList.contains('weekday-header-row') && 
+                    r.getAttribute('data-weekday-header') === day
+                );
+                
+                if (headerIndex !== -1) {
+                    // Find next weekday header or end
+                    let nextHeaderIndex = allRows.length;
+                    for (let i = headerIndex + 1; i < allRows.length; i++) {
+                        if (allRows[i].classList.contains('weekday-header-row') && 
+                            allRows[i].getAttribute('data-weekday-header')) {
+                            nextHeaderIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // Hide all rows between this header and next header
+                    const rowsToHide = allRows.slice(headerIndex + 1, nextHeaderIndex);
+                    rowsToHide.forEach(row => {
+                        if (!row.classList.contains('section-header-row') && 
+                            !row.classList.contains('weekday-header-row')) {
+                            row.style.display = 'none';
+                        }
+                    });
+                    
+                    console.log(`[BREAKDOWN] Collapsed ${day} section (${rowsToHide.length} rows)`);
+                }
+                
+                // v12.6: Also collapse multi-day reference sections by default
+                const multiDayRows = tbody.querySelectorAll(`.multi-day-ref-${day}`);
+                if (multiDayRows.length > 0) {
+                    multiDayRows.forEach(row => row.style.display = 'none');
+                    console.log(`[BREAKDOWN] Collapsed multi-day refs for ${day} (${multiDayRows.length} rows)`);
+                }
+            });
+            
             console.log('[BREAKDOWN] === BREAKDOWN LIST BUILD COMPLETE ===');
         }
         
-        // v12.3: Create weekday header row with cyan background and multi-day notes
+        // v12.6: Create collapsible weekday header row with cyan background and multi-day notes
         function createWeekdayHeaderRow(weekday, dealCount, brands, headerNotes) {
             const row = document.createElement('tr');
             row.classList.add('weekday-header-row');
@@ -7134,10 +7230,14 @@ HTML_TEMPLATE = r"""
             }
             notesHtml += '</div>';
             
+            // v12.6: Add collapse/expand indicator
             row.innerHTML = `
-                <td colspan="14" style="padding:8px 10px; background:#00ffff;">
+                <td colspan="14" style="padding:8px 10px; background:#00ffff; cursor:pointer;" onclick="toggleWeekdaySection('${weekday}')">
                     <div style="display:flex; align-items:flex-start; gap:15px;">
-                        <strong style="font-size:1.4em; color:#003366; min-width:120px;">${weekday}</strong>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="weekday-toggle-${weekday}" style="font-size:1.2em; color:#003366;">▶</span>
+                            <strong style="font-size:1.4em; color:#003366; min-width:120px;">${weekday}</strong>
+                        </div>
                         <span style="color:#003366; font-size:0.9em; align-self:center;">${statusText}</span>
                         <div style="flex:1; min-width:200px;">
                             <strong style="color:#003366; font-size:0.85em;">Brands:</strong>
@@ -7152,6 +7252,68 @@ HTML_TEMPLATE = r"""
             `;
             
             return row;
+        }
+        
+        // v12.6: Toggle weekday section visibility
+        function toggleWeekdaySection(weekday) {
+            const tbody = document.querySelector('#match-results-unified-table tbody');
+            if (!tbody) return;
+            
+            // Find all rows for this weekday (until next weekday header or end)
+            const allRows = Array.from(tbody.querySelectorAll('tr'));
+            const headerIndex = allRows.findIndex(r => 
+                r.classList.contains('weekday-header-row') && 
+                r.getAttribute('data-weekday-header') === weekday
+            );
+            
+            if (headerIndex === -1) return;
+            
+            // Find next weekday header or end
+            let nextHeaderIndex = allRows.length;
+            for (let i = headerIndex + 1; i < allRows.length; i++) {
+                if (allRows[i].classList.contains('weekday-header-row') && 
+                    allRows[i].getAttribute('data-weekday-header')) {
+                    nextHeaderIndex = i;
+                    break;
+                }
+            }
+            
+            // Toggle all rows between this header and next header
+            const rowsToToggle = allRows.slice(headerIndex + 1, nextHeaderIndex);
+            const isCurrentlyVisible = rowsToToggle.length > 0 && rowsToToggle[0].style.display !== 'none';
+            const toggleIcon = document.getElementById(`weekday-toggle-${weekday}`);
+            
+            rowsToToggle.forEach(row => {
+                // Don't hide section headers or other weekday headers
+                if (!row.classList.contains('section-header-row') && 
+                    !row.classList.contains('weekday-header-row')) {
+                    row.style.display = isCurrentlyVisible ? 'none' : '';
+                }
+            });
+            
+            // Update toggle icon
+            if (toggleIcon) {
+                toggleIcon.textContent = isCurrentlyVisible ? '▶' : '▼';
+            }
+        }
+        
+        // v12.6: Toggle multi-day reference section visibility
+        function toggleMultiDayRefs(weekday) {
+            const tbody = document.querySelector('#match-results-unified-table tbody');
+            if (!tbody) return;
+            
+            const rows = tbody.querySelectorAll(`.multi-day-ref-${weekday}`);
+            const isCurrentlyVisible = rows.length > 0 && rows[0].style.display !== 'none';
+            const toggleIcon = document.getElementById(`multi-day-toggle-${weekday}`);
+            
+            rows.forEach(row => {
+                row.style.display = isCurrentlyVisible ? 'none' : '';
+            });
+            
+            // Update toggle icon
+            if (toggleIcon) {
+                toggleIcon.textContent = isCurrentlyVisible ? '▶' : '▼';
+            }
         }
         
         // v12.3: Toggle note dropdown visibility
@@ -7186,29 +7348,29 @@ HTML_TEMPLATE = r"""
             }
         });
         
-        // v12.4: Create multi-day reference row (yellow background with orange border)
+        // v12.6: Create multi-day reference row (PINK background with orange border)
         function createMultiDayReferenceRow(memberRow, firstWeekday) {
             const newRow = memberRow.cloneNode(true);
-            newRow.style.backgroundColor = '#fff9c4'; // Light yellow background
+            newRow.style.backgroundColor = '#ffe6f0'; // v12.6: PINK background instead of yellow
             newRow.classList.add('multi-day-reference-row');
             newRow.classList.remove('group-member-row'); // Remove group styling
             
-            // Update row button to yellow
+            // Update row button to pink/magenta theme
             const cells = newRow.getElementsByTagName('td');
             if (cells.length > 0) {
                 const rowBtn = cells[0].querySelector('button');
                 if (rowBtn) {
                     rowBtn.classList.remove('btn-outline-primary');
-                    rowBtn.classList.add('btn-warning');
-                    rowBtn.style.backgroundColor = '#ffc107';
-                    rowBtn.style.borderColor = '#ffc107';
-                    rowBtn.style.color = '#000';
+                    rowBtn.classList.add('btn-outline-danger');
+                    rowBtn.style.backgroundColor = '#ffe6f0';
+                    rowBtn.style.borderColor = '#ff69b4';
+                    rowBtn.style.color = '#c2185b';
                 }
             }
             
             // Update Notes column to show "First instance: Monday"
             if (cells.length >= 5) {
-                cells[4].innerHTML = `<span style="font-style:italic; color:#666;">First instance: ${firstWeekday}</span>`;
+                cells[4].innerHTML = `<span style="font-style:italic; color:#c2185b;">First instance: ${firstWeekday}</span>`;
             }
             
             return newRow;
@@ -9117,11 +9279,15 @@ HTML_TEMPLATE = r"""
                     existingIds.push(newMisId);
                     existingBrands.push(match.brand);
                     
+                    // v12.6 FIX: Preserve existing blaze_titles when updating MIS IDs
+                    const existingBlazeTitles = existingApproval.blaze_titles || [];
+                    
                     approvedMatches[match.google_row] = {
                         mis_ids: existingIds,
                         brands: existingBrands,
                         section: match.section || 'weekly',
-                        is_multi_brand: true
+                        is_multi_brand: true,
+                        blaze_titles: existingBlazeTitles  // ✅ PRESERVE blaze_titles
                     };
                     console.log(`[MULTI-BRAND] Row ${match.google_row}: Added ${match.brand} (${newMisId}). Total: ${existingIds.length} brands`);
                 } else {
@@ -9133,11 +9299,15 @@ HTML_TEMPLATE = r"""
                 }
             } else {
                 // First approval for this row or single-brand deal
+                // v12.6 FIX: Check if there are existing blaze_titles to preserve
+                const existingBlazeTitles = existingApproval?.blaze_titles || [];
+                
                 approvedMatches[match.google_row] = {
                     mis_ids: [newMisId],
                     brands: [match.brand],
                     section: match.section || 'weekly',
-                    is_multi_brand: match.is_multi_brand || false
+                    is_multi_brand: match.is_multi_brand || false,
+                    blaze_titles: existingBlazeTitles  // ✅ PRESERVE blaze_titles
                 };
             }
             
@@ -10614,10 +10784,12 @@ HTML_TEMPLATE = r"""
                     </div>
                 </div>
                 
-                <!-- Selection Queue -->
-                <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px; min-height: 60px;">
-                    <h6 style="margin: 0 0 8px 0; color: #856404;"><i class="bi bi-list-ol"></i> Selected Queue (drag to reorder)</h6>
-                    <div id="blaze-queue-container" style="display: flex; flex-wrap: wrap; gap: 5px; min-height: 30px;">
+                <!-- Selection Queue (v12.6: Scrollable with counter) -->
+                <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <h6 style="margin: 0 0 8px 0; color: #856404;">
+                        <i class="bi bi-list-ol"></i> Selected Queue (<span id="queue-counter">0</span> items) - drag to reorder
+                    </h6>
+                    <div id="blaze-queue-container" style="display: flex; flex-wrap: wrap; gap: 5px; min-height: 60px; max-height: 120px; overflow-y: auto;">
                         ${blazeModalData.selectedTitles.length === 0 ? '<span style="color: #999; font-style: italic;">No discounts selected</span>' : ''}
                     </div>
                 </div>
@@ -10660,25 +10832,29 @@ HTML_TEMPLATE = r"""
                     </div>
                 </div>
                 
-                <!-- Full Library -->
+                <!-- Full Library (v12.6: Collapsible) -->
                 <div style="margin-bottom: 15px;">
-                    <h6 style="color: #6c757d; border-bottom: 1px solid #6c757d; padding-bottom: 5px;">
+                    <h6 style="color: #6c757d; border-bottom: 1px solid #6c757d; padding-bottom: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px;" 
+                        onclick="toggleFullLibrary()">
+                        <span id="library-toggle-icon">▶</span>
                         <i class="bi bi-collection"></i> Full Library (${blazeModalData.allPromotions.length})
                     </h6>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-                        <input type="text" id="blaze-library-search" class="form-control form-control-sm" 
-                               placeholder="Search by name..." style="flex: 1;" oninput="filterBlazeLibrary()">
-                        <label style="font-size: 0.85em; margin: 0; white-space: nowrap;">Status:</label>
-                        <select id="blaze-library-status" class="form-select form-select-sm" style="width: auto;" onchange="filterBlazeLibrary()">
-                            <option value="All" selected>All</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
+                    <div id="full-library-content" style="display: none;">
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px; margin-top: 8px; align-items: center;">
+                            <input type="text" id="blaze-library-search" class="form-control form-control-sm" 
+                                   placeholder="Search by name..." style="flex: 1;" oninput="filterBlazeLibrary()">
+                            <label style="font-size: 0.85em; margin: 0; white-space: nowrap;">Status:</label>
+                            <select id="blaze-library-status" class="form-select form-select-sm" style="width: auto;" onchange="filterBlazeLibrary()">
+                                <option value="All" selected>All</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div id="blaze-library-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                            ${renderBlazePromoList(blazeModalData.allPromotions.slice(0, 50), 'library')}
+                        </div>
+                        ${blazeModalData.allPromotions.length > 50 ? '<small class="text-muted">Showing first 50. Use search to narrow results.</small>' : ''}
                     </div>
-                    <div id="blaze-library-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
-                        ${renderBlazePromoList(blazeModalData.allPromotions.slice(0, 50), 'library')}
-                    </div>
-                    ${blazeModalData.allPromotions.length > 50 ? '<small class="text-muted">Showing first 50. Use search to narrow results.</small>' : ''}
                 </div>
                 
                 <!-- Action Buttons -->
@@ -10723,8 +10899,37 @@ HTML_TEMPLATE = r"""
                 const name = (promo.Name || '').toLowerCase();
                 let score = 0;
                 let matchesFilter = true;
+                let hasBrandMatch = false;  // v12.6: Track if brand matches
                 
-                // Apply filter type
+                // v12.6 FIX: Check for brand match FIRST
+                // Check for brand word matches in title
+                brandWords.forEach(word => {
+                    if (name.includes(word)) {
+                        score += 30;
+                        hasBrandMatch = true;
+                    }
+                });
+                
+                // Exact brand name match
+                if (name.includes(brand)) {
+                    score += 50;
+                    hasBrandMatch = true;
+                }
+                
+                // Check alternate brands for exact match too
+                alternateBrands.forEach(alt => {
+                    if (name.includes(alt.toLowerCase())) {
+                        score += 50;
+                        hasBrandMatch = true;
+                    }
+                });
+                
+                // v12.6 FIX: If no brand match at all, return score 0 immediately
+                if (!hasBrandMatch) {
+                    return { promo, score: 0 };
+                }
+                
+                // Apply filter type (ONLY after confirming brand match)
                 if (filterType === 'BOGO') {
                     matchesFilter = name.includes('bogo');
                 } else if (filterType === 'B2G1') {
@@ -10732,30 +10937,11 @@ HTML_TEMPLATE = r"""
                 } else if (filterType === 'BULK') {
                     matchesFilter = bulkPatterns.some(pattern => pattern.test(promo.Name || ''));
                 }
-                // NONE = no additional filter
+                // NONE = no additional filter (but still requires brand match)
                 
                 if (!matchesFilter) {
                     return { promo, score: 0 };
                 }
-                
-                // Check for brand word matches in title
-                brandWords.forEach(word => {
-                    if (name.includes(word)) {
-                        score += 30;
-                    }
-                });
-                
-                // Exact brand name match
-                if (name.includes(brand)) {
-                    score += 50;
-                }
-                
-                // Check alternate brands for exact match too
-                alternateBrands.forEach(alt => {
-                    if (name.includes(alt.toLowerCase())) {
-                        score += 50;
-                    }
-                });
                 
                 // Active status bonus
                 if (promo.Status === 'Active') {
@@ -10841,6 +11027,12 @@ HTML_TEMPLATE = r"""
         function renderBlazeQueue() {
             const container = document.getElementById('blaze-queue-container');
             if (!container) return;
+            
+            // v12.6: Update counter
+            const counterSpan = document.getElementById('queue-counter');
+            if (counterSpan) {
+                counterSpan.textContent = blazeModalData.selectedTitles.length;
+            }
             
             if (blazeModalData.selectedTitles.length === 0) {
                 container.innerHTML = '<span style="color: #999; font-style: italic;">No discounts selected</span>';
@@ -11067,6 +11259,18 @@ HTML_TEMPLATE = r"""
             
             // Close modal
             document.getElementById('blaze-modal-overlay').remove();
+        }
+        
+        // v12.6: Toggle Full Library section visibility
+        function toggleFullLibrary() {
+            const content = document.getElementById('full-library-content');
+            const icon = document.getElementById('library-toggle-icon');
+            
+            if (!content || !icon) return;
+            
+            const isCurrentlyVisible = content.style.display !== 'none';
+            content.style.display = isCurrentlyVisible ? 'none' : 'block';
+            icon.textContent = isCurrentlyVisible ? '▶' : '▼';
         }
 
         function displayAuditResults(resultsObj) {
