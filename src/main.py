@@ -1,4 +1,31 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7.3
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.8 Phase 1
+# v12.8 CHANGELOG - PHASE 1 (MIS VALIDATION SYSTEM - REBATE TYPE):
+#   - NEW: MIS Creation Modal Validation System
+#     * Automatically monitors when MIS creation modal is open
+#     * CRITICAL validation: Rebate Type must not be "- Select -"
+#     * RED box with tooltip around Rebate Type field when invalid
+#     * Save button automatically hidden when validation fails
+#     * Clear error message explaining the issue
+#   - NEW: Force Show Save safety button
+#     * Floating button (top-left) to override validation if needed
+#     * Prevents soft-lock if validation glitches
+#     * Removes itself after use
+#   - NEW: Validation injection system
+#     * JavaScript injected after automation fills form
+#     * Monitors modal open/close state
+#     * Validates on 500ms interval (no performance impact)
+#     * Console logging for debugging
+#   - NEW: Manual validation endpoint (/api/mis/inject-validation)
+#     * Can be triggered independently for manual entries
+#     * Enables validation without running automation
+#   - IMPROVED: Prevents saving with blank Rebate Type
+#     * Applies to both automation AND manual entries
+#     * Visual feedback (RED box, tooltip, error message)
+#     * Non-intrusive (doesn't block field interaction)
+#   - PHASE 2 READY: Architecture supports full field validation
+#     * Current: Rebate Type only (critical error)
+#     * Future: All fields compared against Google Sheet
+#     * Future: ORANGE boxes for mismatches, dates validation
 # v12.7.3 CHANGELOG (SIMPLIFIED NAVIGATION):
 #   - FIXED: Removed unreliable button detection completely
 #   - ENHANCED: Direct navigation to creation URL
@@ -19847,6 +19874,289 @@ def api_mis_update_end_date():
 # ============================================
 # CREATE DEAL IN MIS (v12.3)
 # ============================================
+def inject_mis_validation(driver, expected_data=None):
+    """
+    v12.8 - Phase 1: Inject MIS validation JavaScript into the page.
+    
+    Monitors the MIS creation modal and validates:
+    - CRITICAL (RED): Rebate Type must not be "- Select -"
+    - Blocks Save button until errors are fixed
+    - Provides "Force Show Save" safety override
+    
+    Args:
+        driver: Selenium WebDriver instance
+        expected_data: Dict of expected values from Google Sheet (for Phase 2)
+    """
+    validation_js = """
+    (function() {
+        console.log('[MIS-VALIDATION] Phase 1 - Rebate Type Validator Starting...');
+        
+        // Prevent multiple injections
+        if (window.MIS_VALIDATOR_ACTIVE) {
+            console.log('[MIS-VALIDATION] Already active, skipping injection');
+            return;
+        }
+        window.MIS_VALIDATOR_ACTIVE = true;
+        
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const CONFIG = {
+            checkInterval: 500,  // Check every 500ms
+            modalSelector: '.modal-content',
+            rebateTypeId: 'daily_discount_type_id',
+            rebateTypeContainerId: 'select2-daily_discount_type_id-container',
+            saveButtonSelector: '.btn-submit',
+            modalTitleText: 'Add New Daily Discount'
+        };
+        
+        // ============================================
+        // STATE
+        // ============================================
+        let validationState = {
+            modalOpen: false,
+            rebateTypeValid: false,
+            saveButtonHidden: false,
+            originalSaveButton: null,
+            errorBox: null,
+            forceButton: null
+        };
+        
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function log(message, level = 'INFO') {
+            console.log(`[MIS-VALIDATION] [${level}] ${message}`);
+        }
+        
+        function isModalOpen() {
+            const modal = document.querySelector(CONFIG.modalSelector);
+            if (!modal) return false;
+            
+            const modalTitle = modal.querySelector('.modal-title');
+            if (!modalTitle) return false;
+            
+            return modalTitle.textContent.includes(CONFIG.modalTitleText);
+        }
+        
+        function getRebateTypeValue() {
+            const container = document.getElementById(CONFIG.rebateTypeContainerId);
+            if (!container) return null;
+            
+            const title = container.getAttribute('title');
+            return title;
+        }
+        
+        function isRebateTypeValid() {
+            const value = getRebateTypeValue();
+            // Valid if it's "Wholesale" or "Retail", invalid if "- Select -" or null
+            return value && value !== '- Select -';
+        }
+        
+        // ============================================
+        // VISUAL INDICATOR FUNCTIONS
+        // ============================================
+        function addRedBox(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            
+            // Find the Select2 container
+            const select2Container = field.nextElementSibling;
+            if (!select2Container || !select2Container.classList.contains('select2')) return;
+            
+            // Add red border
+            select2Container.style.border = '3px solid #dc3545';
+            select2Container.style.borderRadius = '4px';
+            select2Container.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+            
+            // Add tooltip
+            select2Container.setAttribute('title', '❌ Rebate Type is required! Must be Wholesale or Retail');
+            
+            log('Added RED box to Rebate Type field', 'WARN');
+        }
+        
+        function removeRedBox(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            
+            const select2Container = field.nextElementSibling;
+            if (!select2Container || !select2Container.classList.contains('select2')) return;
+            
+            // Remove styling
+            select2Container.style.border = '';
+            select2Container.style.borderRadius = '';
+            select2Container.style.boxShadow = '';
+            select2Container.removeAttribute('title');
+            
+            log('Removed RED box from Rebate Type field', 'SUCCESS');
+        }
+        
+        // ============================================
+        // SAVE BUTTON CONTROL
+        // ============================================
+        function hideSaveButton() {
+            if (validationState.saveButtonHidden) return;
+            
+            const saveBtn = document.querySelector(CONFIG.saveButtonSelector);
+            if (!saveBtn) {
+                log('Save button not found', 'ERROR');
+                return;
+            }
+            
+            // Store original button
+            validationState.originalSaveButton = saveBtn;
+            
+            // Hide save button
+            saveBtn.style.display = 'none';
+            
+            // Create error message box
+            const errorBox = document.createElement('div');
+            errorBox.id = 'mis-validation-error-box';
+            errorBox.style.cssText = `
+                background: #dc3545;
+                color: white;
+                padding: 10px 15px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+                font-weight: bold;
+                text-align: center;
+            `;
+            errorBox.innerHTML = `
+                ⚠️ VALIDATION ERROR - Cannot Save<br>
+                <small style="font-weight: normal;">• Rebate Type must be selected (Wholesale or Retail)</small>
+            `;
+            
+            // Insert error box before save button
+            saveBtn.parentNode.insertBefore(errorBox, saveBtn);
+            validationState.errorBox = errorBox;
+            
+            validationState.saveButtonHidden = true;
+            log('Save button hidden - Rebate Type validation failed', 'WARN');
+        }
+        
+        function showSaveButton() {
+            if (!validationState.saveButtonHidden) return;
+            
+            // Remove error box
+            if (validationState.errorBox) {
+                validationState.errorBox.remove();
+                validationState.errorBox = null;
+            }
+            
+            // Show save button
+            if (validationState.originalSaveButton) {
+                validationState.originalSaveButton.style.display = '';
+                log('Save button restored - Validation passed', 'SUCCESS');
+            }
+            
+            validationState.saveButtonHidden = false;
+        }
+        
+        // ============================================
+        // FORCE SHOW SAVE BUTTON (SAFETY OVERRIDE)
+        // ============================================
+        function createForceButton() {
+            if (validationState.forceButton) return;
+            
+            const forceBtn = document.createElement('button');
+            forceBtn.id = 'force-show-save-btn';
+            forceBtn.textContent = 'Force Show Save';
+            forceBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 99999;
+                background: #ffc107;
+                color: #000;
+                border: 2px solid #ff9800;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            `;
+            forceBtn.onclick = function() {
+                log('FORCE OVERRIDE: User clicked Force Show Save', 'WARN');
+                showSaveButton();
+                // Remove force button after use
+                forceBtn.remove();
+                validationState.forceButton = null;
+            };
+            
+            document.body.appendChild(forceBtn);
+            validationState.forceButton = forceBtn;
+            log('Force Show Save button created (safety override)', 'INFO');
+        }
+        
+        function removeForceButton() {
+            if (validationState.forceButton) {
+                validationState.forceButton.remove();
+                validationState.forceButton = null;
+            }
+        }
+        
+        // ============================================
+        // VALIDATION LOOP
+        // ============================================
+        function runValidation() {
+            const modalOpen = isModalOpen();
+            
+            // Modal state changed
+            if (modalOpen !== validationState.modalOpen) {
+                validationState.modalOpen = modalOpen;
+                
+                if (modalOpen) {
+                    log('Modal detected - Starting validation', 'INFO');
+                    createForceButton();
+                } else {
+                    log('Modal closed - Stopping validation', 'INFO');
+                    removeForceButton();
+                    validationState.saveButtonHidden = false;
+                }
+            }
+            
+            // Only validate when modal is open
+            if (!modalOpen) return;
+            
+            // Check Rebate Type
+            const rebateValid = isRebateTypeValid();
+            
+            if (rebateValid !== validationState.rebateTypeValid) {
+                validationState.rebateTypeValid = rebateValid;
+                
+                if (rebateValid) {
+                    log('Rebate Type is valid', 'SUCCESS');
+                    removeRedBox(CONFIG.rebateTypeId);
+                    showSaveButton();
+                } else {
+                    log('Rebate Type is INVALID', 'ERROR');
+                    addRedBox(CONFIG.rebateTypeId);
+                    hideSaveButton();
+                }
+            }
+        }
+        
+        // ============================================
+        // START MONITORING
+        // ============================================
+        log('Starting validation monitor (500ms interval)');
+        setInterval(runValidation, CONFIG.checkInterval);
+        
+        // Run immediately
+        runValidation();
+        
+        log('Phase 1 validation system active!');
+    })();
+    """
+    
+    try:
+        driver.execute_script(validation_js)
+        print("[MIS-VALIDATION] JavaScript injected successfully")
+    except Exception as e:
+        print(f"[MIS-VALIDATION] Error injecting JavaScript: {e}")
+        raise
+
+
 @app.route('/api/mis/create-deal', methods=['POST'])
 def api_mis_create_deal():
     """
@@ -20705,6 +21015,14 @@ def api_mis_create_deal():
         log("FORM FILL COMPLETE", "SUCCESS")
         log("=" * 60, "INFO")
         
+        # v12.8: Inject validation system after form fill
+        try:
+            inject_mis_validation(driver, sheet_data)
+            log("Validation system injected", "SUCCESS")
+        except Exception as e:
+            log(f"Warning: Could not inject validation: {e}", "WARN")
+            warnings.append('⚠️ Validation system not loaded')
+        
         return jsonify({
             'success': True,
             'message': 'Deal form filled. Please review and click Save.',
@@ -20780,6 +21098,35 @@ def parse_weight_exception(raw_row_data):
                     print(f"[WEIGHT PARSE] Found 'Only {weight}g' -> min={result['min_weight']}, max={result['max_weight']}")
     
     return result if result else None
+
+
+# v12.8: Standalone endpoint to inject validation (for manual entry monitoring)
+@app.route('/api/mis/inject-validation', methods=['POST'])
+def api_mis_inject_validation():
+    """
+    Inject MIS validation system into the current page.
+    Can be called independently to enable validation for manual entries.
+    """
+    try:
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized'})
+        
+        # Switch to MIS tab
+        for handle in driver.window_handles:
+            driver.switch_to.window(handle)
+            if "mymis.net" in driver.current_url or "mis" in driver.current_url.lower():
+                break
+        
+        inject_mis_validation(driver, expected_data=None)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Validation system injected. Modal monitoring active.'
+        })
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
 
 
 # ============================================
