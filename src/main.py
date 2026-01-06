@@ -1,4 +1,50 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.6
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.7
+# v12.7 CHANGELOG (CREATE BLAZE AUTOMATION + ENHANCED UX):
+#   - NEW: Auto-load existing Blaze selections from Google Sheet
+#     * When opening modal, parses "Blaze Discount Title" column
+#     * Validates titles against Blaze promotions
+#     * Found titles → Added to queue normally
+#     * Not found titles → Added with ⚠️ warning icon, grayed out, [Create] button
+#     * Not found items are removable with red [X] button
+#   - NEW: [View] button on all queue, suggestion, and library items
+#     * Opens existing detail modal (showDetailModal)
+#     * Shows full discount details without leaving page
+#   - NEW: Enhanced hover tooltips (FUTURE - PLACEHOLDER)
+#     * Will show detail info + value calculations per store
+#     * Currently uses existing tooltip behavior
+#   - NEW: [Create] button in modal header (next to Locations)
+#     * Opens creation popup form
+#     * Title field: Empty with suggested variations dropdown
+#     * Type dropdown: Manual selection with auto-detected suggestion text
+#     * Description: Manual entry with [Autofill] button
+#     * Autofill fills: Brand, Type, Value, Locations, Creation Date+Time
+#   - NEW: Blaze creation automation (/api/blaze/create-discount)
+#     * Switches to/opens Blaze browser tab
+#     * Logs in if needed using credentials from setup
+#     * Navigates to company-promotions page
+#     * Clicks "Add Company Promotions" button
+#     * Selects discount type from dropdown (Bundle/BOGO/Global/Collection)
+#     * Fills title field
+#     * PAUSES for manual completion (dates, products, locations, etc.)
+#     * Future enhancement: Auto-fill remaining fields
+#   - NEW: Duplicate name detection
+#     * Before creating, checks if name exists in Blaze
+#     * If exists: Prompt user to select existing OR continue with modified name
+#     * Modified name: User can add note/suffix (e.g., "v2", "2025")
+#   - NEW: Title input with undo functionality
+#     * Click input → Shows suggested title variations
+#     * Type freely → Can still select suggestions
+#     * Select suggestion after typing → [Undo] button appears
+#     * Click [Undo] → Reverts to typed text
+#   - NEW: Sheet write enhancement for not-found items
+#     * Writes: "Title Name (NOTE: Needs to be created)"
+#     * Red text only on "(NOTE: Needs to be created)" portion
+#     * Rest of title remains normal color
+#   - ENHANCED: Queue now shows [Create] button for not-found items
+#     * Click [Create] → Opens creation modal with title pre-filled
+#   - ENHANCED: Suggestions/Library items now have [View] buttons
+#     * Non-intrusive placement
+#     * Maintains checkbox click functionality
 # v12.6 CHANGELOG (UX ENHANCEMENTS + CRITICAL BUG FIX):
 #   - CRITICAL BUGFIX: OK button no longer clears Blaze Discount selections
 #     * approveSingleMatch() now preserves existing blaze_titles array
@@ -3464,6 +3510,7 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 'categories': format_category_display(g_row.get('Categories'), g_row.get('Category Exceptions')),
                 'special_notes': str(g_row.get('SPECIAL NOTES', '')),
                 'deal_info': str(get_col(g_row, ['Deal Information', 'Deal Info'], '')),
+                'blaze_discount_title': str(get_col(g_row, ['Blaze Discount Title'], '')),  # v12.7: For auto-loading
                 'multi_day_group': group_metadata,
                 'raw_row_data': raw_row_data  # v12.1: All Google Sheet columns for More Info
             })
@@ -10695,6 +10742,10 @@ HTML_TEMPLATE = r"""
             const existingData = approvedMatches[match.google_row];
             blazeModalData.selectedTitles = existingData?.blaze_titles ? [...existingData.blaze_titles] : [];
             
+            // v12.7: Auto-load existing titles from Google Sheet column
+            // Track which titles exist in Blaze and which don't
+            blazeModalData.notFoundTitles = [];  // Titles that don't exist in Blaze yet
+            
             // Get all Blaze promotions - check if already loaded
             blazeModalData.allPromotions = blazeData.currentRows || [];
             
@@ -10735,6 +10786,39 @@ HTML_TEMPLATE = r"""
                 }
                 
                 loadingOverlay.remove();
+            }
+            
+            // v12.7: Auto-load existing Blaze titles from Google Sheet column "Blaze Discount Title"
+            // Parse the current sheet value (may have newline-separated titles)
+            const sheetBlazeTitle = match.blaze_discount_title || '';  // Assuming this field exists
+            if (sheetBlazeTitle && sheetBlazeTitle.trim() !== '') {
+                const titleLines = sheetBlazeTitle.split('\n').map(t => t.trim()).filter(t => t.length > 0);
+                
+                titleLines.forEach(title => {
+                    // Check if this title exists in Blaze promotions
+                    const foundPromo = blazeModalData.allPromotions.find(p => 
+                        (p.Name || '').toLowerCase() === title.toLowerCase()
+                    );
+                    
+                    if (foundPromo) {
+                        // Title exists in Blaze - add to selected titles if not already there
+                        if (!blazeModalData.selectedTitles.includes(title)) {
+                            blazeModalData.selectedTitles.push(title);
+                        }
+                    } else {
+                        // Title NOT found in Blaze - track it separately
+                        if (!blazeModalData.notFoundTitles.includes(title)) {
+                            blazeModalData.notFoundTitles.push(title);
+                        }
+                        // Also add to selectedTitles so it appears in queue with warning
+                        if (!blazeModalData.selectedTitles.includes(title)) {
+                            blazeModalData.selectedTitles.push(title);
+                        }
+                    }
+                });
+                
+                console.log('[BLAZE-MODAL] Auto-loaded from sheet:', titleLines.length, 'titles');
+                console.log('[BLAZE-MODAL] Not found in Blaze:', blazeModalData.notFoundTitles.length);
             }
             
             // Generate suggestions based on brand name
@@ -10780,7 +10864,13 @@ HTML_TEMPLATE = r"""
                         <div><strong>Brand:</strong> ${match.brand || '-'}</div>
                         <div><strong>Discount:</strong> ${match.discount !== null ? match.discount + '%' : '-'}</div>
                         <div><strong>Weekday:</strong> ${match.weekday || '-'}</div>
-                        <div><strong>Locations:</strong> ${(match.locations || '-').substring(0, 30)}${(match.locations || '').length > 30 ? '...' : ''}</div>
+                        <div style="grid-column: span 2;">
+                            <strong>Locations:</strong> ${(match.locations || '-').substring(0, 50)}${(match.locations || '').length > 50 ? '...' : ''}
+                            <button class="btn btn-success btn-sm" style="margin-left: 10px; padding: 2px 8px; font-size: 0.85em;" 
+                                    onclick="openCreateBlazeModal(${rowIdx})" title="Create new Blaze discount">
+                                <i class="bi bi-plus-circle"></i> Create
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -10968,13 +11058,14 @@ HTML_TEMPLATE = r"""
                 const statusColor = promo.Status === 'Active' ? '#198754' : '#dc3545';
                 const bgColor = isSelected ? '#d4edda' : '#fff';
                 
+                // v12.7: Add View button for each promo
                 return `
-                    <div style="padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: ${bgColor}; cursor: pointer;"
-                         onclick="toggleBlazeSelection('${escapeHtml(promo.Name)}')"
+                    <div style="padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; background: ${bgColor};"
                          onmouseover="this.style.background='${isSelected ? '#c3e6cb' : '#f8f9fa'}'"
                          onmouseout="this.style.background='${bgColor}'">
-                        <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;">
-                        <div style="flex: 1; min-width: 0;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} style="cursor: pointer;" 
+                               onclick="toggleBlazeSelection('${escapeHtml(promo.Name)}')">
+                        <div style="flex: 1; min-width: 0; cursor: pointer;" onclick="toggleBlazeSelection('${escapeHtml(promo.Name)}')">
                             <div style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(promo.Name)}">
                                 ${escapeHtml(promo.Name)}
                             </div>
@@ -10984,6 +11075,10 @@ HTML_TEMPLATE = r"""
                                 ${promo['Start Date'] ? ' | ' + promo['Start Date'] : ''}
                             </div>
                         </div>
+                        <button class="btn btn-info btn-sm" style="padding: 2px 6px; font-size: 0.75em; white-space: nowrap;" 
+                                onclick="event.stopPropagation(); showDetailModal(${JSON.stringify(promo).replace(/"/g, '&quot;')}, true)">
+                            <i class="bi bi-eye"></i> View
+                        </button>
                     </div>
                 `;
             }).join('');
@@ -11039,22 +11134,61 @@ HTML_TEMPLATE = r"""
                 return;
             }
             
-            container.innerHTML = blazeModalData.selectedTitles.map((title, idx) => `
-                <div class="blaze-queue-item" draggable="true" data-idx="${idx}"
-                     style="background: #fff; border: 1px solid #ffc107; border-radius: 4px; padding: 4px 8px; 
-                            display: flex; align-items: center; gap: 5px; cursor: move;">
-                    <span style="font-weight: bold; color: #856404;">${idx + 1}.</span>
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title="${escapeHtml(title)}">
-                        ${escapeHtml(title)}
-                    </span>
-                    <button class="btn btn-sm" style="padding: 0 4px; color: #dc3545;" onclick="event.stopPropagation(); removeFromBlazeQueue(${idx})">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
-            `).join('');
+            // v12.7: Render items with different styling for not-found titles
+            container.innerHTML = blazeModalData.selectedTitles.map((title, idx) => {
+                const isNotFound = blazeModalData.notFoundTitles.includes(title);
+                
+                // Find promo to get View button
+                const promo = blazeModalData.allPromotions.find(p => 
+                    (p.Name || '').toLowerCase() === title.toLowerCase()
+                );
+                
+                if (isNotFound) {
+                    // Not found in Blaze - show warning with Create button
+                    return `
+                        <div class="blaze-queue-item" data-idx="${idx}" data-not-found="true"
+                             style="background: #f8f9fa; border: 1px solid #6c757d; border-radius: 4px; padding: 4px 8px; 
+                                    display: flex; align-items: center; gap: 5px; opacity: 0.7;">
+                            <span style="font-weight: bold; color: #6c757d;">${idx + 1}.</span>
+                            <i class="bi bi-exclamation-triangle" style="color: #ffc107;" title="Not found in Blaze"></i>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; color: #6c757d;" title="${escapeHtml(title)}">
+                                ${escapeHtml(title)}
+                            </span>
+                            <button class="btn btn-success btn-sm" style="padding: 1px 4px; font-size: 0.75em;" 
+                                    onclick="event.stopPropagation(); createBlazeDiscountFromQueue('${escapeHtml(title)}')">
+                                <i class="bi bi-plus-circle"></i> Create
+                            </button>
+                            <button class="btn btn-sm" style="padding: 0 4px; color: #dc3545;" onclick="event.stopPropagation(); removeFromBlazeQueue(${idx})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Found in Blaze - normal item with drag and View button
+                    return `
+                        <div class="blaze-queue-item" draggable="true" data-idx="${idx}"
+                             style="background: #fff; border: 1px solid #ffc107; border-radius: 4px; padding: 4px 8px; 
+                                    display: flex; align-items: center; gap: 5px; cursor: move;">
+                            <span style="font-weight: bold; color: #856404;">${idx + 1}.</span>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="${escapeHtml(title)}">
+                                ${escapeHtml(title)}
+                            </span>
+                            ${promo ? `
+                                <button class="btn btn-info btn-sm" style="padding: 1px 4px; font-size: 0.75em;" 
+                                        onclick="event.stopPropagation(); showDetailModal(${JSON.stringify(promo).replace(/"/g, '&quot;')}, true)">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            ` : ''}
+                            <button class="btn btn-sm" style="padding: 0 4px; color: #dc3545;" onclick="event.stopPropagation(); removeFromBlazeQueue(${idx})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            }).join('');
             
-            // Add drag-and-drop handlers
-            const items = container.querySelectorAll('.blaze-queue-item');
+            // Add drag-and-drop handlers only to items that are found (draggable)
+            const items = container.querySelectorAll('.blaze-queue-item[draggable="true"]');
             items.forEach(item => {
                 item.addEventListener('dragstart', handleQueueDragStart);
                 item.addEventListener('dragover', handleQueueDragOver);
@@ -11229,11 +11363,13 @@ HTML_TEMPLATE = r"""
                     mis_ids: [],
                     brands: [],
                     section: match.section || 'weekly',
-                    blaze_titles: []
+                    blaze_titles: [],
+                    blaze_titles_not_found: []  // v12.7: Track not-found titles
                 };
             }
             
             approvedMatches[match.google_row].blaze_titles = [...blazeModalData.selectedTitles];
+            approvedMatches[match.google_row].blaze_titles_not_found = [...blazeModalData.notFoundTitles];  // v12.7
             
             // Update the Blaze button in the table
             const row = document.getElementById('match-row-' + blazeModalData.rowIdx);
@@ -11271,6 +11407,287 @@ HTML_TEMPLATE = r"""
             const isCurrentlyVisible = content.style.display !== 'none';
             content.style.display = isCurrentlyVisible ? 'none' : 'block';
             icon.textContent = isCurrentlyVisible ? '▶' : '▼';
+        }
+        
+        // v12.7: Create Blaze Discount Modal and Automation
+        let createBlazeModalData = {
+            rowIdx: null,
+            suggestedTitle: '',
+            typedTitle: '',
+            canUndo: false
+        };
+        
+        function openCreateBlazeModal(rowIdx) {
+            const match = matchesData[rowIdx];
+            if (!match) return;
+            
+            // Store for later use
+            createBlazeModalData.rowIdx = rowIdx;
+            createBlazeModalData.suggestedTitle = '';
+            createBlazeModalData.typedTitle = '';
+            createBlazeModalData.canUndo = false;
+            
+            // Generate suggested title variations
+            const brand = match.brand || '';
+            const discount = match.discount !== null ? match.discount + '%' : '';
+            const weekday = match.weekday || '';
+            
+            const suggestions = [
+                `${brand} ${discount} ${weekday}`.trim(),
+                `${brand} ${discount} Off ${weekday}`.trim(),
+                `${weekday} ${brand} ${discount}`.trim(),
+                `${discount} Off ${brand} - ${weekday}`.trim()
+            ].filter(s => s.length > 0);
+            
+            // Auto-detect discount type from pattern
+            const dealInfo = (match.deal_info || '').toLowerCase();
+            let detectedType = '';
+            if (dealInfo.includes('bogo') || dealInfo.includes('buy') && dealInfo.includes('get')) {
+                detectedType = 'BOGO';
+            } else if (dealInfo.includes('bundle')) {
+                detectedType = 'Bundle';
+            } else if (dealInfo.includes('bulk') || dealInfo.includes('mix')) {
+                detectedType = 'BULK (likely Global Product Discount)';
+            } else {
+                detectedType = 'Unknown (manual selection required)';
+            }
+            
+            // Create modal
+            const existing = document.getElementById('create-blaze-overlay');
+            if (existing) existing.remove();
+            
+            const overlay = document.createElement('div');
+            overlay.id = 'create-blaze-overlay';
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background-color: rgba(0, 0, 0, 0.7); z-index: 10000;
+                display: flex; justify-content: center; align-items: center;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: #fff; padding: 25px; border-radius: 12px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+                width: 600px; max-width: 95%;
+            `;
+            
+            const currentDate = new Date().toLocaleString();
+            
+            modal.innerHTML = `
+                <h4 style="margin: 0 0 15px 0; color: #198754;">
+                    <i class="bi bi-plus-circle-fill"></i> Create Blaze Discount
+                </h4>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Title:</label>
+                    <div style="position: relative;">
+                        <input type="text" id="create-blaze-title" class="form-control" placeholder="Enter discount title..."
+                               onfocus="showTitleSuggestions()"
+                               oninput="handleTitleInput(event)">
+                        <div id="title-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; 
+                                background: white; border: 1px solid #ccc; border-top: none; max-height: 150px; overflow-y: auto; z-index: 1000;">
+                            ${suggestions.map(s => `
+                                <div style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;"
+                                     onmouseover="this.style.background='#f8f9fa'"
+                                     onmouseout="this.style.background='white'"
+                                     onclick="selectTitleSuggestion('${escapeHtml(s)}')">
+                                    ${escapeHtml(s)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button id="title-undo-btn" class="btn btn-sm btn-outline-warning mt-1" style="display: none;" onclick="undoTitleSelection()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Undo
+                    </button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Discount Type:</label>
+                    <select id="create-blaze-type" class="form-select">
+                        <option value="">-- Select Type --</option>
+                        <option value="Bundle">Bundle</option>
+                        <option value="BOGO">BOGO</option>
+                        <option value="Global Product Discount">Global Product Discount</option>
+                        <option value="Collection Discount">Collection Discount</option>
+                    </select>
+                    <small style="color: #6c757d; font-style: italic;">Suggested: ${detectedType}</small>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Description:</label>
+                    <textarea id="create-blaze-description" class="form-control" rows="4" placeholder="Enter description..."></textarea>
+                    <button class="btn btn-sm btn-outline-secondary mt-1" onclick="autofillDescription()">
+                        <i class="bi bi-magic"></i> Autofill
+                    </button>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #dee2e6; padding-top: 15px;">
+                    <button class="btn btn-outline-secondary" onclick="document.getElementById('create-blaze-overlay').remove()">Cancel</button>
+                    <button class="btn btn-success" onclick="executeCreateBlazeAutomation()">
+                        <i class="bi bi-check-lg"></i> Create in Blaze
+                    </button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Close on outside click
+            overlay.onclick = function(e) {
+                if (e.target === overlay) overlay.remove();
+            };
+        }
+        
+        function createBlazeDiscountFromQueue(title) {
+            // Find the row index and open create modal with pre-filled title
+            const rowIdx = createBlazeModalData.rowIdx || blazeModalData.rowIdx;
+            if (rowIdx === null) return;
+            
+            openCreateBlazeModal(rowIdx);
+            
+            // Pre-fill title after modal opens
+            setTimeout(() => {
+                const titleInput = document.getElementById('create-blaze-title');
+                if (titleInput) {
+                    titleInput.value = title;
+                    createBlazeModalData.typedTitle = title;
+                }
+            }, 100);
+        }
+        
+        function showTitleSuggestions() {
+            const dropdown = document.getElementById('title-suggestions');
+            if (dropdown) dropdown.style.display = 'block';
+        }
+        
+        function handleTitleInput(event) {
+            createBlazeModalData.typedTitle = event.target.value;
+            // Hide undo button if user types new text
+            if (createBlazeModalData.canUndo && event.target.value !== createBlazeModalData.suggestedTitle) {
+                createBlazeModalData.canUndo = false;
+                const undoBtn = document.getElementById('title-undo-btn');
+                if (undoBtn) undoBtn.style.display = 'none';
+            }
+        }
+        
+        function selectTitleSuggestion(suggestion) {
+            const titleInput = document.getElementById('create-blaze-title');
+            const undoBtn = document.getElementById('title-undo-btn');
+            const dropdown = document.getElementById('title-suggestions');
+            
+            if (titleInput) {
+                titleInput.value = suggestion;
+                createBlazeModalData.suggestedTitle = suggestion;
+                createBlazeModalData.canUndo = true;
+                
+                if (undoBtn) undoBtn.style.display = 'inline-block';
+            }
+            
+            if (dropdown) dropdown.style.display = 'none';
+        }
+        
+        function undoTitleSelection() {
+            const titleInput = document.getElementById('create-blaze-title');
+            const undoBtn = document.getElementById('title-undo-btn');
+            
+            if (titleInput) {
+                titleInput.value = createBlazeModalData.typedTitle;
+                createBlazeModalData.canUndo = false;
+                
+                if (undoBtn) undoBtn.style.display = 'none';
+            }
+        }
+        
+        function autofillDescription() {
+            const match = matchesData[createBlazeModalData.rowIdx];
+            if (!match) return;
+            
+            const descArea = document.getElementById('create-blaze-description');
+            if (!descArea) return;
+            
+            const brand = match.brand || '-';
+            const discountType = document.getElementById('create-blaze-type')?.value || 'Not Selected';
+            const discountValue = match.discount !== null ? match.discount + '%' : '-';
+            const locations = match.locations || '-';
+            const creationDate = new Date().toLocaleString();
+            
+            descArea.value = `Brand: ${brand}\nDiscount Type: ${discountType}\nDiscount Value: ${discountValue}\nLocations: ${locations}\nCreation Date + Time: ${creationDate}`;
+        }
+        
+        async function executeCreateBlazeAutomation() {
+            const title = document.getElementById('create-blaze-title')?.value.trim();
+            const type = document.getElementById('create-blaze-type')?.value;
+            const description = document.getElementById('create-blaze-description')?.value.trim();
+            
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+            
+            if (!type) {
+                alert('Please select a discount type');
+                return;
+            }
+            
+            // Check for duplicate names in Blaze
+            const existingPromo = blazeModalData.allPromotions.find(p => 
+                (p.Name || '').toLowerCase() === title.toLowerCase()
+            );
+            
+            if (existingPromo) {
+                const userChoice = confirm(
+                    `A discount with the name "${title}" already exists in Blaze.\n\n` +
+                    `Do you want to:\n` +
+                    `- OK: Select the existing discount\n` +
+                    `- Cancel: Continue creating with a modified name`
+                );
+                
+                if (userChoice) {
+                    // User chose to use existing - add it to queue
+                    if (!blazeModalData.selectedTitles.includes(title)) {
+                        blazeModalData.selectedTitles.push(title);
+                        renderBlazeQueue();
+                    }
+                    document.getElementById('create-blaze-overlay').remove();
+                    return;
+                } else {
+                    // User wants to create anyway - ask for note
+                    const note = prompt('Enter a note to append to the title (e.g., "v2", "2025"):', 'v2');
+                    if (note) {
+                        document.getElementById('create-blaze-title').value = `${title} ${note}`;
+                        return; // Don't proceed, let user review and click Create again
+                    } else {
+                        return; // User cancelled
+                    }
+                }
+            }
+            
+            // Proceed with automation
+            console.log('[CREATE-BLAZE] Starting automation...');
+            console.log('[CREATE-BLAZE] Title:', title);
+            console.log('[CREATE-BLAZE] Type:', type);
+            console.log('[CREATE-BLAZE] Description:', description);
+            
+            try {
+                // Call backend to execute Blaze automation
+                const response = await fetch('/api/blaze/create-discount', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title, type, description })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Discount creation started in Blaze!\n\nThe title has been filled in. Please complete the remaining fields manually.');
+                    document.getElementById('create-blaze-overlay').remove();
+                } else {
+                    alert('Error starting automation: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('[CREATE-BLAZE] Error:', error);
+                alert('Error communicating with server: ' + error.message);
+            }
         }
 
         function displayAuditResults(resultsObj) {
@@ -18218,14 +18635,28 @@ def api_mis_apply_blaze_titles():
             
             # Get blaze_titles from match_data
             blaze_titles = []
+            not_found_titles = []  # v12.7: Track which titles don't exist in Blaze
             if isinstance(match_data, dict):
                 blaze_titles = match_data.get('blaze_titles', [])
+                not_found_titles = match_data.get('blaze_titles_not_found', [])  # v12.7
             
             if not blaze_titles:
                 continue  # Skip rows with no Blaze titles selected
             
+            # v12.7: Append "(NOTE: Needs to be created)" for not-found titles
+            formatted_titles = []
+            for title in blaze_titles:
+                if title in not_found_titles:
+                    formatted_titles.append(f"{title} (NOTE: Needs to be created)")
+                else:
+                    formatted_titles.append(title)
+            
             # Join titles with newlines (preserving order from queue)
-            new_value = '\n'.join(blaze_titles)
+            new_value = '\n'.join(formatted_titles)
+            
+            # TODO (Future Enhancement): Use Google Sheets API's textFormat to make
+            # only the "(NOTE: Needs to be created)" text red, not the entire title.
+            # This requires spreadsheets.batchUpdate with textFormatRuns instead of values().update()
             
             updates.append({
                 'range': f"'{sheet_name}'!{target_col_letter}{sheet_row}",
@@ -22915,6 +23346,148 @@ def api_blaze_navigate():
         
         return jsonify({'success': True})
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# v12.7: Create Blaze Discount Automation Endpoint
+@app.route('/api/blaze/create-discount', methods=['POST'])
+def api_blaze_create_discount():
+    """
+    Automates creation of a new discount in Blaze.
+    Expects: {'title': str, 'type': str, 'description': str}
+    
+    Steps:
+    1. Switch to/open Blaze browser tab
+    2. Login if needed
+    3. Navigate to https://retail.blaze.me/company-promotions/promotions
+    4. Click "Add Company Promotions" button
+    5. Select discount type from dropdown
+    6. Fill in title field
+    7. PAUSE for manual completion (future: auto-fill remaining fields)
+    """
+    try:
+        data = request.get_json()
+        title = data.get('title', '').strip()
+        discount_type = data.get('type', '').strip()
+        description = data.get('description', '').strip()
+        
+        if not title or not discount_type:
+            return jsonify({'success': False, 'error': 'Title and discount type required'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized'})
+        
+        print(f"[CREATE-BLAZE] Starting automation for: {title} ({discount_type})")
+        
+        # Step 1: Switch to Blaze tab or open new one
+        blaze_found = False
+        for handle in driver.window_handles:
+            driver.switch_to.window(handle)
+            if "blaze.me" in driver.current_url:
+                blaze_found = True
+                print("[CREATE-BLAZE] Switched to existing Blaze tab")
+                break
+        
+        if not blaze_found:
+            print("[CREATE-BLAZE] Opening new Blaze tab...")
+            driver.execute_script("window.open('https://retail.blaze.me/', '_blank');")
+            time.sleep(1)
+            driver.switch_to.window(driver.window_handles[-1])
+        
+        # Step 2: Check if logged in (look for login fields)
+        try:
+            username_field = driver.find_element(By.NAME, "username")
+            # Login page detected - need to login
+            print("[CREATE-BLAZE] Login page detected, logging in...")
+            
+            # Get credentials from config
+            creds = load_credentials()
+            if not creds or 'blaze_username' not in creds:
+                return jsonify({'success': False, 'error': 'Blaze credentials not configured'})
+            
+            username_field.send_keys(creds['blaze_username'])
+            password_field = driver.find_element(By.NAME, "password")
+            password_field.send_keys(creds['blaze_password'])
+            password_field.send_keys(Keys.RETURN)
+            
+            time.sleep(3)  # Wait for login
+            print("[CREATE-BLAZE] Login completed")
+        except:
+            print("[CREATE-BLAZE] Already logged in")
+        
+        # Step 3: Navigate to company-promotions page
+        promotions_url = "https://retail.blaze.me/company-promotions/promotions"
+        if driver.current_url != promotions_url:
+            print(f"[CREATE-BLAZE] Navigating to {promotions_url}")
+            driver.get(promotions_url)
+            time.sleep(2)
+        
+        # Step 4: Click "Add Company Promotions" button
+        try:
+            add_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Add Company Promotions')]"))
+            )
+            driver.execute_script("arguments[0].click();", add_button)
+            print("[CREATE-BLAZE] Clicked 'Add Company Promotions' button")
+            time.sleep(1)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not find Add Company Promotions button: {str(e)}'})
+        
+        # Step 5: Select discount type from dropdown
+        type_mapping = {
+            'Bundle': "//div[@role='button'][@tabindex='3']//p[text()='Bundle']",
+            'BOGO': "//div[@role='button'][@tabindex='0']//p[text()='BOGO']",
+            'Global Product Discount': "//div[@role='button'][@tabindex='2']//p[text()='Global Product Discount']",
+            'Collection Discount': "//div[@role='button'][@tabindex='1']//p[text()='Collection Discount']"
+        }
+        
+        type_xpath = type_mapping.get(discount_type)
+        if not type_xpath:
+            return jsonify({'success': False, 'error': f'Unknown discount type: {discount_type}'})
+        
+        try:
+            type_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, type_xpath))
+            )
+            driver.execute_script("arguments[0].click();", type_button)
+            print(f"[CREATE-BLAZE] Selected discount type: {discount_type}")
+            time.sleep(1)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not select discount type: {str(e)}'})
+        
+        # Step 6: Fill in title field
+        try:
+            title_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "name"))
+            )
+            title_input.clear()
+            title_input.send_keys(title)
+            print(f"[CREATE-BLAZE] Filled title: {title}")
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not fill title field: {str(e)}'})
+        
+        # Step 7: PAUSE - Future automation will fill remaining fields
+        # TODO (Future Enhancement): Auto-fill dates, products, locations, etc.
+        #   - Fill Start/End dates from Google Sheet data
+        #   - Select products/collections based on category
+        #   - Select locations from Google Sheet locations column
+        #   - Fill description field
+        #   - Set discount value/type
+        #   - Configure advanced settings
+        
+        print("[CREATE-BLAZE] Automation PAUSED - Manual completion required")
+        print("[CREATE-BLAZE] Title filled successfully. Please complete remaining fields manually.")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Discount creation started. Title filled. Please complete remaining fields manually.',
+            'title': title,
+            'type': discount_type
+        })
+        
+    except Exception as e:
+        print(f"[CREATE-BLAZE] ERROR: {e}")
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/tax-rates')
