@@ -1,4 +1,4 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.11 COMPREHENSIVE BANNER
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.4 COMPLETE VALIDATION SYSTEM
 # v12.11 CHANGELOG (COMPREHENSIVE BANNER - SHOWS ALL ERRORS):
 #   - FIXED: Banner now shows ALL errors (critical AND advisory) in single list
 #     * Was: Banner only showed advisory warnings, ignored critical errors
@@ -20384,7 +20384,7 @@ def inject_mis_validation(driver, expected_data=None):
     
     validation_js = f"""
     (function() {{
-        console.log('[MIS-VALIDATION] v12.12.3 - Smart Validator Starting...');
+        console.log('[MIS-VALIDATION] v12.12.4 - Complete Validator Starting...');
         
         // Note: Re-injection check now handled in Python for better control
         if (window.MIS_VALIDATOR_ACTIVE) {{
@@ -20557,6 +20557,8 @@ def inject_mis_validation(driver, expected_data=None):
             // Clear expected data and switch to manual mode
             EXPECTED_DATA = null;
             VALIDATION_MODE = 'manual';
+            validationState.criticalErrors = {};
+            validationState.fieldWarnings = {};
             
             // Clear all validation state
             validationState.fieldWarnings = {{}};
@@ -20719,19 +20721,46 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
-            // Weekday (CASE-INSENSITIVE)
+            // Rebate Type VALUE comparison (Phase 2 ADVISORY)
+            if (EXPECTED_DATA.rebate_type) {{
+                const rebateSelect = document.getElementById('daily_discount_type_id');
+                if (rebateSelect && rebateSelect.value) {{
+                    const actual = rebateSelect.options[rebateSelect.selectedIndex]?.text || rebateSelect.value;
+                    const expected = EXPECTED_DATA.rebate_type;
+                    if (actual && actual !== expected) {{
+                        warnings.rebate_type = {{
+                            expected: expected,
+                            actual: actual,
+                            message: `Rebate Type: Expected "${{expected}}", found "${{actual}}"`
+                        }};
+                    }}
+                }}
+            }}
+            
+            // Weekday (ENHANCED with Extra/Missing detection)
             if (EXPECTED_DATA.weekday) {{
                 const actual = getWeekdayValues();
-                const expected = EXPECTED_DATA.weekday;
+                const expectedStr = EXPECTED_DATA.weekday;
+                const expected = expectedStr.split(',').map(d => d.trim()).filter(d => d);
                 
                 const actualLower = actual.map(d => d.toLowerCase());
-                const expectedLower = expected.toLowerCase();
+                const expectedLower = expected.map(d => d.toLowerCase());
                 
-                if (actual.length > 0 && !actualLower.includes(expectedLower)) {{
+                // Find extra and missing days
+                const extraDays = actual.filter(day => !expectedLower.includes(day.toLowerCase()));
+                const missingDays = expected.filter(day => !actualLower.includes(day.toLowerCase()));
+                
+                if (extraDays.length > 0 || missingDays.length > 0) {{
+                    let msg = `Weekday: Expected "${{expected.join(', ')}}", found "${{actual.join(', ')}}"`;
+                    const notes = [];
+                    if (extraDays.length > 0) notes.push('Extra: ' + extraDays.join(', '));
+                    if (missingDays.length > 0) notes.push('Missing: ' + missingDays.join(', '));
+                    if (notes.length > 0) msg += ' (' + notes.join(', ') + ')';
+                    
                     warnings.weekday = {{
-                        expected: expected,
+                        expected: expected.join(', '),
                         actual: actual.join(', '),
-                        message: `Weekday mismatch: Expected "${{expected}}", found "${{actual.join(', ')}}"`
+                        message: msg
                     }};
                 }}
             }}
