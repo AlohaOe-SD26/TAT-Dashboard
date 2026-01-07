@@ -21012,7 +21012,7 @@ def inject_mis_validation(driver, expected_data=None):
 @app.route('/api/mis/create-deal', methods=['POST'])
 def api_mis_create_deal():
     """
-    
+    Create a new deal in MIS based on Google Sheet data.
     
     Steps:
     1. Navigate to MIS daily-discount page
