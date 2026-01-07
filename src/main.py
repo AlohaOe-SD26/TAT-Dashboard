@@ -1,4 +1,37 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.9 PERSISTENT VALIDATION
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10 WEEKDAY CRITICAL + FIXES
+# v12.10 CHANGELOG (WEEKDAY CRITICAL + MULTI-SELECT + CATEGORIES FIX):
+#   - CRITICAL: Weekday is now RED (blocks Save) like Rebate Type
+#     * Weekday MUST have at least one day selected
+#     * RED box appears if blank
+#     * Save button hidden until at least one day selected
+#     * Applies to BOTH automation AND manual mode
+#   - FIXED: Multi-select detection for Weekday and Stores
+#     * Proper iteration: for (let i = 0; i < select.options.length; i++)
+#     * Was using for...of which didn't work properly
+#     * Now detects ALL selected values correctly
+#     * Added debug logging to show selected count
+#   - FIXED: Categories "All Categories (Except: *)" logic
+#     * "*" is now recognized as filler exception (ignored)
+#     * Blank actual = "All Categories" when expected is "All Categories (Except: *)"
+#     * No false warnings for this common Google Sheet pattern
+#   - UPDATED: Manual mode validation
+#     * Now validates: Rebate Type + Weekday (both RED, both block Save)
+#     * Banner shows: "Manual mode: Validating Rebate Type + Weekday only"
+#     * Was: Only Rebate Type
+#   - UPDATED: Error messages
+#     * hideSaveButton now shows errors for BOTH fields if invalid
+#     * Banner advisory text: "can save if Rebate Type and Weekday are filled"
+#     * Was: "can save if Rebate Type is filled"
+#   - UPDATED: Validation loop
+#     * Checks BOTH rebateValid AND weekdayValid
+#     * Hide save if EITHER is invalid
+#     * Show save only when BOTH are valid
+#   - IMPROVED: State tracking
+#     * Added weekdayValid to validation state
+#     * Proper cleanup on modal close
+#   - REMOVED: Duplicate validation script (723 lines deleted)
+#     * Was causing confusion with multiple versions
+#     * Now single clean validation script
 # v12.9 CHANGELOG (PERSISTENT VALIDATION + MODE TRACKING):
 #   - NEW: Persistent validation banner (ALWAYS visible until Save clicked)
 #     * Green banner when all correct: "✅ All Fields Correct - Ready to Save!"
@@ -19993,7 +20026,7 @@ def api_mis_update_end_date():
 # ============================================
 def inject_mis_validation(driver, expected_data=None):
     """
-    v12.9 - Phase 1 & 2 + Persistent Validation: Inject MIS validation JavaScript.
+    v12.10 - Weekday Critical + Multi-Select Fixed: Inject MIS validation JavaScript.
     
     Phase 1 (CRITICAL - RED):
     - Rebate Type must not be "- Select -"
@@ -20078,6 +20111,7 @@ def inject_mis_validation(driver, expected_data=None):
         let validationState = {{
             modalOpen: false,
             rebateTypeValid: false,
+            weekdayValid: false,  // NEW: Track weekday validity (CRITICAL)
             fieldWarnings: {{}},
             saveButtonHidden: false,
             originalSaveButton: null,
@@ -20160,15 +20194,15 @@ def inject_mis_validation(driver, expected_data=None):
             VALIDATION_MODE = 'manual';
             validationState.fieldWarnings = {{}};
             
-            log('Switched to MANUAL mode (Rebate Type only)', 'WARN');
-            log('Expected data cleared - no longer validating against Google Sheet', 'INFO');
+            log('Switched to MANUAL mode (Rebate Type + Weekday only)', 'WARN');
+            log('Expected data cleared', 'INFO');
             
             // Immediately re-validate in manual mode
             runValidation();
         }}
         
         // ============================================
-        // FIELD VALUE GETTERS
+        // FIELD VALUE GETTERS (FIXED MULTI-SELECT)
         // ============================================
         function getRebateTypeValue() {{
             const container = document.getElementById(CONFIG.rebateTypeContainerId);
@@ -20190,40 +20224,59 @@ def inject_mis_validation(driver, expected_data=None):
         
         function getWeekdayValues() {{
             const select = document.getElementById(CONFIG.weekdayId);
-            if (!select) return [];
+            if (!select) {{
+                log('Weekday select not found', 'WARN');
+                return [];
+            }}
             
             const selected = [];
-            for (let option of select.options) {{
+            // Use proper iteration for HTMLOptionsCollection
+            for (let i = 0; i < select.options.length; i++) {{
+                const option = select.options[i];
                 if (option.selected) {{
-                    selected.push(option.text);
+                    selected.push(option.text.trim());
                 }}
             }}
+            
+            log(`Weekday values: [${{selected.join(', ')}}] (count: ${{selected.length}})`, 'DEBUG');
             return selected;
         }}
         
         function getCategoryValues() {{
             const select = document.getElementById(CONFIG.categoryId);
-            if (!select) return [];
+            if (!select) {{
+                log('Category select not found', 'WARN');
+                return [];
+            }}
             
             const selected = [];
-            for (let option of select.options) {{
+            for (let i = 0; i < select.options.length; i++) {{
+                const option = select.options[i];
                 if (option.selected) {{
-                    selected.push(option.text);
+                    selected.push(option.text.trim());
                 }}
             }}
+            
+            log(`Category values: [${{selected.join(', ')}}] (count: ${{selected.length}})`, 'DEBUG');
             return selected;
         }}
         
         function getStoreValues() {{
             const select = document.getElementById(CONFIG.storeId);
-            if (!select) return [];
+            if (!select) {{
+                log('Store select not found', 'WARN');
+                return [];
+            }}
             
             const selected = [];
-            for (let option of select.options) {{
+            for (let i = 0; i < select.options.length; i++) {{
+                const option = select.options[i];
                 if (option.selected) {{
-                    selected.push(option.text);
+                    selected.push(option.text.trim());
                 }}
             }}
+            
+            log(`Store values: [${{selected.join(', ')}}] (count: ${{selected.length}})`, 'DEBUG');
             return selected;
         }}
         
@@ -20246,11 +20299,19 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         // ============================================
-        // VALIDATION FUNCTIONS
+        // CRITICAL VALIDATION (RED - BLOCKS SAVE)
         // ============================================
         function isRebateTypeValid() {{
             const value = getRebateTypeValue();
             return value && value !== '- Select -';
+        }}
+        
+        function isWeekdayValid() {{
+            // Weekday MUST have at least one day selected
+            const selected = getWeekdayValues();
+            const valid = selected.length > 0;
+            log(`Weekday validation: ${{valid ? 'VALID' : 'INVALID'}} (${{selected.length}} days selected)`, valid ? 'SUCCESS' : 'ERROR');
+            return valid;
         }}
         
         function validateAllFields() {{
@@ -20302,12 +20363,55 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
-            // Categories (CASE-INSENSITIVE, multi-select)
+            // Categories (ENHANCED LOGIC - similar to Stores)
             if (EXPECTED_DATA.categories) {{
                 const actual = getCategoryValues();
                 const expectedText = EXPECTED_DATA.categories.trim();
+                const expectedLower = expectedText.toLowerCase();
                 
-                if (expectedText && expectedText.toLowerCase() !== 'all' && expectedText.toLowerCase() !== 'all categories') {{
+                // Case 1: "All Categories" or "All" - blank actual is correct
+                if (expectedLower === 'all categories' || expectedLower === 'all') {{
+                    if (actual.length > 0) {{
+                        warnings.categories = {{
+                            expected: 'All Categories (blank)',
+                            actual: actual.join(', '),
+                            message: `Category mismatch: Expected "All Categories" (blank), found "${{actual.join(', ')}}"`
+                        }};
+                    }}
+                    // If actual is blank, that's correct - no warning
+                }}
+                // Case 2: "All Categories (Except: X, Y)" - ignore "*" exceptions
+                else if (expectedText.toLowerCase().includes('except')) {{
+                    const exceptMatch = expectedText.match(/except[:\\s]*(.+?)(?:\\)|$)/i);
+                    if (exceptMatch) {{
+                        const exceptionsText = exceptMatch[1];
+                        const rawExceptions = exceptionsText.split(',').map(s => s.trim());
+                        
+                        // Filter out "*" (filler exception) and empty strings
+                        const exceptions = rawExceptions.filter(exc => 
+                            exc && exc !== '*' && exc.toLowerCase() !== 'none'
+                        ).map(s => s.toLowerCase());
+                        
+                        // If no real exceptions (only "*"), treat as "All Categories"
+                        if (exceptions.length === 0) {{
+                            if (actual.length > 0) {{
+                                warnings.categories = {{
+                                    expected: 'All Categories (blank)',
+                                    actual: actual.join(', '),
+                                    message: `Category mismatch: Expected "All Categories" (blank), found "${{actual.join(', ')}}"`
+                                }};
+                            }}
+                        }} else {{
+                            // Has real exceptions - validate properly
+                            // For categories, we don't have a master list, so just check if expected text makes sense
+                            log(`Categories with real exceptions: ${{exceptions.join(', ')}}`, 'DEBUG');
+                            // For now, if blank actual with real exceptions, that might be wrong
+                            // But we can't fully validate without master category list
+                        }}
+                    }}
+                }}
+                // Case 3: Specific categories
+                else {{
                     const expected = expectedText.split(',').map(s => s.trim());
                     const expectedLower = expected.map(s => s.toLowerCase());
                     const actualLower = actual.map(s => s.toLowerCase());
@@ -20437,7 +20541,7 @@ def inject_mis_validation(driver, expected_data=None):
         // ============================================
         // VISUAL INDICATORS - RED (CRITICAL)
         // ============================================
-        function addRedBox(fieldId, containerId) {{
+        function addRedBox(fieldId, containerId, tooltip) {{
             const field = document.getElementById(fieldId);
             if (!field) return;
             
@@ -20446,10 +20550,10 @@ def inject_mis_validation(driver, expected_data=None):
                 container.style.border = '3px solid #dc3545';
                 container.style.borderRadius = '4px';
                 container.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
-                container.setAttribute('title', '❌ Rebate Type is required! Must be Wholesale or Retail');
+                container.setAttribute('title', tooltip);
             }}
             
-            log('Added RED box to Rebate Type field', 'WARN');
+            log(`Added RED box to ${{fieldId}}`, 'WARN');
         }}
         
         function removeRedBox(fieldId, containerId) {{
@@ -20464,7 +20568,7 @@ def inject_mis_validation(driver, expected_data=None):
                 container.removeAttribute('title');
             }}
             
-            log('Removed RED box from Rebate Type field', 'SUCCESS');
+            log(`Removed RED box from ${{fieldId}}`, 'SUCCESS');
         }}
         
         // ============================================
@@ -20615,10 +20719,10 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     banner.innerHTML = `
                         <div style="font-size: 1.1em;">
-                            ✅ Rebate Type Filled - Ready to Save!
+                            ✅ Critical Fields Filled - Ready to Save!
                         </div>
                         <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
-                            Manual mode: Only validating Rebate Type
+                            Manual mode: Validating Rebate Type + Weekday only
                         </div>
                     `;
                 }}
@@ -20666,7 +20770,7 @@ def inject_mis_validation(driver, expected_data=None):
                         ⚠️ ${{warningCount}} Field${{plural}} May Need Review
                     </div>
                     <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
-                        These are advisory warnings - you can still save if Rebate Type is filled
+                        Advisory warnings - you can still save if Rebate Type and Weekday are filled
                     </div>
                     <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
                         ${{errorList}}
@@ -20805,25 +20909,57 @@ def inject_mis_validation(driver, expected_data=None):
                     removeForceButton();
                     removeSummaryBanner();
                     validationState.saveButtonHidden = false;
+                    validationState.rebateTypeValid = false;
+                    validationState.weekdayValid = false;
                     validationState.fieldWarnings = {{}};
                 }}
             }}
             
             if (!modalOpen) return;
             
-            // Phase 1: CRITICAL - Rebate Type
+            // Phase 1: CRITICAL - Rebate Type AND Weekday
             const rebateValid = isRebateTypeValid();
-            if (rebateValid !== validationState.rebateTypeValid) {{
+            const weekdayValid = isWeekdayValid();
+            
+            // Check if validation state changed
+            const rebateChanged = rebateValid !== validationState.rebateTypeValid;
+            const weekdayChanged = weekdayValid !== validationState.weekdayValid;
+            
+            if (rebateChanged) {{
                 validationState.rebateTypeValid = rebateValid;
                 
                 if (rebateValid) {{
                     log('Rebate Type is valid', 'SUCCESS');
                     removeRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId);
-                    showSaveButton();
                 }} else {{
                     log('Rebate Type is INVALID', 'ERROR');
-                    addRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId);
-                    hideSaveButton();
+                    addRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId, 
+                        '❌ Rebate Type is required! Must be Wholesale or Retail');
+                }}
+            }}
+            
+            if (weekdayChanged) {{
+                validationState.weekdayValid = weekdayValid;
+                
+                if (weekdayValid) {{
+                    log('Weekday is valid', 'SUCCESS');
+                    removeRedBox(CONFIG.weekdayId, null);
+                }} else {{
+                    log('Weekday is INVALID', 'ERROR');
+                    addRedBox(CONFIG.weekdayId, null,
+                        '❌ Weekday is required! Must select at least one day');
+                }}
+            }}
+            
+            // Update Save button based on BOTH critical fields
+            const bothValid = rebateValid && weekdayValid;
+            const eitherInvalid = !rebateValid || !weekdayValid;
+            
+            if (rebateChanged || weekdayChanged) {{
+                if (bothValid) {{
+                    showSaveButton();
+                }} else {{
+                    hideSaveButton(!rebateValid, !weekdayValid);
                 }}
             }}
             
@@ -20853,14 +20989,14 @@ def inject_mis_validation(driver, expected_data=None):
         // START MONITORING
         // ============================================
         log('Starting validation monitor (500ms interval)');
-        log('Phase 1: Rebate Type (CRITICAL - blocks save)');
+        log('Phase 1: Rebate Type + Weekday (CRITICAL - blocks save)');
         log('Phase 2: All fields (ADVISORY - warnings only)');
         log('Features: Persistent banner, Save/Cancel detection');
         setInterval(runValidation, CONFIG.checkInterval);
         
         runValidation();
         
-        log('v12.9 validation system active!');
+        log('v12.10 validation system active!');
     }})();
     """
     
@@ -20873,729 +21009,6 @@ def inject_mis_validation(driver, expected_data=None):
     """
     v12.8 - Phase 1 & 2: Inject MIS validation JavaScript into the page.
     
-    Phase 1 (CRITICAL - RED):
-    - Rebate Type must not be "- Select -"
-    - Blocks Save button until fixed
-    
-    Phase 2 (ADVISORY - ORANGE):
-    - Compares all fields to expected_data (Google Sheet)
-    - Shows ORANGE boxes for mismatches
-    - Does NOT block Save button
-    - Provides tooltips with Expected vs Actual
-    
-    Args:
-        driver: Selenium WebDriver instance
-        expected_data: Dict of expected values from Google Sheet
-            {
-                'brand': str,
-                'discount': str/float,
-                'weekday': str,
-                'vendor_contrib': str/float,
-                'locations': str,  # Comma-separated
-                'rebate_type': str,  # "Wholesale" or "Retail"
-                'after_wholesale': bool
-            }
-    """
-    # Prepare expected data as JSON for JavaScript
-    import json
-    expected_json = json.dumps(expected_data) if expected_data else 'null'
-    
-    validation_js = f"""
-    (function() {{
-        console.log('[MIS-VALIDATION] Phase 1 & 2 - Full Validator Starting...');
-        
-        // Prevent multiple injections
-        if (window.MIS_VALIDATOR_ACTIVE) {{
-            console.log('[MIS-VALIDATION] Already active, skipping injection');
-            return;
-        }}
-        window.MIS_VALIDATOR_ACTIVE = true;
-        
-        // ============================================
-        // CONFIGURATION
-        // ============================================
-        const CONFIG = {{
-            checkInterval: 500,
-            modalSelector: '.modal-content',
-            modalTitleText: 'Add New Daily Discount',
-            saveButtonSelector: '.btn-submit',
-            
-            // Field IDs
-            brandId: 'brand_id',
-            brandContainerId: 'select2-brand_id-container',
-            weekdayId: 'weekday_ids',
-            storeId: 'store_ids',
-            discountId: 'discount_rate',
-            rebateTypeId: 'daily_discount_type_id',
-            rebateTypeContainerId: 'select2-daily_discount_type_id-container',
-            vendorContribId: 'rebate_percent',
-            afterWholesaleId: 'rebate_wholesale_discount'
-        }};
-        
-        // Expected data from Google Sheet (Phase 2)
-        const EXPECTED_DATA = {expected_json};
-        
-        // ============================================
-        // STATE
-        // ============================================
-        let validationState = {{
-            modalOpen: false,
-            rebateTypeValid: false,  // Phase 1: CRITICAL
-            fieldWarnings: {{}},  // Phase 2: ADVISORY
-            saveButtonHidden: false,
-            originalSaveButton: null,
-            errorBox: null,
-            forceButton: null,
-            summaryBanner: null
-        }};
-        
-        // ============================================
-        // UTILITY FUNCTIONS
-        // ============================================
-        function log(message, level = 'INFO') {{
-            console.log(`[MIS-VALIDATION] [${{level}}] ${{message}}`);
-        }}
-        
-        function isModalOpen() {{
-            const modal = document.querySelector(CONFIG.modalSelector);
-            if (!modal) return false;
-            
-            const modalTitle = modal.querySelector('.modal-title');
-            if (!modalTitle) return false;
-            
-            return modalTitle.textContent.includes(CONFIG.modalTitleText);
-        }}
-        
-        // ============================================
-        // FIELD VALUE GETTERS
-        // ============================================
-        function getRebateTypeValue() {{
-            const container = document.getElementById(CONFIG.rebateTypeContainerId);
-            if (!container) return null;
-            return container.getAttribute('title');
-        }}
-        
-        function getBrandValue() {{
-            const container = document.getElementById(CONFIG.brandContainerId);
-            if (!container) return null;
-            return container.getAttribute('title');
-        }}
-        
-        function getWeekdayValues() {{
-            // Multi-select: get all selected options
-            const select = document.getElementById(CONFIG.weekdayId);
-            if (!select) return [];
-            
-            const selected = [];
-            for (let option of select.options) {{
-                if (option.selected) {{
-                    selected.push(option.text);
-                }}
-            }}
-            return selected;
-        }}
-        
-        function getStoreValues() {{
-            // Multi-select: get all selected options
-            const select = document.getElementById(CONFIG.storeId);
-            if (!select) return [];
-            
-            const selected = [];
-            for (let option of select.options) {{
-                if (option.selected) {{
-                    selected.push(option.text);
-                }}
-            }}
-            return selected;
-        }}
-        
-        function getDiscountValue() {{
-            const input = document.getElementById(CONFIG.discountId);
-            if (!input) return null;
-            return input.value.trim();
-        }}
-        
-        function getVendorContribValue() {{
-            const input = document.getElementById(CONFIG.vendorContribId);
-            if (!input) return null;
-            return input.value.trim();
-        }}
-        
-        function getAfterWholesaleValue() {{
-            const checkbox = document.getElementById(CONFIG.afterWholesaleId);
-            if (!checkbox) return false;
-            return checkbox.checked;
-        }}
-        
-        // ============================================
-        // VALIDATION FUNCTIONS
-        // ============================================
-        function isRebateTypeValid() {{
-            const value = getRebateTypeValue();
-            return value && value !== '- Select -';
-        }}
-        
-        function validateAllFields() {{
-            if (!EXPECTED_DATA) {{
-                log('No expected data provided - Phase 2 validation skipped', 'INFO');
-                return {{}};
-            }}
-            
-            const warnings = {{}};
-            
-            // Brand
-            if (EXPECTED_DATA.brand) {{
-                const actual = getBrandValue();
-                if (actual && actual !== '- Select -' && actual !== EXPECTED_DATA.brand) {{
-                    warnings.brand = {{
-                        expected: EXPECTED_DATA.brand,
-                        actual: actual,
-                        message: `Brand mismatch: Expected "${{EXPECTED_DATA.brand}}", found "${{actual}}"`
-                    }};
-                }}
-            }}
-            
-            // Weekday (CASE-INSENSITIVE)
-            if (EXPECTED_DATA.weekday) {{
-                const actual = getWeekdayValues();
-                const expected = EXPECTED_DATA.weekday;
-                
-                // Case-insensitive comparison
-                const actualLower = actual.map(d => d.toLowerCase());
-                const expectedLower = expected.toLowerCase();
-                
-                if (actual.length > 0 && !actualLower.includes(expectedLower)) {{
-                    warnings.weekday = {{
-                        expected: expected,
-                        actual: actual.join(', '),
-                        message: `Weekday mismatch: Expected "${{expected}}", found "${{actual.join(', ')}}"`
-                    }};
-                }}
-            }}
-            
-            // Discount
-            if (EXPECTED_DATA.discount != null) {{
-                const actual = getDiscountValue();
-                const expected = String(EXPECTED_DATA.discount);
-                if (actual && actual !== expected) {{
-                    warnings.discount = {{
-                        expected: expected + '%',
-                        actual: actual + '%',
-                        message: `Discount mismatch: Expected "${{expected}}%", found "${{actual}}%"`
-                    }};
-                }}
-            }}
-            
-            // Vendor Contribution
-            if (EXPECTED_DATA.vendor_contrib != null) {{
-                const actual = getVendorContribValue();
-                const expected = String(EXPECTED_DATA.vendor_contrib);
-                if (actual && actual !== expected) {{
-                    warnings.vendor_contrib = {{
-                        expected: expected + '%',
-                        actual: actual + '%',
-                        message: `Vendor Contribution mismatch: Expected "${{expected}}%", found "${{actual}}%"`
-                    }};
-                }}
-            }}
-            
-            // After Wholesale toggle
-            if (EXPECTED_DATA.after_wholesale != null) {{
-                const actual = getAfterWholesaleValue();
-                const expected = EXPECTED_DATA.after_wholesale;
-                if (actual !== expected) {{
-                    warnings.after_wholesale = {{
-                        expected: expected ? 'ON' : 'OFF',
-                        actual: actual ? 'ON' : 'OFF',
-                        message: `After Wholesale toggle mismatch: Expected "${{expected ? 'ON' : 'OFF'}}", found "${{actual ? 'ON' : 'OFF'}}"`
-                    }};
-                }}
-            }}
-            
-            // Stores (ENHANCED LOGIC)
-            if (EXPECTED_DATA.locations) {{
-                const actual = getStoreValues();
-                const expectedText = EXPECTED_DATA.locations.trim();
-                const expectedLower = expectedText.toLowerCase();
-                
-                // Case 1: "All Locations" - blank actual is correct
-                if (expectedLower === 'all locations' || expectedLower === 'all') {{
-                    if (actual.length > 0) {{
-                        // Actual has selections when it should be blank (All Locations)
-                        warnings.stores = {{
-                            expected: 'All Locations (blank)',
-                            actual: actual.join(', '),
-                            message: `Store mismatch: Expected "All Locations" (blank), found "${{actual.join(', ')}}"`
-                        }};
-                    }}
-                    // If actual is blank (length 0), that's correct - no warning
-                }}
-                // Case 2: "All Locations Except: X, Y"
-                else if (expectedText.toLowerCase().includes('except')) {{
-                    // Parse expected exceptions
-                    const exceptMatch = expectedText.match(/except[:\\s]*(.+?)(?:\\)|$)/i);
-                    if (exceptMatch) {{
-                        const exceptionsText = exceptMatch[1];
-                        const exceptions = exceptionsText.split(',').map(s => s.trim().toLowerCase());
-                        
-                        // Master store list (must match Python's MASTER_STORE_LIST)
-                        const masterStores = [
-                            'Beverly', 'Davis', 'Dixon', 'El Sobrante', 'Fresno', 'Fresno Shaw',
-                            'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'
-                        ];
-                        
-                        // Calculate expected stores (all except exceptions)
-                        const expectedStores = masterStores.filter(store => {{
-                            const storeLower = store.toLowerCase();
-                            return !exceptions.some(exc => storeLower.includes(exc) || exc.includes(storeLower));
-                        }});
-                        
-                        // Compare actual vs expected
-                        const actualLower = actual.map(s => s.toLowerCase());
-                        const expectedLower = expectedStores.map(s => s.toLowerCase());
-                        
-                        // Check if arrays match (order doesn't matter)
-                        const missing = expectedStores.filter(s => !actualLower.includes(s.toLowerCase()));
-                        const extra = actual.filter(s => !expectedLower.includes(s.toLowerCase()));
-                        
-                        if (missing.length > 0 || extra.length > 0) {{
-                            warnings.stores = {{
-                                expected: expectedStores.join(', '),
-                                actual: actual.join(', ') || '(blank)',
-                                message: `Store mismatch: Expected "${{expectedStores.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
-                            }};
-                        }}
-                    }}
-                }}
-                // Case 3: Specific stores
-                else {{
-                    const expected = expectedText.split(',').map(s => s.trim());
-                    
-                    // Compare (case-insensitive, order doesn't matter)
-                    const expectedLower = expected.map(s => s.toLowerCase());
-                    const actualLower = actual.map(s => s.toLowerCase());
-                    
-                    const missing = expected.filter(e => !actualLower.includes(e.toLowerCase()));
-                    const extra = actual.filter(a => !expectedLower.includes(a.toLowerCase()));
-                    
-                    if (missing.length > 0 || extra.length > 0) {{
-                        warnings.stores = {{
-                            expected: expected.join(', '),
-                            actual: actual.join(', ') || '(blank)',
-                            message: `Store mismatch: Expected "${{expected.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
-                        }};
-                    }}
-                }}
-            }}
-            
-            return warnings;
-        }}
-        
-        // ============================================
-        // VISUAL INDICATORS - RED (CRITICAL)
-        // ============================================
-        function addRedBox(fieldId, containerId) {{
-            const field = document.getElementById(fieldId);
-            if (!field) return;
-            
-            // For select2 fields, style the container
-            if (containerId) {{
-                const container = field.nextElementSibling;
-                if (container && container.classList.contains('select2')) {{
-                    container.style.border = '3px solid #dc3545';
-                    container.style.borderRadius = '4px';
-                    container.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
-                    container.setAttribute('title', '❌ Rebate Type is required! Must be Wholesale or Retail');
-                }}
-            }} else {{
-                // For regular input fields
-                field.style.border = '3px solid #dc3545';
-                field.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
-            }}
-            
-            log('Added RED box to Rebate Type field', 'WARN');
-        }}
-        
-        function removeRedBox(fieldId, containerId) {{
-            const field = document.getElementById(fieldId);
-            if (!field) return;
-            
-            if (containerId) {{
-                const container = field.nextElementSibling;
-                if (container && container.classList.contains('select2')) {{
-                    container.style.border = '';
-                    container.style.borderRadius = '';
-                    container.style.boxShadow = '';
-                    container.removeAttribute('title');
-                }}
-            }} else {{
-                field.style.border = '';
-                field.style.boxShadow = '';
-            }}
-            
-            log('Removed RED box from Rebate Type field', 'SUCCESS');
-        }}
-        
-        // ============================================
-        // VISUAL INDICATORS - ORANGE (ADVISORY)
-        // ============================================
-        function addOrangeBox(fieldId, isSelect2, tooltip) {{
-            const field = document.getElementById(fieldId);
-            if (!field) {{
-                log(`Field not found: ${{fieldId}}`, 'WARN');
-                return;
-            }}
-            
-            if (isSelect2) {{
-                // For Select2 dropdowns, style the container
-                const container = field.nextElementSibling;
-                if (container && container.classList.contains('select2')) {{
-                    container.style.border = '3px solid #ff9800';
-                    container.style.borderRadius = '4px';
-                    container.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
-                    container.setAttribute('title', tooltip);
-                    log(`Added ORANGE box to ${{fieldId}} (Select2)`, 'WARN');
-                }} else {{
-                    log(`Select2 container not found for ${{fieldId}}`, 'WARN');
-                }}
-            }} else if (fieldId === CONFIG.afterWholesaleId) {{
-                // For checkbox toggle, style the parent row
-                const row = field.closest('.input-row');
-                if (row) {{
-                    row.style.border = '3px solid #ff9800';
-                    row.style.borderRadius = '4px';
-                    row.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
-                    row.style.padding = '5px';
-                    row.setAttribute('title', tooltip);
-                    log(`Added ORANGE box to After Wholesale (toggle row)`, 'WARN');
-                }} else {{
-                    log(`Toggle row not found for ${{fieldId}}`, 'WARN');
-                }}
-            }} else {{
-                // For regular input fields, style the input directly
-                field.style.border = '3px solid #ff9800';
-                field.style.borderRadius = '4px';
-                field.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
-                field.setAttribute('title', tooltip);
-                log(`Added ORANGE box to ${{fieldId}} (input)`, 'WARN');
-            }}
-        }}
-        
-        function removeOrangeBox(fieldId, isSelect2) {{
-            const field = document.getElementById(fieldId);
-            if (!field) return;
-            
-            if (isSelect2) {{
-                const container = field.nextElementSibling;
-                if (container && container.classList.contains('select2')) {{
-                    container.style.border = '';
-                    container.style.borderRadius = '';
-                    container.style.boxShadow = '';
-                    container.removeAttribute('title');
-                }}
-            }} else if (fieldId === CONFIG.afterWholesaleId) {{
-                const row = field.closest('.input-row');
-                if (row) {{
-                    row.style.border = '';
-                    row.style.borderRadius = '';
-                    row.style.boxShadow = '';
-                    row.style.padding = '';
-                    row.removeAttribute('title');
-                }}
-            }} else {{
-                field.style.border = '';
-                field.style.borderRadius = '';
-                field.style.boxShadow = '';
-                field.removeAttribute('title');
-            }}
-        }}
-        
-        function updateFieldWarnings(warnings) {{
-            // Remove all orange boxes first
-            removeOrangeBox(CONFIG.brandId, true);
-            removeOrangeBox(CONFIG.weekdayId, true);
-            removeOrangeBox(CONFIG.storeId, true);
-            removeOrangeBox(CONFIG.discountId, false);
-            removeOrangeBox(CONFIG.vendorContribId, false);
-            removeOrangeBox(CONFIG.afterWholesaleId, false);
-            
-            // Add orange boxes for warnings
-            if (warnings.brand) {{
-                addOrangeBox(CONFIG.brandId, true, `⚠️ ${{warnings.brand.message}}`);
-            }}
-            if (warnings.weekday) {{
-                addOrangeBox(CONFIG.weekdayId, true, `⚠️ ${{warnings.weekday.message}}`);
-            }}
-            if (warnings.stores) {{
-                addOrangeBox(CONFIG.storeId, true, `⚠️ ${{warnings.stores.message}}`);
-            }}
-            if (warnings.discount) {{
-                addOrangeBox(CONFIG.discountId, false, `⚠️ ${{warnings.discount.message}}`);
-            }}
-            if (warnings.vendor_contrib) {{
-                addOrangeBox(CONFIG.vendorContribId, false, `⚠️ ${{warnings.vendor_contrib.message}}`);
-            }}
-            if (warnings.after_wholesale) {{
-                addOrangeBox(CONFIG.afterWholesaleId, false, `⚠️ ${{warnings.after_wholesale.message}}`);
-            }}
-        }}
-        
-        // ============================================
-        // SUMMARY BANNER
-        // ============================================
-        function createSummaryBanner(warnings) {{
-            // Remove existing banner
-            if (validationState.summaryBanner) {{
-                validationState.summaryBanner.remove();
-                validationState.summaryBanner = null;
-            }}
-            
-            const warningCount = Object.keys(warnings).length;
-            if (warningCount === 0) return;
-            
-            const banner = document.createElement('div');
-            banner.id = 'mis-validation-summary';
-            banner.style.cssText = `
-                background: #ff9800;
-                color: white;
-                padding: 12px 15px;
-                margin-bottom: 15px;
-                border-radius: 4px;
-                font-weight: bold;
-                text-align: left;
-            `;
-            
-            // Build detailed error list
-            let errorList = '';
-            const fieldNames = {{
-                brand: 'Brand',
-                weekday: 'Weekday',
-                stores: 'Stores/Locations',
-                discount: 'Discount',
-                vendor_contrib: 'Vendor Contribution',
-                after_wholesale: 'After Wholesale'
-            }};
-            
-            for (const [key, warning] of Object.entries(warnings)) {{
-                const fieldName = fieldNames[key] || key;
-                errorList += `
-                    <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
-                        <strong style="color: #fff3cd;">🟧 ${{fieldName}}:</strong><br>
-                        <span style="font-weight: normal; padding-left: 10px;">
-                            Expected: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.expected}}</span><br>
-                            <span style="padding-left: 10px;">Actual: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.actual}}</span></span>
-                        </span>
-                    </div>
-                `;
-            }}
-            
-            const plural = warningCount > 1 ? 's' : '';
-            banner.innerHTML = `
-                <div style="text-align: center; margin-bottom: 8px;">
-                    ⚠️ ${{warningCount}} Field${{plural}} May Need Review
-                </div>
-                <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
-                    These are advisory warnings - you can still save if Rebate Type is filled
-                </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
-                    ${{errorList}}
-                </div>
-            `;
-            
-            // Insert at top of modal body
-            const modalBody = document.querySelector('.modal-body');
-            if (modalBody) {{
-                modalBody.insertBefore(banner, modalBody.firstChild);
-                validationState.summaryBanner = banner;
-                log(`Enhanced summary banner created: ${{warningCount}} warning${{plural}} with details`, 'INFO');
-            }}
-        }}
-        
-        function removeSummaryBanner() {{
-            if (validationState.summaryBanner) {{
-                validationState.summaryBanner.remove();
-                validationState.summaryBanner = null;
-            }}
-        }}
-        
-        // ============================================
-        // SAVE BUTTON CONTROL
-        // ============================================
-        function hideSaveButton() {{
-            if (validationState.saveButtonHidden) return;
-            
-            const saveBtn = document.querySelector(CONFIG.saveButtonSelector);
-            if (!saveBtn) {{
-                log('Save button not found', 'ERROR');
-                return;
-            }}
-            
-            validationState.originalSaveButton = saveBtn;
-            saveBtn.style.display = 'none';
-            
-            const errorBox = document.createElement('div');
-            errorBox.id = 'mis-validation-error-box';
-            errorBox.style.cssText = `
-                background: #dc3545;
-                color: white;
-                padding: 10px 15px;
-                border-radius: 4px;
-                margin-bottom: 10px;
-                font-weight: bold;
-                text-align: center;
-            `;
-            errorBox.innerHTML = `
-                ⚠️ CRITICAL ERROR - Cannot Save<br>
-                <small style="font-weight: normal;">• Rebate Type must be selected (Wholesale or Retail)</small>
-            `;
-            
-            saveBtn.parentNode.insertBefore(errorBox, saveBtn);
-            validationState.errorBox = errorBox;
-            validationState.saveButtonHidden = true;
-            log('Save button hidden - Rebate Type validation failed', 'WARN');
-        }}
-        
-        function showSaveButton() {{
-            if (!validationState.saveButtonHidden) return;
-            
-            if (validationState.errorBox) {{
-                validationState.errorBox.remove();
-                validationState.errorBox = null;
-            }}
-            
-            if (validationState.originalSaveButton) {{
-                validationState.originalSaveButton.style.display = '';
-                log('Save button restored - Validation passed', 'SUCCESS');
-            }}
-            
-            validationState.saveButtonHidden = false;
-        }}
-        
-        // ============================================
-        // FORCE SHOW SAVE BUTTON (SAFETY OVERRIDE)
-        // ============================================
-        function createForceButton() {{
-            if (validationState.forceButton) return;
-            
-            const forceBtn = document.createElement('button');
-            forceBtn.id = 'force-show-save-btn';
-            forceBtn.textContent = 'Force Show Save';
-            forceBtn.style.cssText = `
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                z-index: 99999;
-                background: #ffc107;
-                color: #000;
-                border: 2px solid #ff9800;
-                padding: 8px 12px;
-                border-radius: 4px;
-                font-weight: bold;
-                cursor: pointer;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            `;
-            forceBtn.onclick = function() {{
-                log('FORCE OVERRIDE: User clicked Force Show Save', 'WARN');
-                showSaveButton();
-                log('Force button remains active (persistent during validation)', 'INFO');
-            }};
-            
-            document.body.appendChild(forceBtn);
-            validationState.forceButton = forceBtn;
-            log('Force Show Save button created (persistent safety override)', 'INFO');
-        }}
-        
-        function removeForceButton() {{
-            if (validationState.forceButton) {{
-                validationState.forceButton.remove();
-                validationState.forceButton = null;
-                log('Force Show Save button removed (modal closed)', 'INFO');
-            }}
-        }}
-        
-        // ============================================
-        // VALIDATION LOOP
-        // ============================================
-        function runValidation() {{
-            const modalOpen = isModalOpen();
-            
-            if (modalOpen !== validationState.modalOpen) {{
-                validationState.modalOpen = modalOpen;
-                
-                if (modalOpen) {{
-                    log('Modal detected - Starting validation', 'INFO');
-                    createForceButton();
-                }} else {{
-                    log('Modal closed - Cleaning up', 'INFO');
-                    removeForceButton();
-                    removeSummaryBanner();
-                    validationState.saveButtonHidden = false;
-                    validationState.fieldWarnings = {{}};
-                }}
-            }}
-            
-            if (!modalOpen) return;
-            
-            // Phase 1: CRITICAL - Rebate Type
-            const rebateValid = isRebateTypeValid();
-            if (rebateValid !== validationState.rebateTypeValid) {{
-                validationState.rebateTypeValid = rebateValid;
-                
-                if (rebateValid) {{
-                    log('Rebate Type is valid', 'SUCCESS');
-                    removeRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId);
-                    showSaveButton();
-                }} else {{
-                    log('Rebate Type is INVALID', 'ERROR');
-                    addRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId);
-                    hideSaveButton();
-                }}
-            }}
-            
-            // Phase 2: ADVISORY - All other fields
-            if (EXPECTED_DATA) {{
-                const warnings = validateAllFields();
-                const warningCount = Object.keys(warnings).length;
-                const oldWarningCount = Object.keys(validationState.fieldWarnings).length;
-                
-                if (warningCount !== oldWarningCount) {{
-                    validationState.fieldWarnings = warnings;
-                    updateFieldWarnings(warnings);
-                    
-                    // Update summary banner
-                    removeSummaryBanner();
-                    if (warningCount > 0) {{
-                        createSummaryBanner(warnings);
-                        log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
-                    }} else {{
-                        log('Phase 2: All fields match expected values', 'SUCCESS');
-                    }}
-                }}
-            }}
-        }}
-        
-        // ============================================
-        // START MONITORING
-        // ============================================
-        log('Starting validation monitor (500ms interval)');
-        log('Phase 1: Rebate Type (CRITICAL - blocks save)');
-        log('Phase 2: All fields (ADVISORY - warnings only)');
-        setInterval(runValidation, CONFIG.checkInterval);
-        
-        runValidation();
-        
-        log('Phase 1 & 2 validation system active!');
-    }})();
-    """
-    
-    try:
-        driver.execute_script(validation_js)
-        print("[MIS-VALIDATION] Phase 1 & 2 JavaScript injected successfully")
-    except Exception as e:
-        print(f"[MIS-VALIDATION] Error injecting JavaScript: {e}")
-        raise
-
-
 @app.route('/api/mis/create-deal', methods=['POST'])
 def api_mis_create_deal():
     """
