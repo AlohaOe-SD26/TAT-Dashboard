@@ -21002,13 +21002,12 @@ def inject_mis_validation(driver, expected_data=None):
     
     try:
         driver.execute_script(validation_js)
-        print("[MIS-VALIDATION] v12.9 JavaScript injected successfully")
+        print("[MIS-VALIDATION] v12.10 JavaScript injected successfully")
     except Exception as e:
         print(f"[MIS-VALIDATION] Error injecting JavaScript: {e}")
         raise
-    """
-    v12.8 - Phase 1 & 2: Inject MIS validation JavaScript into the page.
-    
+
+
 @app.route('/api/mis/create-deal', methods=['POST'])
 def api_mis_create_deal():
     """
