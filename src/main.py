@@ -1,5 +1,20 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10 WEEKDAY CRITICAL + FIXES
-# v12.10 CHANGELOG (WEEKDAY CRITICAL + MULTI-SELECT + CATEGORIES FIX):
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10.2 BANNER UPDATE FIX
+# v12.10.2 CHANGELOG (BANNER UPDATE FIX):
+#   - FIXED: Banner now updates dynamically as fields change
+#     * Was: Only updated when warning COUNT changed (0→1, 1→2)
+#     * Now: Updates when ANY warning CONTENT changes
+#     * Uses deep comparison: JSON.stringify(warnings) vs old warnings
+#     * Catches: Count changes, field changes, value changes
+#   - IMPROVED: Banner update detection
+#     * Before: if (warningCount !== oldWarningCount || warningCount === 0)
+#     * After: if (JSON.stringify(warnings) !== JSON.stringify(oldWarnings))
+#     * No more "stuck banner" after automation
+#   - Examples now working:
+#     * Change Brand: Stiiizy → Jeeter → Banner updates ✅
+#     * Fix Brand, break Discount (1→1 warnings) → Banner updates ✅
+#     * Change Discount: 20% → 25% → Banner updates ✅
+#     * All correct → Change anything → Banner updates immediately ✅
+# v12.10.1 CHANGELOG (SYNTAX FIX):
 #   - CRITICAL: Weekday is now RED (blocks Save) like Rebate Type
 #     * Weekday MUST have at least one day selected
 #     * RED box appears if blank
@@ -20026,7 +20041,7 @@ def api_mis_update_end_date():
 # ============================================
 def inject_mis_validation(driver, expected_data=None):
     """
-    v12.10 - Weekday Critical + Multi-Select Fixed: Inject MIS validation JavaScript.
+    v12.10.2 - Banner Update Fixed: Inject MIS validation JavaScript.
     
     Phase 1 (CRITICAL - RED):
     - Rebate Type must not be "- Select -"
@@ -20965,18 +20980,21 @@ def inject_mis_validation(driver, expected_data=None):
             
             // Phase 2: ADVISORY - All other fields (only in automation mode)
             const warnings = validateAllFields();
-            const warningCount = Object.keys(warnings).length;
-            const oldWarningCount = Object.keys(validationState.fieldWarnings).length;
             
-            // Always update banner (even when 0 warnings - shows green)
-            if (warningCount !== oldWarningCount || warningCount === 0) {{
+            // Deep compare: Check if ANY warning changed (not just count)
+            const currentWarningsJson = JSON.stringify(warnings);
+            const oldWarningsJson = JSON.stringify(validationState.fieldWarnings);
+            const warningsChanged = currentWarningsJson !== oldWarningsJson;
+            
+            if (warningsChanged) {{
                 validationState.fieldWarnings = warnings;
                 updateFieldWarnings(warnings);
                 
-                // ALWAYS show banner (persistent)
+                // ALWAYS update banner when warnings change
                 removeSummaryBanner();
                 createSummaryBanner(warnings);
                 
+                const warningCount = Object.keys(warnings).length;
                 if (warningCount > 0) {{
                     log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
                 }} else {{
@@ -20996,7 +21014,7 @@ def inject_mis_validation(driver, expected_data=None):
         
         runValidation();
         
-        log('v12.10 validation system active!');
+        log('v12.10.2 validation system active!');
     }})();
     """
     
