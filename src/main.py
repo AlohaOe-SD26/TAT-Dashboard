@@ -1,4 +1,24 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.8 Phase 2 COMPLETE
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.8.2
+# v12.8.2 CHANGELOG (ORANGE BOX FIX + ENHANCED SUMMARY):
+#   - FIXED: ORANGE boxes now properly visible on all field types
+#     * Select2 dropdowns (Brand, Weekday, Stores): 3px solid orange border
+#     * Input fields (Discount, Vendor Contrib): 3px solid orange border + glow
+#     * Toggle (After Wholesale): Orange border on entire row
+#     * Increased border width from 2px to 3px for better visibility
+#     * Enhanced shadow/glow effect for prominence
+#   - ENHANCED: Summary banner now shows detailed error breakdown
+#     * Lists each field with Expected vs Actual values
+#     * Color-coded boxes for expected/actual values
+#     * Clear field names: Brand, Weekday, Stores, Discount, etc.
+#     * Example: "Brand: Expected [Stiiizy], Actual [Jeeter]"
+#     * Makes it easy to see what needs correction at a glance
+#   - IMPROVED: Better logging for debugging
+#     * Logs when ORANGE boxes are added/removed
+#     * Logs field IDs and types
+#     * Helps diagnose styling issues
+#   - IMPROVED: Tooltip positioning and styling
+#     * Works on all field types correctly
+#     * Clear error messages with context
 # v12.8 PHASE 2 CHANGELOG (FULL FIELD VALIDATION):
 #   - NEW: Full field validation against Google Sheet data
 #     * Compares ALL fields to expected values from automation
@@ -20216,30 +20236,53 @@ def inject_mis_validation(driver, expected_data=None):
         // ============================================
         // VISUAL INDICATORS - ORANGE (ADVISORY)
         // ============================================
-        function addOrangeBox(fieldId, containerId, tooltip) {{
+        function addOrangeBox(fieldId, isSelect2, tooltip) {{
             const field = document.getElementById(fieldId);
-            if (!field) return;
+            if (!field) {{
+                log(`Field not found: ${{fieldId}}`, 'WARN');
+                return;
+            }}
             
-            if (containerId) {{
+            if (isSelect2) {{
+                // For Select2 dropdowns, style the container
                 const container = field.nextElementSibling;
                 if (container && container.classList.contains('select2')) {{
-                    container.style.border = '2px solid #ff9800';
+                    container.style.border = '3px solid #ff9800';
                     container.style.borderRadius = '4px';
-                    container.style.boxShadow = '0 0 8px rgba(255, 152, 0, 0.4)';
+                    container.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
                     container.setAttribute('title', tooltip);
+                    log(`Added ORANGE box to ${{fieldId}} (Select2)`, 'WARN');
+                }} else {{
+                    log(`Select2 container not found for ${{fieldId}}`, 'WARN');
+                }}
+            }} else if (fieldId === CONFIG.afterWholesaleId) {{
+                // For checkbox toggle, style the parent row
+                const row = field.closest('.input-row');
+                if (row) {{
+                    row.style.border = '3px solid #ff9800';
+                    row.style.borderRadius = '4px';
+                    row.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
+                    row.style.padding = '5px';
+                    row.setAttribute('title', tooltip);
+                    log(`Added ORANGE box to After Wholesale (toggle row)`, 'WARN');
+                }} else {{
+                    log(`Toggle row not found for ${{fieldId}}`, 'WARN');
                 }}
             }} else {{
-                field.style.border = '2px solid #ff9800';
-                field.style.boxShadow = '0 0 8px rgba(255, 152, 0, 0.4)';
+                // For regular input fields, style the input directly
+                field.style.border = '3px solid #ff9800';
+                field.style.borderRadius = '4px';
+                field.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
                 field.setAttribute('title', tooltip);
+                log(`Added ORANGE box to ${{fieldId}} (input)`, 'WARN');
             }}
         }}
         
-        function removeOrangeBox(fieldId, containerId) {{
+        function removeOrangeBox(fieldId, isSelect2) {{
             const field = document.getElementById(fieldId);
             if (!field) return;
             
-            if (containerId) {{
+            if (isSelect2) {{
                 const container = field.nextElementSibling;
                 if (container && container.classList.contains('select2')) {{
                     container.style.border = '';
@@ -20247,8 +20290,18 @@ def inject_mis_validation(driver, expected_data=None):
                     container.style.boxShadow = '';
                     container.removeAttribute('title');
                 }}
+            }} else if (fieldId === CONFIG.afterWholesaleId) {{
+                const row = field.closest('.input-row');
+                if (row) {{
+                    row.style.border = '';
+                    row.style.borderRadius = '';
+                    row.style.boxShadow = '';
+                    row.style.padding = '';
+                    row.removeAttribute('title');
+                }}
             }} else {{
                 field.style.border = '';
+                field.style.borderRadius = '';
                 field.style.boxShadow = '';
                 field.removeAttribute('title');
             }}
@@ -20256,37 +20309,31 @@ def inject_mis_validation(driver, expected_data=None):
         
         function updateFieldWarnings(warnings) {{
             // Remove all orange boxes first
-            removeOrangeBox(CONFIG.brandId, CONFIG.brandContainerId);
-            removeOrangeBox(CONFIG.weekdayId);
-            removeOrangeBox(CONFIG.storeId);
-            removeOrangeBox(CONFIG.discountId);
-            removeOrangeBox(CONFIG.vendorContribId);
-            removeOrangeBox(CONFIG.afterWholesaleId);
+            removeOrangeBox(CONFIG.brandId, true);
+            removeOrangeBox(CONFIG.weekdayId, true);
+            removeOrangeBox(CONFIG.storeId, true);
+            removeOrangeBox(CONFIG.discountId, false);
+            removeOrangeBox(CONFIG.vendorContribId, false);
+            removeOrangeBox(CONFIG.afterWholesaleId, false);
             
             // Add orange boxes for warnings
             if (warnings.brand) {{
-                addOrangeBox(CONFIG.brandId, CONFIG.brandContainerId, 
-                    `⚠️ ${{warnings.brand.message}}`);
+                addOrangeBox(CONFIG.brandId, true, `⚠️ ${{warnings.brand.message}}`);
             }}
             if (warnings.weekday) {{
-                addOrangeBox(CONFIG.weekdayId, null, 
-                    `⚠️ ${{warnings.weekday.message}}`);
+                addOrangeBox(CONFIG.weekdayId, true, `⚠️ ${{warnings.weekday.message}}`);
             }}
             if (warnings.stores) {{
-                addOrangeBox(CONFIG.storeId, null, 
-                    `⚠️ ${{warnings.stores.message}}`);
+                addOrangeBox(CONFIG.storeId, true, `⚠️ ${{warnings.stores.message}}`);
             }}
             if (warnings.discount) {{
-                addOrangeBox(CONFIG.discountId, null, 
-                    `⚠️ ${{warnings.discount.message}}`);
+                addOrangeBox(CONFIG.discountId, false, `⚠️ ${{warnings.discount.message}}`);
             }}
             if (warnings.vendor_contrib) {{
-                addOrangeBox(CONFIG.vendorContribId, null, 
-                    `⚠️ ${{warnings.vendor_contrib.message}}`);
+                addOrangeBox(CONFIG.vendorContribId, false, `⚠️ ${{warnings.vendor_contrib.message}}`);
             }}
             if (warnings.after_wholesale) {{
-                addOrangeBox(CONFIG.afterWholesaleId, null, 
-                    `⚠️ ${{warnings.after_wholesale.message}}`);
+                addOrangeBox(CONFIG.afterWholesaleId, false, `⚠️ ${{warnings.after_wholesale.message}}`);
             }}
         }}
         
@@ -20308,17 +20355,48 @@ def inject_mis_validation(driver, expected_data=None):
             banner.style.cssText = `
                 background: #ff9800;
                 color: white;
-                padding: 10px 15px;
+                padding: 12px 15px;
                 margin-bottom: 15px;
                 border-radius: 4px;
                 font-weight: bold;
-                text-align: center;
+                text-align: left;
             `;
+            
+            // Build detailed error list
+            let errorList = '';
+            const fieldNames = {{
+                brand: 'Brand',
+                weekday: 'Weekday',
+                stores: 'Stores/Locations',
+                discount: 'Discount',
+                vendor_contrib: 'Vendor Contribution',
+                after_wholesale: 'After Wholesale'
+            }};
+            
+            for (const [key, warning] of Object.entries(warnings)) {{
+                const fieldName = fieldNames[key] || key;
+                errorList += `
+                    <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
+                        <strong style="color: #fff3cd;">🟧 ${{fieldName}}:</strong><br>
+                        <span style="font-weight: normal; padding-left: 10px;">
+                            Expected: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.expected}}</span><br>
+                            <span style="padding-left: 10px;">Actual: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.actual}}</span></span>
+                        </span>
+                    </div>
+                `;
+            }}
             
             const plural = warningCount > 1 ? 's' : '';
             banner.innerHTML = `
-                ⚠️ ${{warningCount}} field${{plural}} may need review (ORANGE boxes below)
-                <br><small style="font-weight: normal;">These are advisory warnings - you can still save if Rebate Type is filled</small>
+                <div style="text-align: center; margin-bottom: 8px;">
+                    ⚠️ ${{warningCount}} Field${{plural}} May Need Review
+                </div>
+                <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
+                    These are advisory warnings - you can still save if Rebate Type is filled
+                </div>
+                <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
+                    ${{errorList}}
+                </div>
             `;
             
             // Insert at top of modal body
@@ -20326,7 +20404,7 @@ def inject_mis_validation(driver, expected_data=None):
             if (modalBody) {{
                 modalBody.insertBefore(banner, modalBody.firstChild);
                 validationState.summaryBanner = banner;
-                log(`Summary banner created: ${{warningCount}} warning${{plural}}`, 'INFO');
+                log(`Enhanced summary banner created: ${{warningCount}} warning${{plural}} with details`, 'INFO');
             }}
         }}
         
