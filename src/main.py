@@ -20211,27 +20211,51 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         function attachCancelButtonListener() {{
-            // Find Cancel/Close button
-            const buttons = document.querySelectorAll('button');
-            let cancelBtn = null;
-            
-            for (const btn of buttons) {{
-                if (btn.textContent.trim().toLowerCase() === 'close' || 
-                    btn.textContent.trim().toLowerCase() === 'cancel') {{
-                    cancelBtn = btn;
-                    break;
-                }}
+            const modal = document.querySelector(CONFIG.modalSelector);
+            if (!modal) {{
+                log('Modal not found for cancel detection', 'WARN');
+                return;
             }}
             
-            if (!cancelBtn || validationState.cancelButtonListener) return;
+            // Skip if already attached
+            if (validationState.cancelButtonListener) return;
             
+            // Method 1: Find all buttons with data-dismiss="modal" attribute
+            // This catches: <button data-dismiss="modal">Close</button>
+            //           and: <button data-dismiss="modal">×</button>
+            const dismissButtons = modal.querySelectorAll('[data-dismiss="modal"]');
+            
+            // Method 2: Find by specific class names
+            // This catches: <button class="btn-modal-close">...</button>
+            //           and: <button class="close">×</button>
+            const closeButtons = modal.querySelectorAll('.btn-modal-close, .close');
+            
+            // Combine both sets (use Set to avoid duplicates)
+            const allCancelButtons = new Set([...dismissButtons, ...closeButtons]);
+            
+            if (allCancelButtons.size === 0) {{
+                log('No cancel buttons found (Close/X)', 'WARN');
+                return;
+            }}
+            
+            // Create the handler function once
             validationState.cancelButtonListener = function() {{
-                log('Cancel button clicked - Switching to manual mode', 'INFO');
+                log('Close/X button clicked - Switching to manual mode', 'WARN');
                 handleCancelClick();
             }};
             
-            cancelBtn.addEventListener('click', validationState.cancelButtonListener);
-            log('Cancel button listener attached', 'DEBUG');
+            // Attach listener to all cancel buttons
+            let attachedCount = 0;
+            allCancelButtons.forEach(btn => {{
+                // Skip if already has listener (prevent double-attach)
+                if (btn.dataset.cancelListenerAttached) return;
+                
+                btn.addEventListener('click', validationState.cancelButtonListener);
+                btn.dataset.cancelListenerAttached = 'true';
+                attachedCount++;
+            }});
+            
+            log(`Cancel listeners attached to ${{attachedCount}} button(s) (Close/X)`, 'DEBUG');
         }}
         
         function handleSaveClick() {{
@@ -20243,17 +20267,27 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         function handleCancelClick() {{
-            // User cancelled automation entry
+            // User clicked Close/X button - switch to manual mode immediately
+            log('Handling cancel - clearing automation data', 'INFO');
+            
             // Clear expected data and switch to manual mode
             EXPECTED_DATA = null;
             VALIDATION_MODE = 'manual';
+            
+            // Clear all validation state
             validationState.fieldWarnings = {{}};
+            validationState.criticalErrors = {{}};
+            validationState.rebateTypeValid = false;
+            validationState.weekdayValid = false;
             
-            log('Switched to MANUAL mode (Rebate Type + Weekday only)', 'WARN');
-            log('Expected data cleared', 'INFO');
+            // Remove all visual indicators immediately (clean slate)
+            removeAllRedBoxes();
+            removeAllOrangeBoxes();
+            removeSummaryBanner();
             
-            // Immediately re-validate in manual mode
-            runValidation();
+            log('Switched to MANUAL mode (Rebate Type + Weekday only)', 'SUCCESS');
+            log('Expected data cleared - next entry will be manual', 'INFO');
+            log('All validation boxes cleared - clean slate', 'DEBUG');
         }}
         
         // ============================================
@@ -20626,6 +20660,13 @@ def inject_mis_validation(driver, expected_data=None):
             log(`Removed RED box from ${{fieldId}}`, 'SUCCESS');
         }}
         
+        function removeAllRedBoxes() {{
+            // Remove RED boxes from all critical fields
+            removeRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId);
+            removeRedBox(CONFIG.weekdayId, null);
+            log('Removed all RED boxes', 'DEBUG');
+        }}
+        
         // ============================================
         // VISUAL INDICATORS - ORANGE (ADVISORY)
         // ============================================
@@ -20695,6 +20736,19 @@ def inject_mis_validation(driver, expected_data=None):
                 field.style.boxShadow = '';
                 field.removeAttribute('title');
             }}
+        }}
+        
+        function removeAllOrangeBoxes() {{
+            // Remove ORANGE boxes from all advisory fields
+            removeOrangeBox(CONFIG.brandId, true);
+            removeOrangeBox(CONFIG.linkedBrandId, true);
+            removeOrangeBox(CONFIG.weekdayId, true);
+            removeOrangeBox(CONFIG.categoryId, true);
+            removeOrangeBox(CONFIG.storeId, true);
+            removeOrangeBox(CONFIG.discountId, false);
+            removeOrangeBox(CONFIG.vendorContribId, false);
+            removeOrangeBox(CONFIG.afterWholesaleId, false);
+            log('Removed all ORANGE boxes', 'DEBUG');
         }}
         
         function updateFieldWarnings(warnings) {{
