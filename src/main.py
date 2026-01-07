@@ -8938,6 +8938,54 @@ HTML_TEMPLATE = r"""
                 setTimeout(() => document.title = originalTitle, 2000); 
             }
         }
+        
+        async function lookupMisIdWithValidation(buttonElement, misId) {
+            /**
+             * Enhanced MIS ID lookup that includes row data for validation.
+             * Extracts row data from button's data-row attribute and sends to backend.
+             */
+            if (!misId || misId === '-') return;
+            
+            const originalTitle = document.title;
+            document.title = "Looking up: " + misId;
+            
+            try {
+                // Try to get row data from button element
+                let rowData = null;
+                if (buttonElement && buttonElement.getAttribute) {
+                    try {
+                        const rowDataJson = buttonElement.getAttribute('data-row');
+                        if (rowDataJson) {
+                            rowData = JSON.parse(rowDataJson);
+                            console.log('[MIS ID LOOKUP] Row data found:', rowData);
+                        }
+                    } catch (e) {
+                        console.warn('[MIS ID LOOKUP] Could not parse row data:', e);
+                    }
+                }
+                
+                // Send request with optional row data
+                await fetch('/api/mis/lookup-mis-id', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        mis_id: misId,
+                        row_data: rowData  // Will be null if not available
+                    })
+                });
+                
+                if (rowData) {
+                    console.log('[MIS ID LOOKUP] Validation will be applied');
+                } else {
+                    console.log('[MIS ID LOOKUP] No validation (no row data)');
+                }
+                
+            } catch (e) { 
+                console.error('[MIS ID LOOKUP] Error:', e); 
+            } finally { 
+                setTimeout(() => document.title = originalTitle, 2000); 
+            }
+        }
 
         function renderMisIdCell(misIdStr) {
             if (!misIdStr || misIdStr === '-') {
@@ -13071,8 +13119,25 @@ function handleMISCSV(input) {
                     const rowBtn = window.globalSpreadsheetId ? 
                         `<button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openSheetRow(${item.row})" title="Go to row ${item.row}">${item.row}</button>` : 
                         item.row;
+                    
+                    // Enhanced MIS ID button with row data for validation
+                    const rowDataJson = JSON.stringify({
+                        brand: item.brand || '',
+                        linked_brand: item.linked_brand || '',
+                        weekday: item.weekday || '',
+                        categories: item.categories || '',
+                        discount: item.discount || '',
+                        vendor_contrib: item.vendor_contrib || '',
+                        locations: item.locations || 'All Locations',
+                        rebate_type: item.rebate_type || '',
+                        after_wholesale: item.after_wholesale || false
+                    }).replace(/"/g, '&quot;');
+                    
                     const misIdBtn = item.mis_id ? 
-                        `<button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="lookupMisId('${item.mis_id}')">${item.mis_id}</button>` : '-';
+                        `<button class="btn btn-outline-secondary btn-sm py-0 px-2" 
+                                 data-row='${rowDataJson}' 
+                                 onclick="lookupMisIdWithValidation(this, '${item.mis_id}')"
+                                 title="Click to lookup and validate">${item.mis_id}</button>` : '-';
                     html += `<tr>
                         <td>${rowBtn}</td>
                         <td>${sectionBadge}</td>
@@ -13106,8 +13171,25 @@ function handleMISCSV(input) {
                     const rowBtn = window.globalSpreadsheetId ? 
                         `<button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openSheetRow(${item.row})" title="Go to row ${item.row}">${item.row}</button>` : 
                         item.row;
+                    
+                    // Enhanced MIS ID button with row data for validation
+                    const rowDataJson = JSON.stringify({
+                        brand: item.brand || '',
+                        linked_brand: item.linked_brand || '',
+                        weekday: item.weekday || '',
+                        categories: item.categories || '',
+                        discount: item.discount || '',
+                        vendor_contrib: item.vendor_contrib || '',
+                        locations: item.locations || 'All Locations',
+                        rebate_type: item.rebate_type || '',
+                        after_wholesale: item.after_wholesale || false
+                    }).replace(/"/g, '&quot;');
+                    
                     const misIdBtn = item.mis_id ? 
-                        `<button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="lookupMisId('${item.mis_id}')">${item.mis_id}</button>` : '-';
+                        `<button class="btn btn-outline-secondary btn-sm py-0 px-2" 
+                                 data-row='${rowDataJson}' 
+                                 onclick="lookupMisIdWithValidation(this, '${item.mis_id}')"
+                                 title="Click to lookup and validate">${item.mis_id}</button>` : '-';
                     const pct = item.match_percent || 0;
                     const pctClass = pct >= 80 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-danger';
                     const issues = item.issues ? item.issues.join(', ') : '-';
@@ -13144,8 +13226,25 @@ function handleMISCSV(input) {
                     const rowBtn = window.globalSpreadsheetId ? 
                         `<button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openSheetRow(${item.row})" title="Go to row ${item.row}">${item.row}</button>` : 
                         item.row;
+                    
+                    // Enhanced MIS ID button with row data for validation
+                    const rowDataJson = JSON.stringify({
+                        brand: item.brand || '',
+                        linked_brand: item.linked_brand || '',
+                        weekday: item.weekday || '',
+                        categories: item.categories || '',
+                        discount: item.discount || '',
+                        vendor_contrib: item.vendor_contrib || '',
+                        locations: item.locations || 'All Locations',
+                        rebate_type: item.rebate_type || '',
+                        after_wholesale: item.after_wholesale || false
+                    }).replace(/"/g, '&quot;');
+                    
                     const misIdBtn = item.mis_id ? 
-                        `<button class="btn btn-outline-success btn-sm py-0 px-2" onclick="lookupMisId('${item.mis_id}')">${item.mis_id}</button>` : '-';
+                        `<button class="btn btn-outline-success btn-sm py-0 px-2" 
+                                 data-row='${rowDataJson}' 
+                                 onclick="lookupMisIdWithValidation(this, '${item.mis_id}')"
+                                 title="Click to lookup and validate">${item.mis_id}</button>` : '-';
                     html += `<tr>
                         <td>${rowBtn}</td>
                         <td>${sectionBadge}</td>
@@ -19667,19 +19766,27 @@ def api_mis_open_sheet_row():
 @app.route('/api/mis/lookup-mis-id', methods=['POST'])
 def api_mis_lookup_mis_id():
     try:
+        # Set automation flag
+        GLOBAL_DATA['automation_in_progress'] = True
+        
         data = request.get_json()
         mis_id = str(data.get('mis_id', '')).strip()
+        row_data = data.get('row_data', None)  # NEW: Get row data for validation
+        
         if not mis_id:
+            GLOBAL_DATA['automation_in_progress'] = False
             return jsonify({'success': False, 'error': 'No ID'})
         
         # Strip any tag prefixes (Part 1:, Part 2:, GAP:, Patch:, etc.)
         mis_id = strip_mis_id_tag(mis_id)
         
         if not mis_id or not mis_id.isdigit():
+            GLOBAL_DATA['automation_in_progress'] = False
             return jsonify({'success': False, 'error': f'Invalid MIS ID format: {data.get("mis_id")}'})
         
         driver = GLOBAL_DATA['browser_instance']
         if not driver:
+            GLOBAL_DATA['automation_in_progress'] = False
             return jsonify({'success': False, 'error': 'Browser not initialized. Please click Initialize first.'})
         
         # INTELLIGENT MIS SESSION CHECK - ensures tab exists and is logged in
@@ -19689,14 +19796,49 @@ def api_mis_lookup_mis_id():
             mis_pass = creds.get('mis_password', '')
             ensure_mis_ready(driver, mis_user, mis_pass)
         except Exception as e:
+            GLOBAL_DATA['automation_in_progress'] = False
             return jsonify({'success': False, 'error': str(e)})
         
         print(f"[MIS LOOKUP] Looking up MIS ID: {mis_id}")
         
+        # Open the entry modal
         if filter_and_open_mis_id(driver, mis_id):
+            # NEW: If row data provided, inject validation
+            if row_data:
+                try:
+                    # Format row data for validation (similar to create_deal)
+                    expected_data = {
+                        'brand': row_data.get('brand', ''),
+                        'linked_brand': row_data.get('linked_brand', ''),
+                        'weekday': row_data.get('weekday', ''),
+                        'categories': row_data.get('categories', ''),
+                        'discount': row_data.get('discount', ''),
+                        'vendor_contrib': row_data.get('vendor_contrib', ''),
+                        'locations': row_data.get('locations', 'All Locations'),
+                        'rebate_type': row_data.get('rebate_type', ''),
+                        'after_wholesale': row_data.get('after_wholesale', False)
+                    }
+                    
+                    print(f"[MIS LOOKUP] Injecting validation with row data")
+                    print(f"[MIS LOOKUP] Expected: Brand={expected_data['brand']}, Weekday={expected_data['weekday']}")
+                    
+                    inject_mis_validation(driver, expected_data)
+                    print(f"[MIS LOOKUP] ✅ Validation injected for MIS ID {mis_id}")
+                    
+                except Exception as e:
+                    print(f"[MIS LOOKUP] ⚠️ Could not inject validation: {e}")
+            else:
+                print(f"[MIS LOOKUP] No row data provided - skipping validation")
+            
+            # Clear automation flag
+            GLOBAL_DATA['automation_in_progress'] = False
             return jsonify({'success': True, 'message': f'Lookup successful for ID {mis_id}'})
+        
+        GLOBAL_DATA['automation_in_progress'] = False
         return jsonify({'success': False, 'error': f'Failed to lookup ID {mis_id}'})
+        
     except Exception as e:
+        GLOBAL_DATA['automation_in_progress'] = False
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -21237,6 +21379,9 @@ def api_mis_create_deal():
     4. (Does NOT click Save - user reviews first)
     """
     try:
+        # Set automation flag (prevents background validation monitor from interfering)
+        GLOBAL_DATA['automation_in_progress'] = True
+        
         data = request.get_json()
         start_date = data.get('start_date', '')
         end_date = data.get('end_date', '')
@@ -22119,6 +22264,9 @@ def api_mis_create_deal():
             log(f"Warning: Could not inject validation: {e}", "WARN")
             warnings.append(f'⚠️ Validation system not loaded: {type(e).__name__}')
         
+        # Clear automation flag
+        GLOBAL_DATA['automation_in_progress'] = False
+        
         return jsonify({
             'success': True,
             'message': 'Deal form filled. Please review and click Save.',
@@ -22126,6 +22274,8 @@ def api_mis_create_deal():
         })
         
     except Exception as e:
+        # Clear automation flag on error
+        GLOBAL_DATA['automation_in_progress'] = False
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -25842,6 +25992,52 @@ def convert_store_name_to_data_cy(store_name):
 # ============================================================================
 # STARTUP
 # ============================================================================
+def background_validation_monitor():
+    """
+    Background thread that ensures validation system is always active on MIS daily-discount page.
+    Runs every 10 seconds, non-blocking, skips if automation is in progress.
+    """
+    print("[VALIDATION-MONITOR] Background validation monitor starting...")
+    time.sleep(5)  # Wait for browser to initialize
+    
+    while True:
+        try:
+            time.sleep(10)  # Check every 10 seconds
+            
+            # SAFETY: Skip if automation is running
+            if GLOBAL_DATA.get('automation_in_progress', False):
+                continue
+            
+            # SAFETY: Skip if browser not initialized
+            driver = GLOBAL_DATA.get('browser_instance')
+            if not driver:
+                continue
+            
+            # Check if we're on the daily-discount page
+            try:
+                current_url = driver.current_url
+                if "daily-discount" not in current_url:
+                    continue
+                
+                # Quick check if validation already active
+                is_active = driver.execute_script(
+                    "return window.MIS_VALIDATOR_ACTIVE || false;"
+                )
+                
+                if not is_active:
+                    # Inject validation in manual mode (no expected data)
+                    inject_mis_validation(driver, expected_data=None)
+                    print("[VALIDATION-MONITOR] ✅ Injected manual validation (was missing)")
+                    
+            except Exception:
+                # Silently skip on any error (don't crash the monitor)
+                pass
+                
+        except Exception as e:
+            # Log but don't crash
+            print(f"[VALIDATION-MONITOR] ⚠️ Error: {e}")
+            time.sleep(30)  # Wait longer on error
+
 def open_browser_to_dashboard():
     time.sleep(2)
     print("[STARTUP] Initializing unified browser...")
@@ -25875,6 +26071,11 @@ def main():
     
     browser_thread = threading.Thread(target=open_browser_to_dashboard, daemon=True)
     browser_thread.start()
+    
+    # Start background validation monitor
+    validation_monitor_thread = threading.Thread(target=background_validation_monitor, daemon=True)
+    validation_monitor_thread.start()
+    
     print("[START] Starting Flask server on http://127.0.0.1:5100")
     
     # Run Flask without reloader to prevent duplicate threads
