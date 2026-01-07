@@ -8163,7 +8163,7 @@ HTML_TEMPLATE = r"""
         }
         
         // v88: Helper to render clickable MIS ID(s)
-        function renderClickableMisId(misIdStr) {
+        function renderClickableMisId(misIdStr, rowData) {
             if (!misIdStr || misIdStr === '-') {
                 return '<span style="color:#999; font-style:italic;">No ID</span>';
             }
@@ -8194,10 +8194,33 @@ HTML_TEMPLATE = r"""
                 return '<span style="color:#999; font-style:italic;">No ID</span>';
             }
             
+            // Prepare row data for validation (if provided)
+            var rowDataJson = null;
+            if (rowData) {
+                var validationData = {
+                    brand: rowData.brand || '',
+                    linked_brand: rowData.linked_brand || '',
+                    weekday: rowData.weekday || '',
+                    categories: rowData.categories || '',
+                    discount: rowData.discount || '',
+                    vendor_contrib: rowData.vendor_contrib || rowData.vendor_percentage || '',
+                    locations: rowData.locations || 'All Locations',
+                    rebate_type: rowData.rebate_type || '',
+                    after_wholesale: rowData.after_wholesale || false
+                };
+                rowDataJson = JSON.stringify(validationData).replace(/"/g, '&quot;');
+            }
+            
             return ids.map(function(id) {
                 var cleanId = stripTag(id);  // Strip tag for lookup
                 var displayId = id;  // Keep full display (with tag)
-                return '<span onclick="lookupMisId(\'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup in MIS">' + displayId + '</span>';
+                
+                // Use enhanced validation if row data is available
+                if (rowDataJson) {
+                    return '<span data-row=\'' + rowDataJson + '\' onclick="lookupMisIdWithValidation(this, \'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup and validate in MIS">' + displayId + '</span>';
+                } else {
+                    return '<span onclick="lookupMisId(\'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup in MIS">' + displayId + '</span>';
+                }
             }).join(' ');
         }
         
@@ -8987,7 +9010,7 @@ HTML_TEMPLATE = r"""
             }
         }
 
-        function renderMisIdCell(misIdStr) {
+        function renderMisIdCell(misIdStr, rowData) {
             if (!misIdStr || misIdStr === '-') {
                 return '<span style="color:#999; font-style:italic;">No ID</span>';
             }
@@ -9018,11 +9041,40 @@ HTML_TEMPLATE = r"""
                 return '<span style="color:#999; font-style:italic;">No ID</span>';
             }
             
+            // Prepare row data for validation (if provided)
+            let rowDataJson = null;
+            if (rowData) {
+                const validationData = {
+                    brand: rowData.brand || '',
+                    linked_brand: rowData.linked_brand || '',
+                    weekday: rowData.weekday || '',
+                    categories: rowData.categories || '',
+                    discount: rowData.discount || '',
+                    vendor_contrib: rowData.vendor_contrib || rowData.vendor_percentage || '',
+                    locations: rowData.locations || 'All Locations',
+                    rebate_type: rowData.rebate_type || '',
+                    after_wholesale: rowData.after_wholesale || false
+                };
+                rowDataJson = JSON.stringify(validationData).replace(/"/g, '&quot;');
+            }
+            
             // Make each ID clickable
             const clickableIds = ids.map(id => {
                 let cleanId = stripTag(id.replace(' (Estimated)', '').trim());
                 const displayId = id; // Keep original format with tag and (Estimated) if present
-                return `<span onclick="lookupMisId('${cleanId}')" style="cursor:pointer; font-weight:bold; text-decoration:underline; color:#667eea;" title="Click to lookup in MIS">${displayId}</span>`;
+                
+                // Use enhanced validation if row data is available
+                if (rowDataJson) {
+                    return `<span data-row='${rowDataJson}' 
+                                  onclick="lookupMisIdWithValidation(this, '${cleanId}')" 
+                                  style="cursor:pointer; font-weight:bold; text-decoration:underline; color:#667eea;" 
+                                  title="Click to lookup and validate in MIS">${displayId}</span>`;
+                } else {
+                    // Fallback to old method without validation
+                    return `<span onclick="lookupMisId('${cleanId}')" 
+                                  style="cursor:pointer; font-weight:bold; text-decoration:underline; color:#667eea;" 
+                                  title="Click to lookup in MIS">${displayId}</span>`;
+                }
             });
             
             return clickableIds.join(', ');
@@ -12308,7 +12360,7 @@ async function autoAuthenticateGoogle() {
             
             const rowBtn = renderRowButton(r.google_row);
             const brandCell = renderBrandCell(r.brand, idx, 'audit');
-            const misIdCell = renderMisIdCell(r.mis_id);
+            const misIdCell = renderMisIdCell(r.mis_id, r);  // Pass full row data for validation
             
             let weekdayDisplay = r.weekday || '-';
             if (!r.weekday || r.weekday.trim() === '') {
@@ -19800,6 +19852,51 @@ def api_mis_lookup_mis_id():
             return jsonify({'success': False, 'error': str(e)})
         
         print(f"[MIS LOOKUP] Looking up MIS ID: {mis_id}")
+        
+        # SMART FALLBACK: If no row data provided, try to fetch from Google Sheet
+        if not row_data:
+            print(f"[MIS LOOKUP] No row data provided, searching Google Sheet...")
+            try:
+                # Try to get Google Sheet data from GLOBAL_DATA
+                google_df = GLOBAL_DATA.get('google_df')
+                if google_df is not None and not google_df.empty:
+                    # Search for matching MIS ID in Google Sheet
+                    # Check both 'ID' and 'MIS ID' columns
+                    id_col = None
+                    for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+                        if col in google_df.columns:
+                            id_col = col
+                            break
+                    
+                    if id_col:
+                        # Search for the MIS ID
+                        for idx, row in google_df.iterrows():
+                            sheet_mis_id = str(row.get(id_col, '')).strip()
+                            # Handle multi-part IDs (W1: 123, W2: 456)
+                            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                                # Found it! Extract row data
+                                row_data = {
+                                    'brand': str(row.get('Brand', '')).strip(),
+                                    'linked_brand': str(row.get('Linked Brand', '')).strip(),
+                                    'weekday': str(row.get('Weekday', '')).strip(),
+                                    'categories': str(row.get('Categories', '')).strip(),
+                                    'discount': str(row.get('Discount', '')).strip(),
+                                    'vendor_contrib': str(row.get('Vendor %', '')).strip(),
+                                    'locations': str(row.get('Locations', 'All Locations')).strip(),
+                                    'rebate_type': str(row.get('Rebate Type', '')).strip(),
+                                    'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                                }
+                                print(f"[MIS LOOKUP] ✅ Found row data in Google Sheet!")
+                                print(f"[MIS LOOKUP] Brand: {row_data['brand']}, Weekday: {row_data['weekday']}")
+                                break
+                    else:
+                        print(f"[MIS LOOKUP] ⚠️ Could not find MIS ID column in Google Sheet")
+                else:
+                    print(f"[MIS LOOKUP] ⚠️ No Google Sheet data available")
+            except Exception as e:
+                print(f"[MIS LOOKUP] ⚠️ Error searching Google Sheet: {e}")
+        else:
+            print(f"[MIS LOOKUP] Row data provided by frontend")
         
         # Open the entry modal
         if filter_and_open_mis_id(driver, mis_id):
