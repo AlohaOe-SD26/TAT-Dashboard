@@ -21148,9 +21148,24 @@ def inject_mis_validation(driver, expected_data=None):
     """
     
     try:
+        # DIAGNOSTIC: Pre-execution checks
+        print("[VALIDATION-INJECT] Starting injection...")
+        print(f"[VALIDATION-INJECT] Driver type: {type(driver)}")
+        print(f"[VALIDATION-INJECT] Expected data: {expected_data is not None}")
+        print(f"[VALIDATION-INJECT] JavaScript length: {len(validation_js)} characters")
+        
         driver.execute_script(validation_js)
         print("[MIS-VALIDATION] v12.10 JavaScript injected successfully")
+        print("[VALIDATION-INJECT] ✅ Injection completed successfully")
+        
     except Exception as e:
+        # ENHANCED ERROR LOGGING
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[VALIDATION-INJECT] ❌ JavaScript execution FAILED!")
+        print(f"[VALIDATION-INJECT] Error type: {type(e).__name__}")
+        print(f"[VALIDATION-INJECT] Error message: {str(e)}")
+        print(f"[VALIDATION-INJECT] Full traceback:\n{error_details}")
         print(f"[MIS-VALIDATION] Error injecting JavaScript: {e}")
         raise
 
@@ -22027,11 +22042,27 @@ def api_mis_create_deal():
                 'rebate_type': rebate_type,
                 'after_wholesale': after_wholesale
             }
+            
+            # DIAGNOSTIC: Log validation injection attempt
+            print("[VALIDATION-DIAGNOSTIC] Attempting to inject validation system...")
+            print(f"[VALIDATION-DIAGNOSTIC] Driver available: {driver is not None}")
+            print(f"[VALIDATION-DIAGNOSTIC] Expected data keys: {list(expected_data.keys())}")
+            
             inject_mis_validation(driver, expected_data)
             log("Validation system injected with Phase 2 field comparison", "SUCCESS")
+            print("[VALIDATION-DIAGNOSTIC] ✅ Validation injection successful!")
+            
         except Exception as e:
+            # ENHANCED ERROR LOGGING
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"[VALIDATION-DIAGNOSTIC] ❌ Validation injection FAILED!")
+            print(f"[VALIDATION-DIAGNOSTIC] Error type: {type(e).__name__}")
+            print(f"[VALIDATION-DIAGNOSTIC] Error message: {str(e)}")
+            print(f"[VALIDATION-DIAGNOSTIC] Full traceback:\n{error_details}")
+            
             log(f"Warning: Could not inject validation: {e}", "WARN")
-            warnings.append('⚠️ Validation system not loaded')
+            warnings.append(f'⚠️ Validation system not loaded: {type(e).__name__}')
         
         return jsonify({
             'success': True,
