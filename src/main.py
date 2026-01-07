@@ -1,4 +1,30 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10.3 BANNER INITIALIZATION FIX
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.11 COMPREHENSIVE BANNER
+# v12.11 CHANGELOG (COMPREHENSIVE BANNER - SHOWS ALL ERRORS):
+#   - FIXED: Banner now shows ALL errors (critical AND advisory) in single list
+#     * Was: Banner only showed advisory warnings, ignored critical errors
+#     * Now: Banner shows comprehensive list of ALL issues
+#     * Critical errors listed first with 🔴 + "(BLOCKS SAVE)"
+#     * Advisory warnings listed second with 🟧
+#   - IMPROVED: Banner color priority
+#     * RED banner: Any critical errors (even if advisory too)
+#     * ORANGE banner: Only advisory warnings (no critical)
+#     * GREEN banner: All fields correct
+#   - IMPROVED: Banner updates for critical validation changes
+#     * Change Rebate Type → Banner updates ✅
+#     * Change Weekday → Banner updates ✅
+#     * Any critical field change → Banner reflects immediately ✅
+#   - ENHANCED: Comprehensive error tracking
+#     * criticalErrors object: {rebateType, weekday}
+#     * Deep comparison for critical validation state
+#     * Banner updates when EITHER critical OR advisory changes
+#   - NEW: Header shows blocking count
+#     * "⚠️ 3 Issues Found (2 errors blocking save)"
+#     * Clear indication of what blocks Save button
+#   - Examples:
+#     * 2 critical + 1 advisory → RED banner, lists all 3
+#     * 0 critical + 2 advisory → ORANGE banner, lists both
+#     * 1 critical + 0 advisory → RED banner, shows critical
+#     * 0 critical + 0 advisory → GREEN banner, all correct
 # v12.10.3 CHANGELOG (BANNER INITIALIZATION FIX):
 #   - FIXED: Banner now appears immediately on first validation run
 #     * Was: Banner missing when automation fills correctly (0 warnings → 0 warnings)
@@ -20054,7 +20080,7 @@ def api_mis_update_end_date():
 # ============================================
 def inject_mis_validation(driver, expected_data=None):
     """
-    v12.10.3 - Banner Always Appears: Inject MIS validation JavaScript.
+    v12.11 - Comprehensive Banner: Inject MIS validation JavaScript.
     
     Phase 1 (CRITICAL - RED):
     - Rebate Type must not be "- Select -"
@@ -20711,19 +20737,22 @@ def inject_mis_validation(driver, expected_data=None):
         // ============================================
         // PERSISTENT SUMMARY BANNER
         // ============================================
-        function createSummaryBanner(warnings) {{
+        function createSummaryBanner(warnings, criticalErrors) {{
             // Remove existing banner
             if (validationState.summaryBanner) {{
                 validationState.summaryBanner.remove();
                 validationState.summaryBanner = null;
             }}
             
-            const warningCount = Object.keys(warnings).length;
+            const criticalCount = Object.keys(criticalErrors || {{}}).length;
+            const warningCount = Object.keys(warnings || {{}}).length;
+            const totalIssues = criticalCount + warningCount;
+            
             const banner = document.createElement('div');
             banner.id = 'mis-validation-summary';
             
-            // Always show banner (even when all correct)
-            if (warningCount === 0) {{
+            // Determine banner color: RED for critical, ORANGE for advisory only, GREEN for all correct
+            if (totalIssues === 0) {{
                 // ALL CORRECT - Green banner
                 banner.style.cssText = `
                     background: #28a745;
@@ -20755,9 +20784,12 @@ def inject_mis_validation(driver, expected_data=None):
                     `;
                 }}
             }} else {{
-                // WARNINGS - Orange banner with details
+                // HAS ISSUES - RED for critical, ORANGE for advisory only
+                const hasCritical = criticalCount > 0;
+                const bgColor = hasCritical ? '#dc3545' : '#ff9800';  // RED or ORANGE
+                
                 banner.style.cssText = `
-                    background: #ff9800;
+                    background: ${{bgColor}};
                     color: white;
                     padding: 12px 15px;
                     margin-bottom: 15px;
@@ -20766,9 +20798,16 @@ def inject_mis_validation(driver, expected_data=None):
                     text-align: left;
                 `;
                 
-                // Build detailed error list
+                // Build comprehensive error list
                 let errorList = '';
-                const fieldNames = {{
+                
+                // Field name mapping
+                const criticalFieldNames = {{
+                    rebateType: 'Rebate Type',
+                    weekday: 'Weekday'
+                }};
+                
+                const advisoryFieldNames = {{
                     brand: 'Brand',
                     linked_brand: 'Linked Brand',
                     weekday: 'Weekday',
@@ -20779,8 +20818,22 @@ def inject_mis_validation(driver, expected_data=None):
                     after_wholesale: 'After Wholesale'
                 }};
                 
-                for (const [key, warning] of Object.entries(warnings)) {{
-                    const fieldName = fieldNames[key] || key;
+                // Add CRITICAL errors first (with 🔴 and BLOCKS SAVE)
+                for (const [key, error] of Object.entries(criticalErrors || {{}})) {{
+                    const fieldName = criticalFieldNames[key] || key;
+                    errorList += `
+                        <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
+                            <strong style="color: #ffcccc;">🔴 ${{fieldName}}:</strong>
+                            <span style="font-weight: normal;">
+                                ${{error.message}} <strong>(BLOCKS SAVE)</strong>
+                            </span>
+                        </div>
+                    `;
+                }}
+                
+                // Add ADVISORY warnings second (with 🟧)
+                for (const [key, warning] of Object.entries(warnings || {{}})) {{
+                    const fieldName = advisoryFieldNames[key] || key;
                     errorList += `
                         <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
                             <strong style="color: #fff3cd;">🟧 ${{fieldName}}:</strong><br>
@@ -20792,13 +20845,28 @@ def inject_mis_validation(driver, expected_data=None):
                     `;
                 }}
                 
-                const plural = warningCount > 1 ? 's' : '';
+                // Build header text
+                const plural = totalIssues > 1 ? 's' : '';
+                let headerText = '';
+                let subtitleText = '';
+                
+                if (hasCritical) {{
+                    // RED banner - has critical errors
+                    const blockingText = criticalCount === 1 ? '1 error blocking' : `${{criticalCount}} errors blocking`;
+                    headerText = `⚠️ ${{totalIssues}} Issue${{plural}} Found (${{blockingText}} save)`;
+                    subtitleText = 'Critical errors must be fixed before saving';
+                }} else {{
+                    // ORANGE banner - advisory only
+                    headerText = `⚠️ ${{totalIssues}} Field${{plural}} May Need Review`;
+                    subtitleText = 'Advisory warnings - you can still save if Rebate Type and Weekday are filled';
+                }}
+                
                 banner.innerHTML = `
                     <div style="text-align: center; margin-bottom: 8px;">
-                        ⚠️ ${{warningCount}} Field${{plural}} May Need Review
+                        ${{headerText}}
                     </div>
                     <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
-                        Advisory warnings - you can still save if Rebate Type and Weekday are filled
+                        ${{subtitleText}}
                     </div>
                     <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
                         ${{errorList}}
@@ -20811,7 +20879,12 @@ def inject_mis_validation(driver, expected_data=None):
             if (modalBody) {{
                 modalBody.insertBefore(banner, modalBody.firstChild);
                 validationState.summaryBanner = banner;
-                log(`Persistent banner created: ${{warningCount === 0 ? 'ALL CORRECT' : warningCount + ' warnings'}}`, 'INFO');
+                
+                if (totalIssues === 0) {{
+                    log(`Persistent banner created: ALL CORRECT`, 'INFO');
+                }} else {{
+                    log(`Persistent banner created: ${{criticalCount}} critical, ${{warningCount}} advisory`, 'INFO');
+                }}
             }}
         }}
         
@@ -20991,6 +21064,19 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
+            // Build critical errors object
+            const criticalErrors = {{}};
+            if (!rebateValid) {{
+                criticalErrors.rebateType = {{
+                    message: 'Must be selected'
+                }};
+            }}
+            if (!weekdayValid) {{
+                criticalErrors.weekday = {{
+                    message: 'Must have at least one day'
+                }};
+            }}
+            
             // Phase 2: ADVISORY - All other fields (only in automation mode)
             const warnings = validateAllFields();
             
@@ -20999,18 +21085,41 @@ def inject_mis_validation(driver, expected_data=None):
             const oldWarningsJson = JSON.stringify(validationState.fieldWarnings);
             const warningsChanged = currentWarningsJson !== oldWarningsJson;
             
+            // Check if critical validation changed
+            const currentCriticalJson = JSON.stringify(criticalErrors);
+            const oldCriticalJson = JSON.stringify(validationState.criticalErrors || {{}});
+            const criticalChanged = currentCriticalJson !== oldCriticalJson;
+            
             // ALWAYS create banner if it doesn't exist (first run after modal opens)
             const bannerMissing = !validationState.summaryBanner;
             
-            if (warningsChanged || bannerMissing) {{
+            // Update banner when ANYTHING changes (critical OR advisory OR missing)
+            if (criticalChanged || warningsChanged || bannerMissing) {{
                 validationState.fieldWarnings = warnings;
+                validationState.criticalErrors = criticalErrors;
                 updateFieldWarnings(warnings);
                 
-                // ALWAYS update banner when warnings change or banner missing
+                // ALWAYS update banner - pass BOTH critical and advisory
                 removeSummaryBanner();
-                createSummaryBanner(warnings);
+                createSummaryBanner(warnings, criticalErrors);
                 
                 const warningCount = Object.keys(warnings).length;
+                const criticalCount = Object.keys(criticalErrors).length;
+                
+                if (criticalCount > 0) {{
+                    log(`Phase 1: ${{criticalCount}} CRITICAL error(s) found`, 'ERROR');
+                }}
+                if (warningCount > 0) {{
+                    log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
+                }}
+                if (criticalCount === 0 && warningCount === 0) {{
+                    log('All validation passed - all fields correct', 'SUCCESS');
+                }}
+                
+                if (bannerMissing) {{
+                    log('Initial banner created (first validation run)', 'INFO');
+                }}
+            }}
                 if (warningCount > 0) {{
                     log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
                 }} else {{
@@ -21034,7 +21143,7 @@ def inject_mis_validation(driver, expected_data=None):
         
         runValidation();
         
-        log('v12.10.3 validation system active!');
+        log('v12.11 validation system active!');
     }})();
     """
     
