@@ -1,4 +1,17 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10.2 BANNER UPDATE FIX
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.10.3 BANNER INITIALIZATION FIX
+# v12.10.3 CHANGELOG (BANNER INITIALIZATION FIX):
+#   - FIXED: Banner now appears immediately on first validation run
+#     * Was: Banner missing when automation fills correctly (0 warnings → 0 warnings)
+#     * Why: Deep compare on first run: JSON.stringify({}) === JSON.stringify({})
+#     * Now: Check if banner exists, create if missing (even if warnings unchanged)
+#     * Logic: if (warningsChanged || bannerMissing) { create banner }
+#   - IMPROVED: Banner initialization
+#     * First validation run → Banner created immediately ✅
+#     * User makes edit → Banner updates correctly ✅
+#     * No more "banner appears only after edit" bug ✅
+#   - Added logging for initial banner creation
+#     * Console shows: "Initial banner created (first validation run)"
+#     * Helps debug initialization timing issues
 # v12.10.2 CHANGELOG (BANNER UPDATE FIX):
 #   - FIXED: Banner now updates dynamically as fields change
 #     * Was: Only updated when warning COUNT changed (0→1, 1→2)
@@ -20041,7 +20054,7 @@ def api_mis_update_end_date():
 # ============================================
 def inject_mis_validation(driver, expected_data=None):
     """
-    v12.10.2 - Banner Update Fixed: Inject MIS validation JavaScript.
+    v12.10.3 - Banner Always Appears: Inject MIS validation JavaScript.
     
     Phase 1 (CRITICAL - RED):
     - Rebate Type must not be "- Select -"
@@ -20986,11 +20999,14 @@ def inject_mis_validation(driver, expected_data=None):
             const oldWarningsJson = JSON.stringify(validationState.fieldWarnings);
             const warningsChanged = currentWarningsJson !== oldWarningsJson;
             
-            if (warningsChanged) {{
+            // ALWAYS create banner if it doesn't exist (first run after modal opens)
+            const bannerMissing = !validationState.summaryBanner;
+            
+            if (warningsChanged || bannerMissing) {{
                 validationState.fieldWarnings = warnings;
                 updateFieldWarnings(warnings);
                 
-                // ALWAYS update banner when warnings change
+                // ALWAYS update banner when warnings change or banner missing
                 removeSummaryBanner();
                 createSummaryBanner(warnings);
                 
@@ -20999,6 +21015,10 @@ def inject_mis_validation(driver, expected_data=None):
                     log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
                 }} else {{
                     log('Phase 2: All fields match expected values', 'SUCCESS');
+                }}
+                
+                if (bannerMissing) {{
+                    log('Initial banner created (first validation run)', 'INFO');
                 }}
             }}
         }}
@@ -21014,7 +21034,7 @@ def inject_mis_validation(driver, expected_data=None):
         
         runValidation();
         
-        log('v12.10.2 validation system active!');
+        log('v12.10.3 validation system active!');
     }})();
     """
     
