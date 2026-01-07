@@ -21121,16 +21121,6 @@ def inject_mis_validation(driver, expected_data=None):
                     log('Initial banner created (first validation run)', 'INFO');
                 }}
             }}
-                if (warningCount > 0) {{
-                    log(`Phase 2: ${{warningCount}} advisory warning(s) found`, 'WARN');
-                }} else {{
-                    log('Phase 2: All fields match expected values', 'SUCCESS');
-                }}
-                
-                if (bannerMissing) {{
-                    log('Initial banner created (first validation run)', 'INFO');
-                }}
-            }}
         }}
         
         // ============================================
