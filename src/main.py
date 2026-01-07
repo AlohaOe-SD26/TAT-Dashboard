@@ -1,4 +1,26 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.8.2
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.8.3
+# v12.8.3 CHANGELOG (ENHANCED VALIDATION LOGIC):
+#   - FIXED: Weekday validation now case-insensitive
+#     * "MONDAY" vs "Monday" vs "monday" all match correctly
+#     * No false positives for different capitalization
+#   - FIXED: Stores validation handles blank = "All Locations"
+#     * When actual stores field is blank (no selections), validates as "All Locations"
+#     * No false warning when automation correctly leaves field blank
+#   - ENHANCED: Full support for "All Locations Except:" validation
+#     * Validates "All Locations Except: X, Y, Z" correctly
+#     * Compares expected stores (master list minus exceptions) vs actual selections
+#     * Matches Python's MASTER_STORE_LIST for consistency
+#     * Example: "All Locations Except: Beverly, Davis" validates correctly
+#   - ENHANCED: Store validation logic with three cases:
+#     * Case 1: "All Locations" → expects blank field
+#     * Case 2: "All Locations Except: X, Y" → expects master list minus exceptions
+#     * Case 3: Specific stores "Beverly, Davis" → expects exact match
+#   - IMPROVED: Case-insensitive store comparisons
+#     * "Beverly" vs "beverly" match correctly
+#     * Order doesn't matter (Beverly, Davis == Davis, Beverly)
+#   - IMPROVED: Better error messages for store mismatches
+#     * Shows "(blank)" when field is empty
+#     * Lists actual vs expected stores clearly
 # v12.8.2 CHANGELOG (ORANGE BOX FIX + ENHANCED SUMMARY):
 #   - FIXED: ORANGE boxes now properly visible on all field types
 #     * Select2 dropdowns (Brand, Weekday, Stores): 3px solid orange border
@@ -20115,11 +20137,16 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
-            // Weekday
+            // Weekday (CASE-INSENSITIVE)
             if (EXPECTED_DATA.weekday) {{
                 const actual = getWeekdayValues();
                 const expected = EXPECTED_DATA.weekday;
-                if (actual.length > 0 && !actual.includes(expected)) {{
+                
+                // Case-insensitive comparison
+                const actualLower = actual.map(d => d.toLowerCase());
+                const expectedLower = expected.toLowerCase();
+                
+                if (actual.length > 0 && !actualLower.includes(expectedLower)) {{
                     warnings.weekday = {{
                         expected: expected,
                         actual: actual.join(', '),
@@ -20167,21 +20194,79 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
-            // Stores (more complex - compare lists)
+            // Stores (ENHANCED LOGIC)
             if (EXPECTED_DATA.locations) {{
                 const actual = getStoreValues();
-                const expected = EXPECTED_DATA.locations.split(',').map(s => s.trim());
+                const expectedText = EXPECTED_DATA.locations.trim();
+                const expectedLower = expectedText.toLowerCase();
                 
-                // Check if any expected store is missing
-                const missing = expected.filter(e => !actual.includes(e));
-                const extra = actual.filter(a => !expected.includes(a));
-                
-                if (missing.length > 0 || extra.length > 0) {{
-                    warnings.stores = {{
-                        expected: expected.join(', '),
-                        actual: actual.join(', '),
-                        message: `Store mismatch: Expected "${{expected.join(', ')}}",  found "${{actual.join(', ')}}"`
-                    }};
+                // Case 1: "All Locations" - blank actual is correct
+                if (expectedLower === 'all locations' || expectedLower === 'all') {{
+                    if (actual.length > 0) {{
+                        // Actual has selections when it should be blank (All Locations)
+                        warnings.stores = {{
+                            expected: 'All Locations (blank)',
+                            actual: actual.join(', '),
+                            message: `Store mismatch: Expected "All Locations" (blank), found "${{actual.join(', ')}}"`
+                        }};
+                    }}
+                    // If actual is blank (length 0), that's correct - no warning
+                }}
+                // Case 2: "All Locations Except: X, Y"
+                else if (expectedText.toLowerCase().includes('except')) {{
+                    // Parse expected exceptions
+                    const exceptMatch = expectedText.match(/except[:\\s]*(.+?)(?:\\)|$)/i);
+                    if (exceptMatch) {{
+                        const exceptionsText = exceptMatch[1];
+                        const exceptions = exceptionsText.split(',').map(s => s.trim().toLowerCase());
+                        
+                        // Master store list (must match Python's MASTER_STORE_LIST)
+                        const masterStores = [
+                            'Beverly', 'Davis', 'Dixon', 'El Sobrante', 'Fresno', 'Fresno Shaw',
+                            'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'
+                        ];
+                        
+                        // Calculate expected stores (all except exceptions)
+                        const expectedStores = masterStores.filter(store => {{
+                            const storeLower = store.toLowerCase();
+                            return !exceptions.some(exc => storeLower.includes(exc) || exc.includes(storeLower));
+                        }});
+                        
+                        // Compare actual vs expected
+                        const actualLower = actual.map(s => s.toLowerCase());
+                        const expectedLower = expectedStores.map(s => s.toLowerCase());
+                        
+                        // Check if arrays match (order doesn't matter)
+                        const missing = expectedStores.filter(s => !actualLower.includes(s.toLowerCase()));
+                        const extra = actual.filter(s => !expectedLower.includes(s.toLowerCase()));
+                        
+                        if (missing.length > 0 || extra.length > 0) {{
+                            warnings.stores = {{
+                                expected: expectedStores.join(', '),
+                                actual: actual.join(', ') || '(blank)',
+                                message: `Store mismatch: Expected "${{expectedStores.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
+                            }};
+                        }}
+                    }}
+                }}
+                // Case 3: Specific stores
+                else {{
+                    const expected = expectedText.split(',').map(s => s.trim());
+                    
+                    // Compare (case-insensitive, order doesn't matter)
+                    const expectedLower = expected.map(s => s.toLowerCase());
+                    const actualLower = actual.map(s => s.toLowerCase());
+                    
+                    const missing = expected.filter(e => !actualLower.includes(e.toLowerCase()));
+                    const extra = actual.filter(a => !expectedLower.includes(a.toLowerCase()));
+                    
+                    if (missing.length > 0 || extra.length > 0) {{
+                        warnings.stores = {{
+                            expected: expected.join(', '),
+                            actual: actual.join(', ') || '(blank)',
+                            message: `Store mismatch: Expected "${{expected.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
+                        }};
+                    }}
                 }}
             }}
             
