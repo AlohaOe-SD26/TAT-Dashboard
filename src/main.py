@@ -20179,7 +20179,8 @@ def inject_mis_validation(driver, expected_data=None):
         // ============================================
         // UTILITY FUNCTIONS
         // ============================================
-        function log(message, level = 'INFO') {{
+        function log(message, level) {{
+            level = level || 'INFO';  // Default to 'INFO' if not provided
             console.log(`[MIS-VALIDATION] [${{level}}] ${{message}}`);
         }}
         
@@ -21153,6 +21154,16 @@ def inject_mis_validation(driver, expected_data=None):
         print(f"[VALIDATION-INJECT] Driver type: {type(driver)}")
         print(f"[VALIDATION-INJECT] Expected data: {expected_data is not None}")
         print(f"[VALIDATION-INJECT] JavaScript length: {len(validation_js)} characters")
+        
+        # DIAGNOSTIC: Save JavaScript to file for inspection
+        import datetime
+        debug_file = f"reports/validation_debug_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.js"
+        try:
+            with open(debug_file, 'w', encoding='utf-8') as f:
+                f.write(validation_js)
+            print(f"[VALIDATION-INJECT] 📁 Saved JavaScript to: {debug_file}")
+        except Exception as e:
+            print(f"[VALIDATION-INJECT] ⚠️ Could not save debug file: {e}")
         
         driver.execute_script(validation_js)
         print("[MIS-VALIDATION] v12.10 JavaScript injected successfully")
