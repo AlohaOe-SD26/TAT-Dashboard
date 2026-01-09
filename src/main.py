@@ -18809,6 +18809,15 @@ def api_mis_match():
         # Fetch Google Sheet data (Returns Dictionary of DataFrames)
         sections_data = fetch_google_sheet_data(tab_name)
         
+        # v12.12.5: Combine all sections into single DataFrame for MIS lookup validation
+        combined_df = pd.concat([
+            sections_data.get('weekly', pd.DataFrame()),
+            sections_data.get('monthly', pd.DataFrame()),
+            sections_data.get('sale', pd.DataFrame())
+        ], ignore_index=True)
+        GLOBAL_DATA['google_df'] = combined_df  # Store for MIS lookup's SMART FALLBACK
+        print(f"[MATCHER] Stored combined DataFrame with {len(combined_df)} rows for MIS lookup validation")
+        
         # Check if all empty
         if all(df.empty for df in sections_data.values()):
             return jsonify({'success': False, 'error': 'No data found in any section'})
