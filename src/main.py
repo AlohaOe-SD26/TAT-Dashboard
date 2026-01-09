@@ -18815,8 +18815,18 @@ def api_mis_match():
             sections_data.get('monthly', pd.DataFrame()),
             sections_data.get('sale', pd.DataFrame())
         ], ignore_index=True)
+        
+        # v12.12.5: AGGRESSIVE DEBUG
+        print(f"\n{'🔥'*30}")
+        print(f"[MATCHER] 🔥🔥🔥 STORING COMBINED DATAFRAME 🔥🔥🔥")
+        print(f"[MATCHER] Combined DataFrame shape: {combined_df.shape}")
+        print(f"[MATCHER] Weekly rows: {len(sections_data.get('weekly', pd.DataFrame()))}")
+        print(f"[MATCHER] Monthly rows: {len(sections_data.get('monthly', pd.DataFrame()))}")
+        print(f"[MATCHER] Sale rows: {len(sections_data.get('sale', pd.DataFrame()))}")
         GLOBAL_DATA['google_df'] = combined_df  # Store for MIS lookup's SMART FALLBACK
-        print(f"[MATCHER] Stored combined DataFrame with {len(combined_df)} rows for MIS lookup validation")
+        print(f"[MATCHER] ✅ Stored in GLOBAL_DATA['google_df']")
+        print(f"[MATCHER] Verification: GLOBAL_DATA['google_df'] is None? {GLOBAL_DATA.get('google_df') is None}")
+        print(f"{'🔥'*30}\n")
         
         # Check if all empty
         if all(df.empty for df in sections_data.values()):
@@ -19863,7 +19873,17 @@ def api_mis_lookup_mis_id():
         print(f"\n{'='*60}")
         print(f"[MIS LOOKUP] Looking up MIS ID: {mis_id}")
         print(f"[MIS LOOKUP] Row data provided: {row_data is not None}")
-        print(f"[MIS LOOKUP] Google Sheet loaded: {GLOBAL_DATA.get('google_df') is not None}")
+        
+        # v12.12.5: AGGRESSIVE DEBUG
+        google_df = GLOBAL_DATA.get('google_df')
+        if google_df is not None:
+            print(f"[MIS LOOKUP] ✅✅✅ Google Sheet IS LOADED ✅✅✅")
+            print(f"[MIS LOOKUP] DataFrame shape: {google_df.shape}")
+            print(f"[MIS LOOKUP] DataFrame columns: {list(google_df.columns)[:5]}...")
+        else:
+            print(f"[MIS LOOKUP] ❌❌❌ GOOGLE SHEET IS NONE ❌❌❌")
+            print(f"[MIS LOOKUP] GLOBAL_DATA keys: {list(GLOBAL_DATA.keys())}")
+        
         print(f"{'='*60}")
         
         # SMART FALLBACK: If no row data provided, try to fetch from Google Sheet
