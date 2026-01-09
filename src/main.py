@@ -17586,6 +17586,25 @@ def api_init_all():
         if mis_success: messages.append("MIS login successful")
         if blaze_success: messages.append("Blaze login & Sync successful")
         
+        # V2: Inject persistent validator if MIS login successful
+        if mis_success and driver:
+            try:
+                print("[INIT] 🚀 Injecting Validation V2 (persistent, message-passing)")
+                # Find MIS tab and inject V2 validator + listeners
+                for handle in driver.window_handles:
+                    try:
+                        driver.switch_to.window(handle)
+                        if 'daily-discount' in driver.current_url:
+                            inject_mis_validation(driver, expected_data=None)  # Inject with manual mode
+                            inject_mis_browser_click_listeners(driver)  # Inject click detection
+                            print("[INIT] ✅ Validation V2 + MIS Browser listeners injected")
+                            messages.append("Validation V2 ready")
+                            break
+                    except:
+                        continue
+            except Exception as e:
+                print(f"[INIT] ⚠️ Could not inject V2 validator: {e}")
+        
         # SILENT OPERATION: Return to original tab
         if original_tab and driver:
             try:
@@ -19952,7 +19971,7 @@ def api_mis_lookup_mis_id():
                     print(f"[MIS LOOKUP] Injecting validation with row data")
                     print(f"[MIS LOOKUP] Expected: Brand={expected_data['brand']}, Weekday={expected_data['weekday']}")
                     
-                    inject_mis_validation(driver, expected_data)
+                    send_validation_message(driver, action='automation', mis_id=mis_id, expected_data=expected_data)
                     print(f"[MIS LOOKUP] Ã¢Å“â€¦ Validation injected for MIS ID {mis_id}")
                     
                 except Exception as e:
@@ -19969,6 +19988,91 @@ def api_mis_lookup_mis_id():
         
     except Exception as e:
         GLOBAL_DATA['automation_in_progress'] = False
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/mis/validate-lookup', methods=['POST'])
+def api_mis_validate_lookup():
+    """
+    V2: Handle MIS Browser datatable clicks.
+    Check Google Sheet for MIS ID, send automation or manual message.
+    """
+    try:
+        data = request.get_json()
+        mis_id = str(data.get('mis_id', '')).strip()
+        
+        if not mis_id:
+            return jsonify({'success': False, 'error': 'No MIS ID provided'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized'})
+        
+        print(f"\n{'='*60}")
+        print(f"[V2-LOOKUP] MIS Browser click detected: MIS ID {mis_id}")
+        print(f"{'='*60}")
+        
+        # Check if Google Sheet data available
+        google_df = GLOBAL_DATA.get('google_df')
+        
+        if google_df is not None and not google_df.empty:
+            print(f"[V2-LOOKUP] 🔍 Searching Google Sheet for MIS ID {mis_id}")
+            
+            # Search for MIS ID in sheet
+            found_data = None
+            for idx, row in google_df.iterrows():
+                # Check multiple possible ID columns
+                for id_col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+                    if id_col in google_df.columns:
+                        sheet_mis_id = str(row.get(id_col, '')).strip()
+                        if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                            # Found it!
+                            found_data = {
+                                'brand': str(row.get('Brand', '')).strip(),
+                                'linked_brand': str(row.get('Linked Brand', '')).strip(),
+                                'weekday': str(row.get('Weekday', '')).strip(),
+                                'categories': str(row.get('Categories', '')).strip(),
+                                'discount': str(row.get('Discount', '')).strip(),
+                                'vendor_contrib': str(row.get('Vendor %', '')).strip(),
+                                'locations': str(row.get('Locations', 'All Locations')).strip(),
+                                'rebate_type': str(row.get('Rebate Type', '')).strip(),
+                                'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                            }
+                            print(f"[V2-LOOKUP] ✅ Found in Google Sheet!")
+                            print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
+                            break
+                if found_data:
+                    break
+            
+            if found_data:
+                # Send automation message
+                send_validation_message(driver, action='automation', mis_id=mis_id, expected_data=found_data)
+                return jsonify({
+                    'success': True,
+                    'mode': 'automation',
+                    'message': f'MIS ID {mis_id} found in Google Sheet - automation mode activated'
+                })
+            else:
+                print(f"[V2-LOOKUP] ⚠️ MIS ID {mis_id} not found in Google Sheet")
+                # Send manual message
+                send_validation_message(driver, action='manual')
+                return jsonify({
+                    'success': True,
+                    'mode': 'manual',
+                    'message': f'MIS ID {mis_id} not in Google Sheet - manual mode'
+                })
+        else:
+            print(f"[V2-LOOKUP] ⚠️ No Google Sheet data available")
+            # Send manual message
+            send_validation_message(driver, action='manual')
+            return jsonify({
+                'success': True,
+                'mode': 'manual',
+                'message': 'No Google Sheet loaded - manual mode'
+            })
+    
+    except Exception as e:
+        print(f"[V2-LOOKUP] ❌ Error: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -20348,6 +20452,148 @@ def api_mis_update_end_date():
 
 
 # ============================================
+# VALIDATION V2 - Message Passing Helper
+# ============================================
+def send_validation_message(driver, action='manual', mis_id=None, expected_data=None):
+    """
+    V2: Send message to persistent validator instead of re-injecting.
+    
+    Args:
+        driver: Selenium WebDriver
+        action: 'manual' | 'automation' | 'lookup'
+        mis_id: MIS ID (optional)
+        expected_data: Expected data dict (optional)
+    """
+    import json
+    
+    message = {
+        'action': action,
+        'mis_id': mis_id,
+        'expected_data': expected_data
+    }
+    message_json = json.dumps(message)
+    
+    print(f"[V2] 📨 Sending message: action={action}, has_data={expected_data is not None}")
+    
+    try:
+        driver.execute_script(f"""
+            if (window.receiveValidationMessage) {{
+                window.receiveValidationMessage({message_json});
+            }} else {{
+                console.error('[V2] ERROR: Validator not initialized! Call inject_mis_validation first.');
+            }}
+        """)
+        print(f"[V2] ✅ Message sent successfully")
+    except Exception as e:
+        print(f"[V2] ❌ Failed to send message: {e}")
+
+
+def inject_mis_browser_click_listeners(driver):
+    """
+    V2: Inject click listeners for MIS Browser datatable.
+    Detects when user clicks Edit/MIS ID and sends lookup message.
+    """
+    print("[V2] Injecting MIS Browser click listeners...")
+    
+    listener_js = """
+    (function() {
+        if (window.MIS_BROWSER_LISTENERS_ACTIVE) {
+            console.log('[V2] MIS Browser listeners already active');
+            return;
+        }
+        window.MIS_BROWSER_LISTENERS_ACTIVE = true;
+        
+        console.log('[V2] 👂 Setting up MIS Browser click detection');
+        
+        // Function to send lookup request to backend
+        window.sendMISLookupRequest = async function(misId) {
+            console.log('[V2] 🔍 Sending lookup request for MIS ID:', misId);
+            
+            try {
+                const response = await fetch('/api/mis/validate-lookup', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mis_id: misId })
+                });
+                
+                const result = await response.json();
+                console.log('[V2] Lookup response:', result);
+            } catch (e) {
+                console.error('[V2] Lookup request failed:', e);
+            }
+        };
+        
+        // Attach click listener to datatable
+        function attachListeners() {
+            const table = document.querySelector('#mis-datatable, .datatable, table');
+            if (!table) {
+                console.log('[V2] MIS datatable not found, will retry');
+                return false;
+            }
+            
+            console.log('[V2] ✅ Found MIS datatable, attaching listeners');
+            
+            table.addEventListener('click', function(e) {
+                // Check if clicked element is in a row
+                const row = e.target.closest('tr');
+                if (!row) return;
+                
+                // Check if clicked on Edit button or MIS ID cell
+                const isEditBtn = e.target.closest('.btn-edit, .edit-button, button');
+                const isMISID = e.target.closest('.mis-id, [data-mis-id]');
+                
+                if (isEditBtn || isMISID) {
+                    // Try to extract MIS ID from row
+                    let misId = null;
+                    
+                    // Method 1: Look for data attribute
+                    if (row.dataset.misId) {
+                        misId = row.dataset.misId;
+                    }
+                    // Method 2: Look for MIS ID in cells
+                    else {
+                        const cells = row.querySelectorAll('td');
+                        for (const cell of cells) {
+                            const text = cell.textContent.trim();
+                            // MIS IDs are typically numeric
+                            if (/^\\d{3,}$/.test(text)) {
+                                misId = text;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (misId) {
+                        console.log('[V2] 🎯 Detected MIS Browser click, MIS ID:', misId);
+                        window.sendMISLookupRequest(misId);
+                    }
+                }
+            });
+            
+            return true;
+        }
+        
+        // Try to attach now, retry if needed
+        if (!attachListeners()) {
+            // Retry after 2 seconds if table not found
+            setTimeout(() => {
+                if (!attachListeners()) {
+                    console.log('[V2] ⚠️ Could not find MIS datatable after retry');
+                }
+            }, 2000);
+        }
+        
+    })();
+    """
+    
+    try:
+        driver.execute_script(listener_js)
+        print("[V2] ✅ MIS Browser listeners injected")
+    except Exception as e:
+        print(f"[V2] ❌ Failed to inject listeners: {e}")
+
+
+# ============================================
 # CREATE DEAL IN MIS (v12.3)
 # ============================================
 def inject_mis_validation(driver, expected_data=None):
@@ -20389,31 +20635,75 @@ def inject_mis_validation(driver, expected_data=None):
     import json
     expected_json = json.dumps(expected_data) if expected_data else 'null'
     
-    # SMART UPDATE: If validation already active, just update the expected data
-    # This allows MIS ID button clicks to work without full re-injection
+    # V2 ARCHITECTURE: Check if validator already active, just send message instead of re-injecting
     try:
-        is_active = driver.execute_script("return window.MIS_VALIDATOR_ACTIVE === true;")
-        if is_active:
-            print("[VALIDATION-INJECT] Validator already active, updating EXPECTED_DATA only")
-            update_js = f"""
-            (function() {{
-                if (window.updateValidationData) {{
-                    console.log('[MIS-VALIDATION] Updating expected data for new entry');
-                    window.updateValidationData({expected_json});
+        is_active = driver.execute_script("return window.VALIDATOR_V2_ACTIVE === true;")
+        if is_active and expected_data is not None:
+            print("[V2] ✅ Validator already active, sending message instead of re-injecting")
+            message = {
+                'action': 'automation' if expected_data else 'manual',
+                'expected_data': expected_data
+            }
+            message_json = json.dumps(message)
+            driver.execute_script(f"""
+                if (window.receiveValidationMessage) {{
+                    window.receiveValidationMessage({message_json});
                 }} else {{
-                    console.log('[MIS-VALIDATION] ERROR: updateValidationData function not found!');
+                    console.error('[V2] ERROR: receiveValidationMessage not found!');
                 }}
-            }})();
-            """
-            driver.execute_script(update_js)
+            """)
             return
     except Exception as e:
-        print(f"[VALIDATION-INJECT] Error checking validator status: {e}")
-        # Continue with full injection if check fails
+        print(f"[V2] Could not check validator status: {e}")
+        # Continue with injection if check fails
     
     validation_js = f"""
     (function() {{
-        console.log('[MIS-VALIDATION] v12.12.4 - Complete Validator Starting...');
+        // V2: Persistent validator flag
+        if (window.VALIDATOR_V2_ACTIVE) {{
+            console.log('[V2] Validator already active, updating data only');
+            if (window.receiveValidationMessage) {{
+                window.receiveValidationMessage({{
+                    action: {expected_json} ? 'automation' : 'manual',
+                    expected_data: {expected_json}
+                }});
+            }}
+            return;
+        }}
+        window.VALIDATOR_V2_ACTIVE = true;
+        
+        console.log('[MIS-VALIDATION] v12.12.6 (V2) - Persistent Validator Starting...');
+        console.log('[V2] Message-passing architecture active');
+        console.log('[V2] Supports 3 modes: manual, automation, lookup');
+        
+        // ============================================
+        // V2 MESSAGE RECEIVER
+        // ============================================
+        window.receiveValidationMessage = function(message) {{
+            console.log('[V2] 📨 Received message:', message);
+            
+            if (message.action === 'manual') {{
+                VALIDATION_MODE = 'manual';
+                EXPECTED_DATA = null;
+                console.log('[V2] ✅ Switched to MANUAL mode');
+            }}
+            else if (message.action === 'automation') {{
+                VALIDATION_MODE = 'automation';
+                EXPECTED_DATA = message.expected_data;
+                console.log('[V2] ✅ Switched to AUTOMATION mode');
+                console.log('[V2] Expected data:', message.expected_data);
+            }}
+            else if (message.action === 'lookup') {{
+                console.log('[V2] 🔍 LOOKUP mode - backend will send automation or manual');
+            }}
+            
+            // Clear existing banner and warnings
+            if (validationState.summaryBanner) {{
+                validationState.summaryBanner.remove();
+                validationState.summaryBanner = null;
+            }}
+            validationState.fieldWarnings = {{}};
+        }};
         
         // Note: Re-injection check now handled in Python for better control
         if (window.MIS_VALIDATOR_ACTIVE) {{
@@ -20451,26 +20741,6 @@ def inject_mis_validation(driver, expected_data=None):
         
         // Validation mode: 'automation' or 'manual'
         let VALIDATION_MODE = EXPECTED_DATA ? 'automation' : 'manual';
-        
-        // ============================================
-        // UPDATE FUNCTION (for MIS ID button clicks)
-        // ============================================
-        window.updateValidationData = function(newExpectedData) {{
-            console.log('[MIS-VALIDATION] Updating validation data dynamically');
-            EXPECTED_DATA = newExpectedData;
-            VALIDATION_MODE = newExpectedData ? 'automation' : 'manual';
-            
-            // Clear existing warnings when switching data
-            validationState.fieldWarnings = {{}};
-            
-            // Remove old banner to force recreation with new data
-            if (validationState.summaryBanner) {{
-                validationState.summaryBanner.remove();
-                validationState.summaryBanner = null;
-            }}
-            
-            console.log('[MIS-VALIDATION] Data updated, mode=' + VALIDATION_MODE);
-        }};
         
         // ============================================
         // STATE
