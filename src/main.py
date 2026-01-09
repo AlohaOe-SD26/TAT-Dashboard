@@ -19990,7 +19990,6 @@ def api_mis_lookup_mis_id():
                             if len(matching_rows) > 1:
                                 print(f"[MIS LOOKUP] 🗓️ Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
                             
-                            break
                     else:
                         print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Could not find MIS ID column in Google Sheet")
                 else:
