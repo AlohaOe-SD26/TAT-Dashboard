@@ -19921,26 +19921,76 @@ def api_mis_lookup_mis_id():
                             break
                     
                     if id_col:
-                        # Search for the MIS ID
+                        # Search for the MIS ID - collect ALL matching rows for multi-day detection
+                        matching_rows = []
+                        
                         for idx, row in google_df.iterrows():
                             sheet_mis_id = str(row.get(id_col, '')).strip()
                             # Handle multi-part IDs (W1: 123, W2: 456)
                             if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
-                                # Found it! Extract row data
-                                row_data = {
-                                    'brand': str(row.get('Brand', '')).strip(),
-                                    'linked_brand': str(row.get('Linked Brand', '')).strip(),
-                                    'weekday': str(row.get('Weekday', '')).strip(),
-                                    'categories': str(row.get('Categories', '')).strip(),
-                                    'discount': str(row.get('Discount', '')).strip(),
-                                    'vendor_contrib': str(row.get('Vendor %', '')).strip(),
-                                    'locations': str(row.get('Locations', 'All Locations')).strip(),
-                                    'rebate_type': str(row.get('Rebate Type', '')).strip(),
-                                    'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
-                                }
-                                print(f"[MIS LOOKUP] Ã¢Å“â€¦ Found row data in Google Sheet!")
-                                print(f"[MIS LOOKUP] Brand: {row_data['brand']}, Weekday: {row_data['weekday']}")
-                                break
+                                matching_rows.append(row)
+                        
+                        if matching_rows:
+                            print(f"[MIS LOOKUP] ✅ Found {len(matching_rows)} matching row(s) for MIS ID {mis_id}")
+                            
+                            # Use first row as base, but combine weekdays from all rows
+                            base_row = matching_rows[0]
+                            
+                            # MULTI-DAY HANDLING: Combine weekdays from all matching rows
+                            all_weekdays = []
+                            for match_row in matching_rows:
+                                weekday = str(match_row.get('Weekday', '')).strip()
+                                if weekday and weekday not in all_weekdays:
+                                    all_weekdays.append(weekday)
+                            
+                            combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
+                            
+                            # DEBUG: Print column names
+                            print(f"[MIS LOOKUP] 🔍 Available columns: {list(google_df.columns)}")
+                            
+                            # Try multiple possible column names for Discount
+                            discount_value = ''
+                            for disc_col in ['Discount', 'Discount %', 'Discount Rate', 'discount']:
+                                if disc_col in google_df.columns:
+                                    discount_value = str(base_row.get(disc_col, '')).strip()
+                                    if discount_value:
+                                        print(f"[MIS LOOKUP] Found Discount in column '{disc_col}': '{discount_value}'")
+                                        break
+                            
+                            # Try multiple possible column names for Vendor %
+                            vendor_value = ''
+                            for vendor_col in ['Vendor %', 'Vendor Contribution', 'Vendor', 'vendor %']:
+                                if vendor_col in google_df.columns:
+                                    vendor_value = str(base_row.get(vendor_col, '')).strip()
+                                    if vendor_value:
+                                        print(f"[MIS LOOKUP] Found Vendor % in column '{vendor_col}': '{vendor_value}'")
+                                        break
+                            
+                            # Extract locations with "All Locations Except" handling
+                            locations_raw = str(base_row.get('Locations', 'All Locations')).strip()
+                            
+                            # Found it! Extract row data
+                            row_data = {
+                                'brand': str(base_row.get('Brand', '')).strip(),
+                                'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
+                                'weekday': combined_weekday,
+                                'categories': str(base_row.get('Categories', '')).strip(),
+                                'discount': discount_value,
+                                'vendor_contrib': vendor_value,
+                                'locations': locations_raw,
+                                'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
+                                'after_wholesale': str(base_row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                            }
+                            
+                            print(f"[MIS LOOKUP] ✅ Found row data in Google Sheet!")
+                            print(f"[MIS LOOKUP] Brand: {row_data['brand']}, Weekday: {row_data['weekday']}")
+                            print(f"[MIS LOOKUP] Discount: '{row_data['discount']}', Vendor %: '{row_data['vendor_contrib']}'")
+                            print(f"[MIS LOOKUP] Locations: {row_data['locations']}")
+                            
+                            if len(matching_rows) > 1:
+                                print(f"[MIS LOOKUP] 🗓️ Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
+                            
+                            break
                     else:
                         print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Could not find MIS ID column in Google Sheet")
                 else:
@@ -21137,7 +21187,11 @@ def inject_mis_validation(driver, expected_data=None):
             // Discount
             if (EXPECTED_DATA.discount != null) {{
                 const actual = getDiscountValue();
-                const expected = String(EXPECTED_DATA.discount);
+                let expected = String(EXPECTED_DATA.discount);
+                
+                // Normalize: Strip "%" from expected for comparison
+                expected = expected.replace('%', '').trim();
+                
                 if (actual && actual !== expected) {{
                     warnings.discount = {{
                         expected: expected + '%',
@@ -21150,7 +21204,11 @@ def inject_mis_validation(driver, expected_data=None):
             // Vendor Contribution
             if (EXPECTED_DATA.vendor_contrib != null) {{
                 const actual = getVendorContribValue();
-                const expected = String(EXPECTED_DATA.vendor_contrib);
+                let expected = String(EXPECTED_DATA.vendor_contrib);
+                
+                // Normalize: Strip "%" from expected for comparison
+                expected = expected.replace('%', '').trim();
+                
                 if (actual && actual !== expected) {{
                     warnings.vendor_contrib = {{
                         expected: expected + '%',
