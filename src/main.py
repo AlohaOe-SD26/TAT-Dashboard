@@ -19952,6 +19952,7 @@ def api_mis_lookup_mis_id():
         
         # Open the entry modal
         if filter_and_open_mis_id(driver, mis_id):
+            time.sleep(1)  # V2: Wait for modal to open before injecting
             # NEW: If row data provided, inject validation
             if row_data:
                 try:
@@ -19971,13 +19972,14 @@ def api_mis_lookup_mis_id():
                     print(f"[MIS LOOKUP] Injecting validation with row data")
                     print(f"[MIS LOOKUP] Expected: Brand={expected_data['brand']}, Weekday={expected_data['weekday']}")
                     
-                    send_validation_message(driver, action='automation', mis_id=mis_id, expected_data=expected_data)
+                    inject_mis_validation(driver, expected_data=expected_data)
                     print(f"[MIS LOOKUP] Ã¢Å“â€¦ Validation injected for MIS ID {mis_id}")
                     
                 except Exception as e:
                     print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Could not inject validation: {e}")
             else:
-                print(f"[MIS LOOKUP] No row data provided - skipping validation")
+                inject_mis_validation(driver, expected_data=None)
+                print(f"[MIS LOOKUP] No row data - manual mode validation")
             
             # Clear automation flag
             GLOBAL_DATA['automation_in_progress'] = False
