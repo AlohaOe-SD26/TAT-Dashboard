@@ -3,44 +3,44 @@
 #   - FIXED: Banner now shows ALL errors (critical AND advisory) in single list
 #     * Was: Banner only showed advisory warnings, ignored critical errors
 #     * Now: Banner shows comprehensive list of ALL issues
-#     * Critical errors listed first with ðŸ”´ + "(BLOCKS SAVE)"
-#     * Advisory warnings listed second with ðŸŸ§
+#     * Critical errors listed first with Ã°Å¸â€Â´ + "(BLOCKS SAVE)"
+#     * Advisory warnings listed second with Ã°Å¸Å¸Â§
 #   - IMPROVED: Banner color priority
 #     * RED banner: Any critical errors (even if advisory too)
 #     * ORANGE banner: Only advisory warnings (no critical)
 #     * GREEN banner: All fields correct
 #   - IMPROVED: Banner updates for critical validation changes
-#     * Change Rebate Type â†’ Banner updates âœ…
-#     * Change Weekday â†’ Banner updates âœ…
-#     * Any critical field change â†’ Banner reflects immediately âœ…
+#     * Change Rebate Type Ã¢â€ â€™ Banner updates Ã¢Å“â€¦
+#     * Change Weekday Ã¢â€ â€™ Banner updates Ã¢Å“â€¦
+#     * Any critical field change Ã¢â€ â€™ Banner reflects immediately Ã¢Å“â€¦
 #   - ENHANCED: Comprehensive error tracking
 #     * criticalErrors object: {rebateType, weekday}
 #     * Deep comparison for critical validation state
 #     * Banner updates when EITHER critical OR advisory changes
 #   - NEW: Header shows blocking count
-#     * "âš ï¸ 3 Issues Found (2 errors blocking save)"
+#     * "Ã¢Å¡Â Ã¯Â¸Â 3 Issues Found (2 errors blocking save)"
 #     * Clear indication of what blocks Save button
 #   - Examples:
-#     * 2 critical + 1 advisory â†’ RED banner, lists all 3
-#     * 0 critical + 2 advisory â†’ ORANGE banner, lists both
-#     * 1 critical + 0 advisory â†’ RED banner, shows critical
-#     * 0 critical + 0 advisory â†’ GREEN banner, all correct
+#     * 2 critical + 1 advisory Ã¢â€ â€™ RED banner, lists all 3
+#     * 0 critical + 2 advisory Ã¢â€ â€™ ORANGE banner, lists both
+#     * 1 critical + 0 advisory Ã¢â€ â€™ RED banner, shows critical
+#     * 0 critical + 0 advisory Ã¢â€ â€™ GREEN banner, all correct
 # v12.10.3 CHANGELOG (BANNER INITIALIZATION FIX):
 #   - FIXED: Banner now appears immediately on first validation run
-#     * Was: Banner missing when automation fills correctly (0 warnings â†’ 0 warnings)
+#     * Was: Banner missing when automation fills correctly (0 warnings Ã¢â€ â€™ 0 warnings)
 #     * Why: Deep compare on first run: JSON.stringify({}) === JSON.stringify({})
 #     * Now: Check if banner exists, create if missing (even if warnings unchanged)
 #     * Logic: if (warningsChanged || bannerMissing) { create banner }
 #   - IMPROVED: Banner initialization
-#     * First validation run â†’ Banner created immediately âœ…
-#     * User makes edit â†’ Banner updates correctly âœ…
-#     * No more "banner appears only after edit" bug âœ…
+#     * First validation run Ã¢â€ â€™ Banner created immediately Ã¢Å“â€¦
+#     * User makes edit Ã¢â€ â€™ Banner updates correctly Ã¢Å“â€¦
+#     * No more "banner appears only after edit" bug Ã¢Å“â€¦
 #   - Added logging for initial banner creation
 #     * Console shows: "Initial banner created (first validation run)"
 #     * Helps debug initialization timing issues
 # v12.10.2 CHANGELOG (BANNER UPDATE FIX):
 #   - FIXED: Banner now updates dynamically as fields change
-#     * Was: Only updated when warning COUNT changed (0â†’1, 1â†’2)
+#     * Was: Only updated when warning COUNT changed (0Ã¢â€ â€™1, 1Ã¢â€ â€™2)
 #     * Now: Updates when ANY warning CONTENT changes
 #     * Uses deep comparison: JSON.stringify(warnings) vs old warnings
 #     * Catches: Count changes, field changes, value changes
@@ -49,10 +49,10 @@
 #     * After: if (JSON.stringify(warnings) !== JSON.stringify(oldWarnings))
 #     * No more "stuck banner" after automation
 #   - Examples now working:
-#     * Change Brand: Stiiizy â†’ Jeeter â†’ Banner updates âœ…
-#     * Fix Brand, break Discount (1â†’1 warnings) â†’ Banner updates âœ…
-#     * Change Discount: 20% â†’ 25% â†’ Banner updates âœ…
-#     * All correct â†’ Change anything â†’ Banner updates immediately âœ…
+#     * Change Brand: Stiiizy Ã¢â€ â€™ Jeeter Ã¢â€ â€™ Banner updates Ã¢Å“â€¦
+#     * Fix Brand, break Discount (1Ã¢â€ â€™1 warnings) Ã¢â€ â€™ Banner updates Ã¢Å“â€¦
+#     * Change Discount: 20% Ã¢â€ â€™ 25% Ã¢â€ â€™ Banner updates Ã¢Å“â€¦
+#     * All correct Ã¢â€ â€™ Change anything Ã¢â€ â€™ Banner updates immediately Ã¢Å“â€¦
 # v12.10.1 CHANGELOG (SYNTAX FIX):
 #   - CRITICAL: Weekday is now RED (blocks Save) like Rebate Type
 #     * Weekday MUST have at least one day selected
@@ -88,8 +88,8 @@
 #     * Now single clean validation script
 # v12.9 CHANGELOG (PERSISTENT VALIDATION + MODE TRACKING):
 #   - NEW: Persistent validation banner (ALWAYS visible until Save clicked)
-#     * Green banner when all correct: "âœ… All Fields Correct - Ready to Save!"
-#     * Orange banner when warnings: "âš ï¸ X Fields May Need Review"
+#     * Green banner when all correct: "Ã¢Å“â€¦ All Fields Correct - Ready to Save!"
+#     * Orange banner when warnings: "Ã¢Å¡Â Ã¯Â¸Â X Fields May Need Review"
 #     * Shows validation mode (Automation vs Manual)
 #     * Only disappears when Save clicked or modal closed
 #   - NEW: Save button detection
@@ -139,9 +139,9 @@
 #     * Matches Python's MASTER_STORE_LIST for consistency
 #     * Example: "All Locations Except: Beverly, Davis" validates correctly
 #   - ENHANCED: Store validation logic with three cases:
-#     * Case 1: "All Locations" â†’ expects blank field
-#     * Case 2: "All Locations Except: X, Y" â†’ expects master list minus exceptions
-#     * Case 3: Specific stores "Beverly, Davis" â†’ expects exact match
+#     * Case 1: "All Locations" Ã¢â€ â€™ expects blank field
+#     * Case 2: "All Locations Except: X, Y" Ã¢â€ â€™ expects master list minus exceptions
+#     * Case 3: Specific stores "Beverly, Davis" Ã¢â€ â€™ expects exact match
 #   - IMPROVED: Case-insensitive store comparisons
 #     * "Beverly" vs "beverly" match correctly
 #     * Order doesn't matter (Beverly, Davis == Davis, Beverly)
@@ -175,7 +175,7 @@
 #     * ORANGE boxes (2px solid) for mismatches (advisory, doesn't block Save)
 #     * Hover tooltips showing "Expected: X, Actual: Y"
 #   - NEW: Error summary banner at top of modal
-#     * Shows count: "âš ï¸ 3 fields may need review"
+#     * Shows count: "Ã¢Å¡Â Ã¯Â¸Â 3 fields may need review"
 #     * Clarifies these are advisory (can still save)
 #     * Updates dynamically as fields change
 #   - NEW: Smart field comparison logic
@@ -184,11 +184,11 @@
 #     * Validates boolean toggle (After Wholesale)
 #     * Ignores blank/unselected fields (no false positives)
 #   - IMPROVED: Two-tier validation system
-#     * Phase 1 (RED): Rebate Type MUST be filled â†’ Blocks Save
-#     * Phase 2 (ORANGE): All other fields â†’ Advisory only
+#     * Phase 1 (RED): Rebate Type MUST be filled Ã¢â€ â€™ Blocks Save
+#     * Phase 2 (ORANGE): All other fields Ã¢â€ â€™ Advisory only
 #   - IMPROVED: Enhanced tooltips
-#     * RED: "âŒ Rebate Type is required!"
-#     * ORANGE: "âš ï¸ Brand mismatch: Expected 'Stiiizy', found 'Jeeter'"
+#     * RED: "Ã¢ÂÅ’ Rebate Type is required!"
+#     * ORANGE: "Ã¢Å¡Â Ã¯Â¸Â Brand mismatch: Expected 'Stiiizy', found 'Jeeter'"
 #   - IMPROVED: Console logging for debugging
 #     * Logs all validation checks
 #     * Shows which fields have warnings
@@ -268,8 +268,8 @@
 #   - NEW: Auto-load existing Blaze selections from Google Sheet
 #     * When opening modal, parses "Blaze Discount Title" column
 #     * Validates titles against Blaze promotions
-#     * Found titles â†’ Added to queue normally
-#     * Not found titles â†’ Added with âš ï¸ warning icon, grayed out, [Create] button
+#     * Found titles Ã¢â€ â€™ Added to queue normally
+#     * Not found titles Ã¢â€ â€™ Added with Ã¢Å¡Â Ã¯Â¸Â warning icon, grayed out, [Create] button
 #     * Not found items are removable with red [X] button
 #   - NEW: [View] button on all queue, suggestion, and library items
 #     * Opens existing detail modal (showDetailModal)
@@ -297,16 +297,16 @@
 #     * If exists: Prompt user to select existing OR continue with modified name
 #     * Modified name: User can add note/suffix (e.g., "v2", "2025")
 #   - NEW: Title input with undo functionality
-#     * Click input â†’ Shows suggested title variations
-#     * Type freely â†’ Can still select suggestions
-#     * Select suggestion after typing â†’ [Undo] button appears
-#     * Click [Undo] â†’ Reverts to typed text
+#     * Click input Ã¢â€ â€™ Shows suggested title variations
+#     * Type freely Ã¢â€ â€™ Can still select suggestions
+#     * Select suggestion after typing Ã¢â€ â€™ [Undo] button appears
+#     * Click [Undo] Ã¢â€ â€™ Reverts to typed text
 #   - NEW: Sheet write enhancement for not-found items
 #     * Writes: "Title Name (NOTE: Needs to be created)"
 #     * Red text only on "(NOTE: Needs to be created)" portion
 #     * Rest of title remains normal color
 #   - ENHANCED: Queue now shows [Create] button for not-found items
-#     * Click [Create] â†’ Opens creation modal with title pre-filled
+#     * Click [Create] Ã¢â€ â€™ Opens creation modal with title pre-filled
 #   - ENHANCED: Suggestions/Library items now have [View] buttons
 #     * Non-intrusive placement
 #     * Maintains checkbox click functionality
@@ -398,7 +398,7 @@
 #   - LOGIC: Multi-day detection now collects ALL unique weekdays from ALL member rows
 #     * Handles complex groups where members have different weekdays
 #     * Correctly identifies Monday + Thursday groups even with 2+ brands
-#     * Sorts weekdays in calendar order (Mon Ã¢â€ â€™ Sun)
+#     * Sorts weekdays in calendar order (Mon ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Sun)
 #   - FIXED: Deal count now includes yellow reference rows
 #     * Monday shows: 21 deals (includes groups + singles)
 #     * Thursday shows: 15 deals (includes yellow refs + regular deals)
@@ -408,8 +408,8 @@
 #     * BUG: Cell count check (cells.length <= 3) ran BEFORE weekday extraction
 #     * Result: All group headers exited early with "Not enough cells" error
 #     * Solution: Move cell count check INSIDE single row branch only
-#     * Group headers now: Extract groupId Ã¢â€ â€™ Find members Ã¢â€ â€™ Get weekday from first member
-#     * Single rows now: Check cell count Ã¢â€ â€™ Get weekday from row
+#     * Group headers now: Extract groupId ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Find members ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Get weekday from first member
+#     * Single rows now: Check cell count ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Get weekday from row
 #     * Multi-day groups appear under first weekday with all members
 #     * Notes appear on subsequent weekdays with clickable row buttons
 #   - FIXED: Case sensitivity bug (MONDAY vs Monday)
@@ -423,7 +423,7 @@
 # v12.2 CHANGELOG (WEEKDAY BREAKDOWN LIST):
 #   - NEW: Weekly Deals Breakdown List View
 #     * Toggle between "Full List" (original) and "Breakdown List" (organized by weekday)
-#     * Breakdown List organizes deals by weekday sections (Monday Ã¢â€ â€™ Sunday)
+#     * Breakdown List organizes deals by weekday sections (Monday ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Sunday)
 #     * Each weekday header shows: deal count, brands list (tooltip), multi-day notes
 #     * Multi-day deals: Full group appears under first weekday only
 #     * Other weekdays show notes with clickable row buttons
@@ -438,7 +438,7 @@
 # v12.2 CHANGELOG (CONTINUE ELIGIBILITY FIX):
 #   - FIXED: ID Matcher Continue/Recycle eligibility now handles unparseable tab names gracefully
 #     * Added cannotDetermineDate flag to checkContinueEligibility()
-#     * When tab name can't be parsed Ã¢â€ â€™ shows "? UNDETERMINED" instead of "NEW ENTRY"
+#     * When tab name can't be parsed ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ shows "? UNDETERMINED" instead of "NEW ENTRY"
 #     * No longer adds "Cannot parse tab name for date" to mismatches list
 #     * Prevents false "NEW ENTRY" when tab name format is non-standard
 #     * Only calculates new end date when tab can be successfully parsed
@@ -511,9 +511,9 @@
 #   - enhanced_match_mis_ids(): Added 'section' field to each match object
 #   - Frontend approveSingleMatch(): Now stores {mis_id, section} for each approval
 #   - /api/mis/apply-matches: Updated to detect section and use correct tag prefix
-#     * Weekly deals ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ W1:
-#     * Monthly deals ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ M1:
-#     * Sale deals ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ S1:
+#     * Weekly deals ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ W1:
+#     * Monthly deals ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ M1:
+#     * Sale deals ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ S1:
 #   - /api/mis/apply-split-id: Updated to use section-based tags
 #     * Accepts 'section' parameter to determine prefix
 #     * Converts legacy tags (part1, part2, gap, patch) to new format
@@ -1417,9 +1417,9 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         # Check if we have any credentials at all
         if not username or not password:
             if tab_type == 'mis':
-                raise Exception("[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
+                raise Exception("[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
             elif tab_type == 'blaze':
-                raise Exception("[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
+                raise Exception("[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
         
         # Attempt login
         if tab_type == 'mis':
@@ -1461,7 +1461,7 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         
         elif tab_type == 'blaze':
             # For Blaze, just raise exception - token-based login handled elsewhere
-            raise Exception("[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
+            raise Exception("[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
     
     # Unknown state - proceed cautiously
     return True
@@ -1805,7 +1805,7 @@ def get_api_data(token_input):
             sample = list(colls.items())[:3]
             print(f"[API] Sample collections: {sample}")
         else:
-            print("[API] [!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â WARNING: Zero collections returned!")
+            print("[API] [!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â WARNING: Zero collections returned!")
             
     except Exception as e:
         print(f"[API] [ERROR] Collections fetch failed: {e}")
@@ -2684,7 +2684,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         is_logged_in = len(driver.find_elements(By.ID, "daily-discount")) > 0
         
         if is_logged_in:
-            print(f"[MIS-READY] Ã¢Å“â€œ Already logged in to MIS")
+            print(f"[MIS-READY] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Already logged in to MIS")
             return True
         
         if is_logged_out:
@@ -2706,7 +2706,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
             # Verify we have credentials
             if not username or not password:
                 raise Exception(
-                    "Ã¢Å¡Â Ã¯Â¸Â MIS Login Required\n\n"
+                    "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â MIS Login Required\n\n"
                     "MIS session has expired and no credentials are saved.\n\n"
                     "Please enter your MIS credentials in the Setup tab and try again."
                 )
@@ -2740,7 +2740,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                     EC.presence_of_element_located((By.ID, "daily-discount"))
                 )
                 
-                print(f"[MIS-READY] Ã¢Å“â€œ Login successful!")
+                print(f"[MIS-READY] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Login successful!")
                 
                 # Set table to show all records
                 try:
@@ -2754,7 +2754,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                 
             except Exception as login_error:
                 raise Exception(
-                    f"Ã¢ÂÅ’ MIS Login Failed\n\n"
+                    f"ÃƒÂ¢Ã‚ÂÃ…â€™ MIS Login Failed\n\n"
                     f"Could not log in to MIS. Please check your credentials in the Setup tab.\n\n"
                     f"Error: {str(login_error)}"
                 )
@@ -2766,13 +2766,13 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         
         # Check again
         if len(driver.find_elements(By.ID, "daily-discount")) > 0:
-            print(f"[MIS-READY] Ã¢Å“â€œ MIS is ready")
+            print(f"[MIS-READY] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ MIS is ready")
             return True
         elif len(driver.find_elements(By.NAME, "email")) > 0:
             # Recursively call self to handle login
             return ensure_mis_ready(driver, gui_username, gui_password)
         else:
-            raise Exception("Ã¢ÂÅ’ Could not determine MIS page state. Please try Initialize again.")
+            raise Exception("ÃƒÂ¢Ã‚ÂÃ…â€™ Could not determine MIS page state. Please try Initialize again.")
             
     except Exception as e:
         print(f"[MIS-READY] Error: {e}")
@@ -3303,7 +3303,7 @@ def get_all_weekdays_for_multiday_group(group_data: Dict, section_df: pd.DataFra
     weekdays = group_data.get('weekdays', [])
     
     for weekday in weekdays:
-        if weekday and weekday != '[!] [EMOJI]Ãƒâ€šÃ‚Â  MISSING':
+        if weekday and weekday != '[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MISSING':
             dates = expand_weekday_to_dates(weekday, target_month, target_year)
             all_dates.extend(dates)
     
@@ -3355,7 +3355,7 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
             }
         
         groups[group_id]['rows'].append(true_sheet_row)
-        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] [EMOJI]Ãƒâ€šÃ‚Â  MISSING')
+        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MISSING')
         
         if has_missing_weekday:
             groups[group_id]['has_missing_weekday'] = True
@@ -3705,7 +3705,7 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 elif match_type == 'fuzzy_partial':
                     reasoning_parts.append("(fuzzy - similar name)")
                 if linked_brand_match:
-                    reasoning_parts.append("[LBÃ¢Å“â€œ]")  # Linked Brand matched
+                    reasoning_parts.append("[LBÃƒÂ¢Ã…â€œÃ¢â‚¬Å“]")  # Linked Brand matched
             
                 suggestions.append({
                     'mis_id': clean_mis_id,
@@ -4274,7 +4274,7 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
             ref_row = google_df[google_df['_SHEET_ROW_NUM'] == ref_row_num].iloc[0]
             
             # Combine weekdays
-            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] [EMOJI]Ãƒâ€šÃ‚Â  MISSING']
+            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MISSING']
             # For sale dates, sort by date logic? For now, keep simple sort.
             unique_weekdays = sorted(list(set(raw_weekdays)), key=get_weekday_sort_key)
             weekday_val = ', '.join(unique_weekdays)
@@ -4575,11 +4575,11 @@ class BlazeInventoryReporter:
                     if start > total_server and total_server > 0:
                         break
                 else:
-                    self.log(f"[!] [EMOJI]Ãƒâ€šÃ‚Â API Error {r.status_code}: {r.text[:50]}")
+                    self.log(f"[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â API Error {r.status_code}: {r.text[:50]}")
                     break
                     
             except Exception as e:
-                self.log(f"[!] [EMOJI]Ãƒâ€šÃ‚Â Connection Error: {e}")
+                self.log(f"[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Connection Error: {e}")
                 break
                 
         return all_products
@@ -6279,7 +6279,7 @@ HTML_TEMPLATE = r"""
                 </div>
                 <div id="conflict-section" class="sub-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2>[!] [EMOJI]Ãƒâ€šÃ‚Â Conflict Audit</h2>
+                        <h2>[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Conflict Audit</h2>
                         <div>
                             <span id="conflict-stats" class="badge bg-secondary fs-6 me-2">Ready to Scan</span>
                             <button class="btn btn-warning fw-bold" onclick="runConflictAudit()">
@@ -6739,7 +6739,7 @@ HTML_TEMPLATE = r"""
                                         <input class="form-check-input" type="checkbox" id="invHideZeroQty" 
                                                onchange="applyInventoryFilters()">
                                         <label class="form-check-label small" for="invHideZeroQty">
-                                            &#x261E;[EMOJI]Ãƒâ€šÃ‚Â Hide 0 Qty
+                                            &#x261E;[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Hide 0 Qty
                                         </label>
                                     </div>
                                 </div>
@@ -6787,7 +6787,7 @@ HTML_TEMPLATE = r"""
     <div id="brand-sticky-popup" class="brand-popup">
         <div class="brand-popup-header">
             <span>Select Brand</span>
-            <span class="brand-popup-close" onclick="closeBrandPopup()">X[EMOJI]Ãƒâ€šÃ‚Â</span>
+            <span class="brand-popup-close" onclick="closeBrandPopup()">X[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</span>
         </div>
         <div class="brand-popup-body" id="brand-popup-list"></div>
     </div>
@@ -7184,7 +7184,7 @@ HTML_TEMPLATE = r"""
                             element: row,
                             members: memberRows
                         });
-                        console.log(`[BREAKDOWN]   Ã¢Å“â€œ Added group to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added group to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -7232,7 +7232,7 @@ HTML_TEMPLATE = r"""
                                     days: abbrDays,
                                     brandRowMap: brandRowMap
                                 });
-                                console.log(`[BREAKDOWN]   Ã¢Å“â€œ Added header note to ${day} bucket`);
+                                console.log(`[BREAKDOWN]   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added header note to ${day} bucket`);
                             }
                         });
                         
@@ -7253,7 +7253,7 @@ HTML_TEMPLATE = r"""
                                         members: dayMembers,
                                         firstWeekday: firstWeekday
                                     });
-                                    console.log(`[BREAKDOWN]   Ã¢Å“â€œ Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
+                                    console.log(`[BREAKDOWN]   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
                                 }
                             }
                         });
@@ -7285,7 +7285,7 @@ HTML_TEMPLATE = r"""
                             type: 'dom',
                             element: row
                         });
-                        console.log(`[BREAKDOWN]   Ã¢Å“â€œ Added single row to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added single row to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -7377,7 +7377,7 @@ HTML_TEMPLATE = r"""
                         <td colspan="14" style="padding:6px 10px; background:#ffe6f0; cursor:pointer; border:2px solid #ff69b4;" 
                             onclick="toggleMultiDayRefs('${day}')">
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <span id="multi-day-toggle-${day}" style="font-size:1em; color:#c2185b;">â–¶</span>
+                                <span id="multi-day-toggle-${day}" style="font-size:1em; color:#c2185b;">Ã¢â€“Â¶</span>
                                 <strong style="color:#c2185b; font-size:0.95em;">Multi Day Deals Present:</strong>
                                 <span style="color:#c2185b; font-size:0.85em;">${brandsList}</span>
                             </div>
@@ -7547,7 +7547,7 @@ HTML_TEMPLATE = r"""
                 <td colspan="14" style="padding:8px 10px; background:#00ffff; cursor:pointer;" onclick="toggleWeekdaySection('${weekday}')">
                     <div style="display:flex; align-items:flex-start; gap:15px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span id="weekday-toggle-${weekday}" style="font-size:1.2em; color:#003366;">â–¶</span>
+                            <span id="weekday-toggle-${weekday}" style="font-size:1.2em; color:#003366;">Ã¢â€“Â¶</span>
                             <strong style="font-size:1.4em; color:#003366; min-width:120px;">${weekday}</strong>
                         </div>
                         <span style="color:#003366; font-size:0.9em; align-self:center;">${statusText}</span>
@@ -7605,7 +7605,7 @@ HTML_TEMPLATE = r"""
             
             // Update toggle icon
             if (toggleIcon) {
-                toggleIcon.textContent = isCurrentlyVisible ? 'â–¶' : 'â–¼';
+                toggleIcon.textContent = isCurrentlyVisible ? 'Ã¢â€“Â¶' : 'Ã¢â€“Â¼';
             }
         }
         
@@ -7624,7 +7624,7 @@ HTML_TEMPLATE = r"""
             
             // Update toggle icon
             if (toggleIcon) {
-                toggleIcon.textContent = isCurrentlyVisible ? 'â–¶' : 'â–¼';
+                toggleIcon.textContent = isCurrentlyVisible ? 'Ã¢â€“Â¶' : 'Ã¢â€“Â¼';
             }
         }
         
@@ -8219,7 +8219,7 @@ HTML_TEMPLATE = r"""
                 if (rowDataJson) {
                     return '<span data-row=\'' + rowDataJson + '\' onclick="lookupMisIdWithValidation(this, \'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup and validate in MIS">' + displayId + '</span>';
                 } else {
-                    return '<span onclick="lookupMisId(\'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup in MIS">' + displayId + '</span>';
+                    return '<span onclick="lookupMisIdWithValidation(this, \'' + cleanId + '\')" style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; background:#667eea; color:white; text-decoration:underline; display:inline-block; margin:1px;" title="Click to lookup in MIS (backend will search Google Sheet)">' + displayId + '</span>';
                 }
             }).join(' ');
         }
@@ -9071,9 +9071,9 @@ HTML_TEMPLATE = r"""
                                   title="Click to lookup and validate in MIS">${displayId}</span>`;
                 } else {
                     // Fallback to old method without validation
-                    return `<span onclick="lookupMisId('${cleanId}')" 
+                    return `<span onclick="lookupMisIdWithValidation(this, '${cleanId}')" 
                                   style="cursor:pointer; font-weight:bold; text-decoration:underline; color:#667eea;" 
-                                  title="Click to lookup in MIS">${displayId}</span>`;
+                                  title="Click to lookup in MIS (backend will search Google Sheet)">${displayId}</span>`;
                 }
             });
             
@@ -9190,7 +9190,7 @@ HTML_TEMPLATE = r"""
                         // Badge text: show days and brands info for multi-brand
                         let badgeText = '';
                         if (isMultiBrandGroup) {
-                            badgeText = `[EMOJI] ${groupData.total_days}-Day Ãƒâ€” ${totalBrands}-Brand Deal`;
+                            badgeText = `[EMOJI] ${groupData.total_days}-Day ÃƒÆ’Ã¢â‚¬â€ ${totalBrands}-Brand Deal`;
                         } else {
                             badgeText = `[EMOJI] ${groupData.total_days}-Day Deal`;
                         }
@@ -9699,7 +9699,7 @@ HTML_TEMPLATE = r"""
                         brands: existingBrands,
                         section: match.section || 'weekly',
                         is_multi_brand: true,
-                        blaze_titles: existingBlazeTitles  // âœ… PRESERVE blaze_titles
+                        blaze_titles: existingBlazeTitles  // Ã¢Å“â€¦ PRESERVE blaze_titles
                     };
                     console.log(`[MULTI-BRAND] Row ${match.google_row}: Added ${match.brand} (${newMisId}). Total: ${existingIds.length} brands`);
                 } else {
@@ -9719,7 +9719,7 @@ HTML_TEMPLATE = r"""
                     brands: [match.brand],
                     section: match.section || 'weekly',
                     is_multi_brand: match.is_multi_brand || false,
-                    blaze_titles: existingBlazeTitles  // âœ… PRESERVE blaze_titles
+                    blaze_titles: existingBlazeTitles  // Ã¢Å“â€¦ PRESERVE blaze_titles
                 };
             }
             
@@ -10258,7 +10258,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â  Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â  Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -10276,7 +10276,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â  Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â  Needs Linked Brand</span>';
                     }
                 }
                 
@@ -10290,7 +10290,7 @@ HTML_TEMPLATE = r"""
                         </td>
                         <td>
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2" 
-                                    onclick="lookupMisId('${s.mis_id}')" 
+                                    onclick="lookupMisIdWithValidation(this, '${s.mis_id}')" 
                                     style="font-weight:bold;" 
                                     title="Click to lookup in MIS">
                                 ${s.mis_id}
@@ -10325,7 +10325,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">Ã¢Å“â€¢</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢</button>
                                 </div>
                             </div>
                         </td>
@@ -10526,7 +10526,7 @@ HTML_TEMPLATE = r"""
                     // Update the display
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        const savedIcon = data.saved ? 'Ã¢Å“â€œÃ¢Å“â€œ' : 'Ã¢Å“â€œ';
+                        const savedIcon = data.saved ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“' : 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“';
                         const savedColor = data.saved ? '#155724' : '#856404';
                         displayEl.innerHTML = `<span style="color:${savedColor}; font-weight:bold;">${savedIcon} ${newDate}</span>`;
                         displayEl.style.display = 'block';
@@ -10535,9 +10535,9 @@ HTML_TEMPLATE = r"""
                     editorEl.innerHTML = originalHtml;
                     
                     if (data.saved) {
-                        alert('Ã¢Å“â€œ End date updated to ' + newDate + ' and SAVED successfully!');
+                        alert('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ End date updated to ' + newDate + ' and SAVED successfully!');
                     } else {
-                        alert('Ã¢Å“â€œ End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
+                        alert('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
                     }
                 } else {
                     editorEl.innerHTML = originalHtml;
@@ -10769,9 +10769,9 @@ HTML_TEMPLATE = r"""
                 document.getElementById('create-deal-loading')?.remove();
                 
                 if (data.success) {
-                    let message = 'Ã¢Å“â€œ Deal created in MIS!\\n\\n';
+                    let message = 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Deal created in MIS!\\n\\n';
                     if (data.warnings && data.warnings.length > 0) {
-                        message += 'Ã¢Å¡Â  Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
+                        message += 'ÃƒÂ¢Ã…Â¡Ã‚Â  Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
                     }
                     message += 'Please review and click Save in MIS if everything looks correct.';
                     alert(message);
@@ -10976,7 +10976,7 @@ HTML_TEMPLATE = r"""
                                     currentIdCell.innerHTML = `<span style="cursor:pointer; font-weight:bold; padding:2px 6px; border-radius:4px; 
                                         background:#d4edda; color:#155724; border:1px solid #28a745;
                                         text-decoration:underline; display:inline-block; margin:2px;"
-                                        onclick="lookupMisId('${specificId}')">${specificId}</span>
+                                        onclick="lookupMisIdWithValidation(this, '${specificId}')">${specificId}</span>
                                         <span class="badge bg-success ms-1">Applied</span>`;
                                 }
                             }
@@ -11291,7 +11291,7 @@ HTML_TEMPLATE = r"""
                 <div style="margin-bottom: 15px;">
                     <h6 style="color: #6c757d; border-bottom: 1px solid #6c757d; padding-bottom: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px;" 
                         onclick="toggleFullLibrary()">
-                        <span id="library-toggle-icon">â–¶</span>
+                        <span id="library-toggle-icon">Ã¢â€“Â¶</span>
                         <i class="bi bi-collection"></i> Full Library (${blazeModalData.allPromotions.length})
                     </h6>
                     <div id="full-library-content" style="display: none;">
@@ -11771,7 +11771,7 @@ HTML_TEMPLATE = r"""
             
             const isCurrentlyVisible = content.style.display !== 'none';
             content.style.display = isCurrentlyVisible ? 'none' : 'block';
-            icon.textContent = isCurrentlyVisible ? 'â–¶' : 'â–¼';
+            icon.textContent = isCurrentlyVisible ? 'Ã¢â€“Â¶' : 'Ã¢â€“Â¼';
         }
         
         // v12.7: Create Blaze Discount Modal and Automation
@@ -12106,13 +12106,13 @@ HTML_TEMPLATE = r"""
                             renderedGroups.add(groupId);
                             const groupData = r.multi_day_group;
                             const hasMissingWeekday = groupData.has_missing_weekday;
-                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] [EMOJI]Ãƒâ€šÃ‚Â </span>' : '';
+                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â </span>' : '';
                             
                             sectionHtml += `<tr class="group-header-row" onclick="toggleGroup('${groupId}')" title="Click to collapse/expand">`;
                             sectionHtml += `<td colspan="13">`;
                             sectionHtml += `<span class="group-toggle-icon" id="toggle-${groupId}">->[EMOJI]</span>`;
                             sectionHtml += `${warningIcon}<strong>${r.brand}</strong>`;
-                            sectionHtml += `<span class="multi-day-badge">&#x3030;[EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â ${groupData.total_days}-Day Deal</span>`;
+                            sectionHtml += `<span class="multi-day-badge">&#x3030;[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ${groupData.total_days}-Day Deal</span>`;
                             sectionHtml += ` (Rows: ${groupData.row_numbers.join(', ')})`;
                             sectionHtml += `</td></tr>`;
                             
@@ -12310,7 +12310,7 @@ async function autoAuthenticateGoogle() {
                     document.getElementById('auth-status').innerHTML = '<p class="alert alert-success">[OK] Auto-authenticated successfully!</p>';
                     console.log('[AUTO-AUTH] Google Sheets authenticated');
                 } else {
-                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] [EMOJI]Ãƒâ€šÃ‚Â  Auto-auth failed. Please authenticate manually.</p>';
+                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  Auto-auth failed. Please authenticate manually.</p>';
                     console.log('[AUTO-AUTH] Failed:', data.error);
                 }
             } catch (error) {
@@ -12364,7 +12364,7 @@ async function autoAuthenticateGoogle() {
             
             let weekdayDisplay = r.weekday || '-';
             if (!r.weekday || r.weekday.trim() === '') {
-                weekdayDisplay = '<span class="weekday-missing-icon">[!] [EMOJI]Ãƒâ€šÃ‚Â </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
+                weekdayDisplay = '<span class="weekday-missing-icon">[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
             }
             
             const hasDiscrepancies = r.discrepancies && r.discrepancies.length > 0;
@@ -12636,7 +12636,7 @@ function handleMISCSV(input) {
                     document.getElementById('mis-csv').value = ''; 
                     document.getElementById('mis-csv-status').innerHTML = `
                         <div class="alert alert-success p-2 mb-0" style="font-size: 0.9rem;">
-                            <strong>[OK][EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â Active CSV:</strong> ${data.filename}
+                            <strong>[OK][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Active CSV:</strong> ${data.filename}
                             <br><small class="text-muted">This CSV will be automatically used by ID Matcher and Audit tabs</small>
                         </div>
                     `;
@@ -12827,7 +12827,7 @@ function handleMISCSV(input) {
                         }
 
                         const flagBadge = isMultiDay 
-                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;[EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â ${flagContent}</span>`
+                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ${flagContent}</span>`
                             : '<span style="color:#999;">-</span>';
                         
                         const displayCat = r.DISPLAY_CATEGORY || r.Category || '-';
@@ -12835,9 +12835,9 @@ function handleMISCSV(input) {
                         let warningEmoji = '';
                         const rebateType = r.UI_REBATE_DISPLAY || r['Rebate type'] || '';
                         if (rebateType === 'Retail') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">[EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â</span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</span>';
                         } else if (!rebateType || rebateType.trim() === '') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] [EMOJI]Ãƒâ€šÃ‚Â </span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â </span>';
                         }
 
                         sectionHtml += `<tr style="${bgStyle}">`;
@@ -13406,7 +13406,7 @@ async function runGSheetConflictAudit() {
             const conflictCount = data.conflicts ? data.conflicts.length : 0;
             if (conflictCount > 0) {
                 document.getElementById('gsheet-audit-stats').innerText = 
-                    `[!] [EMOJI]Ãƒâ€šÃ‚Â ${conflictCount} Cross-Section Conflicts Found`;
+                    `[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ${conflictCount} Cross-Section Conflicts Found`;
                 document.getElementById('gsheet-audit-stats').className = 'badge bg-warning text-dark fs-6 me-2';
             } else {
                 document.getElementById('gsheet-audit-stats').innerText = 
@@ -13668,7 +13668,7 @@ function displayGSheetConflictResults(data) {
                     <td style="${wrapStyle}">${locDisplay}</td>
                     <td style="${wrapStyle}">${notes}</td>
                     <td style="${cellStyle}">${misLink}</td>
-                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row ->[EMOJI][EMOJI]Ãƒâ€šÃ‚Â</button></td>
+                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row ->[EMOJI][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</button></td>
                 </tr>`;
             });
             table += `</tbody></table>`;
@@ -14166,7 +14166,7 @@ function showOtdModal(rowIndex) {
                     } else if (diff <= 0.019) {
                         // Penny Variance (Orange)
                         rowColor = "color:#fd7e14;";
-                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] [EMOJI]Ãƒâ€šÃ‚Â Target: $${targetOtd.toFixed(2)})</span>`;
+                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Target: $${targetOtd.toFixed(2)})</span>`;
                     } else {
                         // Mismatch (Red)
                         rowColor = "color:#dc3545; font-weight:bold;";
@@ -14493,11 +14493,11 @@ function showOtdModal(rowIndex) {
                         if (maxDiff >= 0.02) {
                             // Mismatch (> 2 cents): RED TEXT + CAUTION
                             btnStyle = "color:#dc3545; border:1px solid #dc3545;"; 
-                            btnEmoji = "[!] [EMOJI]Ãƒâ€šÃ‚Â";
+                            btnEmoji = "[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
                         } else if (maxDiff > 0.009) {
                             // Penny Variance: ORANGE TEXT + CAUTION
                             btnStyle = "color:#fd7e14; border:1px solid #fd7e14;"; 
-                            btnEmoji = "[!] [EMOJI]Ãƒâ€šÃ‚Â";
+                            btnEmoji = "[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
                         }
                     }
                     // --- AUDIT LOGIC END ---
@@ -14901,13 +14901,13 @@ async function runAutoCleanup() {
             if (!result.success) {
                 console.error(`Failed to disable ${promoId}: ${result.error}`);
                 document.getElementById('zombieProgressText').textContent = 
-                    `[!] [EMOJI]Ãƒâ€šÃ‚Â Error on ID ${promoId}: ${result.error}. Continuing...`;
+                    `[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Error on ID ${promoId}: ${result.error}. Continuing...`;
                 await new Promise(r => setTimeout(r, 2000));
             }
         } catch (e) {
             console.error(`Error disabling ${promoId}:`, e);
             document.getElementById('zombieProgressText').textContent = 
-                `[!] [EMOJI]Ãƒâ€šÃ‚Â Network error on ID ${promoId}. Continuing...`;
+                `[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Network error on ID ${promoId}. Continuing...`;
             await new Promise(r => setTimeout(r, 2000));
         }
         
@@ -15085,7 +15085,7 @@ function finishZombieCleanup() {
                         console.log("[AUTO] Sync failed: " + errorMsg);
                         // Notify user in the setup tab without popup
                         if(statusDiv) {
-                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â ${errorMsg}</span>`;
+                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ${errorMsg}</span>`;
                         }
                     } else {
                         alert("Sync Failed: " + errorMsg);
@@ -15234,7 +15234,7 @@ function showDetailModal(row, isPinned = false) {
     bodyHTML += `<div class="data-row"><span class="data-label">Get/Target:</span> ${row.target_type || 'N/A'} - ${row.target_value || 'N/A'}</div>`;
     
     // ADVANCED SECTION
-    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;[EMOJI]Ãƒâ€šÃ‚Â ADVANCED</div>';
+    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ADVANCED</div>';
     bodyHTML += `<div class="data-row"><span class="data-label">Auto Apply:</span> ${row.auto_apply ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Stackable:</span> ${row.stackable ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Lowest Price First:</span> ${row.apply_lowest_price_first ? 'Yes' : 'No'}</div>`;
@@ -15347,7 +15347,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="detailModalBackdrop"></div>
     <div id="detailModal">
         <div class="modal-header">
-            <button class="close-btn" onclick="closeDetailModal()">X[EMOJI]Ãƒâ€šÃ‚Â</button>
+            <button class="close-btn" onclick="closeDetailModal()">X[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</button>
             <div class="modal-title" id="detailModalTitle"></div>
             <div class="modal-id" id="detailModalId"></div>
             <div class="modal-type" id="detailModalType"></div>
@@ -15391,7 +15391,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="calc-content">
             <div class="calc-header">
                 <h2> Tax Calculator</h2>
-                <button class="calc-close" onclick="toggleCalcModal()">X[EMOJI]Ãƒâ€šÃ‚Â</button>
+                <button class="calc-close" onclick="toggleCalcModal()">X[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â</button>
             </div>
             
             <div class="store-selector">
@@ -15474,7 +15474,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div id="calc-reprice" class="calc-section" style="display:none;">
-                <h3>[!][EMOJI]Ãƒâ€šÃ‚Â Reprice / Stack Fixer</h3>
+                <h3>[!][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Reprice / Stack Fixer</h3>
                 <p style="color: #6c757d; font-size: 0.9em; margin-bottom: 10px;">
                     Calculate required flat discount to bridge the gap between current price and desired % off. (Example: Is 45% Off but needs to be 50% Off)<br>
                     <strong>(PRE-TAX VALUES ONLY)</strong>
@@ -15569,8 +15569,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <ol class="mb-0">
                                 <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
                                 <li>Create a project and enable <strong>Google Sheets API</strong></li>
-                                <li>Go to <strong>OAuth Consent Screen</strong> ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Add your email as a Test User</li>
-                                <li>Go to <strong>Credentials</strong> ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Create <strong>OAuth Client ID</strong> (Desktop App)</li>
+                                <li>Go to <strong>OAuth Consent Screen</strong> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Add your email as a Test User</li>
+                                <li>Go to <strong>Credentials</strong> ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Create <strong>OAuth Client ID</strong> (Desktop App)</li>
                                 <li>Download the JSON and rename it as shown above</li>
                                 <li>Place it in the <code>config/google_credentials/</code> folder</li>
                             </ol>
@@ -15798,24 +15798,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h5 class="text-primary border-bottom pb-2"><i class="bi bi-folder2-open"></i> Directory Structure</h5>
                             <p class="text-muted">The script automatically creates this structure on first run:</p>
                             <pre class="bg-dark text-light p-3 rounded" style="font-size: 0.85em;">project_folder/
-ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ DASHBOARD.py                    # Main script
-ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ config/
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ google_credentials/         # OAuth JSON files
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ credentials_john.doe.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ credentials_jane.smith.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ tokens/                     # Google auth tokens (auto-generated)
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ token_john.doe.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ token_jane.smith.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ blaze_configs/              # MIS/Blaze credentials per profile
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡       ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ blaze_config_john.doe.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡       ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ blaze_config_jane.smith.json
-ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ chrome_profiles/                # Isolated browser profiles
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ chrome_john.doe/
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬Å¡   ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ chrome_jane.smith/
-ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ reports/
-    ÃƒÂ¢Ã¢â‚¬ÂÃ…â€œÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MIS_CSV_REPORTS/            # Downloaded MIS exports
-    ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ BLAZE_CSV_REPORTS/
-        ÃƒÂ¢Ã¢â‚¬ÂÃ¢â‚¬ÂÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ INVENTORY/              # Inventory scan results</pre>
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ DASHBOARD.py                    # Main script
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ config/
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ google_credentials/         # OAuth JSON files
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ credentials_john.doe.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ credentials_jane.smith.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ tokens/                     # Google auth tokens (auto-generated)
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ token_john.doe.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ token_jane.smith.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ blaze_configs/              # MIS/Blaze credentials per profile
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡       ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ blaze_config_john.doe.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡       ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ blaze_config_jane.smith.json
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ chrome_profiles/                # Isolated browser profiles
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ chrome_john.doe/
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡   ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ chrome_jane.smith/
+ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ reports/
+    ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ MIS_CSV_REPORTS/            # Downloaded MIS exports
+    ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ BLAZE_CSV_REPORTS/
+        ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ INVENTORY/              # Inventory scan results</pre>
 
                             <h5 class="text-success mt-4 border-bottom pb-2">Files You Provide</h5>
                             <table class="table table-sm table-bordered">
@@ -16460,7 +16460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 async function runTierUpdate(btn) {
-        if (!confirm("[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
+        if (!confirm("[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
         
         btn.disabled = true;
         const originalHtml = btn.innerHTML;
@@ -16749,7 +16749,7 @@ async function fetchInventoryData() {
         const fetchData = await fetchResponse.json();
 
         if (!fetchData.success) {
-            addDebugLog(`[OK][EMOJI]Ãƒâ€šÃ‚Â Error: ${fetchData.error || 'Unknown error'}`, 'error');
+            addDebugLog(`[OK][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Error: ${fetchData.error || 'Unknown error'}`, 'error');
             alert(`Failed to fetch data: ${fetchData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
             return;
@@ -16787,12 +16787,12 @@ async function fetchInventoryData() {
             addDebugLog('[OK] All done!', 'success');
             setTimeout(() => hideDebugLog(), 3000);
         } else {
-            addDebugLog(`[OK][EMOJI]Ãƒâ€šÃ‚Â Error loading from cache: ${loadData.error}`, 'error');
+            addDebugLog(`[OK][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Error loading from cache: ${loadData.error}`, 'error');
             alert(`Failed to load data: ${loadData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
         }
     } catch (err) {
-        addDebugLog(`[OK][EMOJI]Ãƒâ€šÃ‚Â Network error: ${err.message}`, 'error');
+        addDebugLog(`[OK][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Network error: ${err.message}`, 'error');
         alert(`Network error: ${err.message}`);
         setTimeout(() => hideDebugLog(), 5000);
     } finally {
@@ -18761,7 +18761,7 @@ def diagnose_issue(summary, results):
     else:
         count = results.get('collections', {}).get('count', 0)
         if count == 0:
-            diagnosis.append("[!] [EMOJI]Ãƒâ€šÃ‚Â[EMOJI]Ãƒâ€šÃ‚Â Collections endpoint works but returns 0 items")
+            diagnosis.append("[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â[EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Collections endpoint works but returns 0 items")
             diagnosis.append("   Check: Are there actually Smart Collections in Blaze admin?")
         else:
             diagnosis.append(f"[SUCCESS] Collections working correctly ({count} items found)")
@@ -19890,15 +19890,15 @@ def api_mis_lookup_mis_id():
                                     'rebate_type': str(row.get('Rebate Type', '')).strip(),
                                     'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
                                 }
-                                print(f"[MIS LOOKUP] âœ… Found row data in Google Sheet!")
+                                print(f"[MIS LOOKUP] Ã¢Å“â€¦ Found row data in Google Sheet!")
                                 print(f"[MIS LOOKUP] Brand: {row_data['brand']}, Weekday: {row_data['weekday']}")
                                 break
                     else:
-                        print(f"[MIS LOOKUP] âš ï¸ Could not find MIS ID column in Google Sheet")
+                        print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Could not find MIS ID column in Google Sheet")
                 else:
-                    print(f"[MIS LOOKUP] âš ï¸ No Google Sheet data available")
+                    print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â No Google Sheet data available")
             except Exception as e:
-                print(f"[MIS LOOKUP] âš ï¸ Error searching Google Sheet: {e}")
+                print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Error searching Google Sheet: {e}")
         else:
             print(f"[MIS LOOKUP] Row data provided by frontend")
         
@@ -19924,10 +19924,10 @@ def api_mis_lookup_mis_id():
                     print(f"[MIS LOOKUP] Expected: Brand={expected_data['brand']}, Weekday={expected_data['weekday']}")
                     
                     inject_mis_validation(driver, expected_data)
-                    print(f"[MIS LOOKUP] âœ… Validation injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] Ã¢Å“â€¦ Validation injected for MIS ID {mis_id}")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] âš ï¸ Could not inject validation: {e}")
+                    print(f"[MIS LOOKUP] Ã¢Å¡Â Ã¯Â¸Â Could not inject validation: {e}")
             else:
                 print(f"[MIS LOOKUP] No row data provided - skipping validation")
             
@@ -20506,12 +20506,12 @@ def inject_mis_validation(driver, expected_data=None):
             
             // Method 1: Find all buttons with data-dismiss="modal" attribute
             // This catches: <button data-dismiss="modal">Close</button>
-            //           and: <button data-dismiss="modal">Ã—</button>
+            //           and: <button data-dismiss="modal">Ãƒâ€”</button>
             const dismissButtons = modal.querySelectorAll('[data-dismiss="modal"]');
             
             // Method 2: Find by specific class names
             // This catches: <button class="btn-modal-close">...</button>
-            //           and: <button class="close">Ã—</button>
+            //           and: <button class="close">Ãƒâ€”</button>
             const closeButtons = modal.querySelectorAll('.btn-modal-close, .close');
             
             // Combine both sets (use Set to avoid duplicates)
@@ -21077,28 +21077,28 @@ def inject_mis_validation(driver, expected_data=None):
             
             // Add orange boxes for warnings
             if (warnings.brand) {{
-                addOrangeBox(CONFIG.brandId, true, `âš ï¸ ${{warnings.brand.message}}`);
+                addOrangeBox(CONFIG.brandId, true, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.brand.message}}`);
             }}
             if (warnings.linked_brand) {{
-                addOrangeBox(CONFIG.linkedBrandId, true, `âš ï¸ ${{warnings.linked_brand.message}}`);
+                addOrangeBox(CONFIG.linkedBrandId, true, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.linked_brand.message}}`);
             }}
             if (warnings.weekday) {{
-                addOrangeBox(CONFIG.weekdayId, true, `âš ï¸ ${{warnings.weekday.message}}`);
+                addOrangeBox(CONFIG.weekdayId, true, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.weekday.message}}`);
             }}
             if (warnings.categories) {{
-                addOrangeBox(CONFIG.categoryId, true, `âš ï¸ ${{warnings.categories.message}}`);
+                addOrangeBox(CONFIG.categoryId, true, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.categories.message}}`);
             }}
             if (warnings.stores) {{
-                addOrangeBox(CONFIG.storeId, true, `âš ï¸ ${{warnings.stores.message}}`);
+                addOrangeBox(CONFIG.storeId, true, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.stores.message}}`);
             }}
             if (warnings.discount) {{
-                addOrangeBox(CONFIG.discountId, false, `âš ï¸ ${{warnings.discount.message}}`);
+                addOrangeBox(CONFIG.discountId, false, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.discount.message}}`);
             }}
             if (warnings.vendor_contrib) {{
-                addOrangeBox(CONFIG.vendorContribId, false, `âš ï¸ ${{warnings.vendor_contrib.message}}`);
+                addOrangeBox(CONFIG.vendorContribId, false, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.vendor_contrib.message}}`);
             }}
             if (warnings.after_wholesale) {{
-                addOrangeBox(CONFIG.afterWholesaleId, false, `âš ï¸ ${{warnings.after_wholesale.message}}`);
+                addOrangeBox(CONFIG.afterWholesaleId, false, `Ã¢Å¡Â Ã¯Â¸Â ${{warnings.after_wholesale.message}}`);
             }}
         }}
         
@@ -21135,7 +21135,7 @@ def inject_mis_validation(driver, expected_data=None):
                 if (VALIDATION_MODE === 'automation') {{
                     banner.innerHTML = `
                         <div style="font-size: 1.1em;">
-                            âœ… All Fields Correct - Ready to Save!
+                            Ã¢Å“â€¦ All Fields Correct - Ready to Save!
                         </div>
                         <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
                             Automation mode: Validating against Google Sheet
@@ -21144,7 +21144,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     banner.innerHTML = `
                         <div style="font-size: 1.1em;">
-                            âœ… Critical Fields Filled - Ready to Save!
+                            Ã¢Å“â€¦ Critical Fields Filled - Ready to Save!
                         </div>
                         <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
                             Manual mode: Validating Rebate Type + Weekday only
@@ -21186,12 +21186,12 @@ def inject_mis_validation(driver, expected_data=None):
                     after_wholesale: 'After Wholesale'
                 }};
                 
-                // Add CRITICAL errors first (with ðŸ”´ and BLOCKS SAVE)
+                // Add CRITICAL errors first (with Ã°Å¸â€Â´ and BLOCKS SAVE)
                 for (const [key, error] of Object.entries(criticalErrors || {{}})) {{
                     const fieldName = criticalFieldNames[key] || key;
                     errorList += `
                         <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
-                            <strong style="color: #ffcccc;">ðŸ”´ ${{fieldName}}:</strong>
+                            <strong style="color: #ffcccc;">Ã°Å¸â€Â´ ${{fieldName}}:</strong>
                             <span style="font-weight: normal;">
                                 ${{error.message}} <strong>(BLOCKS SAVE)</strong>
                             </span>
@@ -21199,12 +21199,12 @@ def inject_mis_validation(driver, expected_data=None):
                     `;
                 }}
                 
-                // Add ADVISORY warnings second (with ðŸŸ§)
+                // Add ADVISORY warnings second (with Ã°Å¸Å¸Â§)
                 for (const [key, warning] of Object.entries(warnings || {{}})) {{
                     const fieldName = advisoryFieldNames[key] || key;
                     errorList += `
                         <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
-                            <strong style="color: #fff3cd;">ðŸŸ§ ${{fieldName}}:</strong><br>
+                            <strong style="color: #fff3cd;">Ã°Å¸Å¸Â§ ${{fieldName}}:</strong><br>
                             <span style="font-weight: normal; padding-left: 10px;">
                                 Expected: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.expected}}</span><br>
                                 <span style="padding-left: 10px;">Actual: <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 3px;">${{warning.actual}}</span></span>
@@ -21221,11 +21221,11 @@ def inject_mis_validation(driver, expected_data=None):
                 if (hasCritical) {{
                     // RED banner - has critical errors
                     const blockingText = criticalCount === 1 ? '1 error blocking' : `${{criticalCount}} errors blocking`;
-                    headerText = `âš ï¸ ${{totalIssues}} Issue${{plural}} Found (${{blockingText}} save)`;
+                    headerText = `Ã¢Å¡Â Ã¯Â¸Â ${{totalIssues}} Issue${{plural}} Found (${{blockingText}} save)`;
                     subtitleText = 'Critical errors must be fixed before saving';
                 }} else {{
                     // ORANGE banner - advisory only
-                    headerText = `âš ï¸ ${{totalIssues}} Field${{plural}} May Need Review`;
+                    headerText = `Ã¢Å¡Â Ã¯Â¸Â ${{totalIssues}} Field${{plural}} May Need Review`;
                     subtitleText = 'Advisory warnings - you can still save if Rebate Type and Weekday are filled';
                 }}
                 
@@ -21290,8 +21290,8 @@ def inject_mis_validation(driver, expected_data=None):
                 text-align: center;
             `;
             errorBox.innerHTML = `
-                âš ï¸ CRITICAL ERROR - Cannot Save<br>
-                <small style="font-weight: normal;">â€¢ Rebate Type must be selected (Wholesale or Retail)</small>
+                Ã¢Å¡Â Ã¯Â¸Â CRITICAL ERROR - Cannot Save<br>
+                <small style="font-weight: normal;">Ã¢â‚¬Â¢ Rebate Type must be selected (Wholesale or Retail)</small>
             `;
             
             saveBtn.parentNode.insertBefore(errorBox, saveBtn);
@@ -21403,7 +21403,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     log('Rebate Type is INVALID', 'ERROR');
                     addRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId, 
-                        'âŒ Rebate Type is required! Must be Wholesale or Retail');
+                        'Ã¢ÂÅ’ Rebate Type is required! Must be Wholesale or Retail');
                 }}
             }}
             
@@ -21416,7 +21416,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     log('Weekday is INVALID', 'ERROR');
                     addRedBox(CONFIG.weekdayId, null,
-                        'âŒ Weekday is required! Must select at least one day');
+                        'Ã¢ÂÅ’ Weekday is required! Must select at least one day');
                 }}
             }}
             
@@ -21518,19 +21518,19 @@ def inject_mis_validation(driver, expected_data=None):
         try:
             with open(debug_file, 'w', encoding='utf-8') as f:
                 f.write(validation_js)
-            print(f"[VALIDATION-INJECT] ðŸ“ Saved JavaScript to: {debug_file}")
+            print(f"[VALIDATION-INJECT] Ã°Å¸â€œÂ Saved JavaScript to: {debug_file}")
         except Exception as e:
-            print(f"[VALIDATION-INJECT] âš ï¸ Could not save debug file: {e}")
+            print(f"[VALIDATION-INJECT] Ã¢Å¡Â Ã¯Â¸Â Could not save debug file: {e}")
         
         driver.execute_script(validation_js)
         print("[MIS-VALIDATION] v12.10 JavaScript injected successfully")
-        print("[VALIDATION-INJECT] âœ… Injection completed successfully")
+        print("[VALIDATION-INJECT] Ã¢Å“â€¦ Injection completed successfully")
         
     except Exception as e:
         # ENHANCED ERROR LOGGING
         import traceback
         error_details = traceback.format_exc()
-        print(f"[VALIDATION-INJECT] âŒ JavaScript execution FAILED!")
+        print(f"[VALIDATION-INJECT] Ã¢ÂÅ’ JavaScript execution FAILED!")
         print(f"[VALIDATION-INJECT] Error type: {type(e).__name__}")
         print(f"[VALIDATION-INJECT] Error message: {str(e)}")
         print(f"[VALIDATION-INJECT] Full traceback:\n{error_details}")
@@ -21860,7 +21860,7 @@ def api_mis_create_deal():
                         actions.move_to_element(option)
                         actions.click()
                         actions.perform()
-                        log(f"  [{field_name}] Ã¢Å“â€œ Selected '{value}'", "SUCCESS")
+                        log(f"  [{field_name}] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Selected '{value}'", "SUCCESS")
                     else:
                         raise Exception(f"Could not find option '{value}'")
                         
@@ -21874,7 +21874,7 @@ def api_mis_create_deal():
                         ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
                         time.sleep(0.1)
                         ActionChains(driver).send_keys(Keys.ENTER).perform()
-                    log(f"  [{field_name}] Ã¢Å“â€œ Selected '{value}' via keyboard", "SUCCESS")
+                    log(f"  [{field_name}] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Selected '{value}' via keyboard", "SUCCESS")
                 
                 time.sleep(0.1)
                 
@@ -22034,7 +22034,7 @@ def api_mis_create_deal():
                         actions.click()
                         actions.perform()
                         selected_count += 1
-                        log(f"  [{field_name}] Ã¢Å“â€œ Selected '{value}'", "SUCCESS")
+                        log(f"  [{field_name}] ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Selected '{value}'", "SUCCESS")
                         time.sleep(0.08)  # Very short pause between selections
                 
                 # Step 5: Close the dropdown after ALL selections
@@ -22235,7 +22235,7 @@ def api_mis_create_deal():
                 val_str = str(val).strip().upper()
                 log(f"Found wholesale column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
                 # Google Sheets checkboxes return TRUE/FALSE as strings
-                if val_str in ['TRUE', 'YES', '1', 'X', 'Ã¢Å“â€œ', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“', 'CHECKED']:
                     wholesale_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     wholesale_checked = False
@@ -22243,7 +22243,7 @@ def api_mis_create_deal():
                 retail_col_found = True
                 val_str = str(val).strip().upper()
                 log(f"Found retail column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
-                if val_str in ['TRUE', 'YES', '1', 'X', 'Ã¢Å“â€œ', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“', 'CHECKED']:
                     retail_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     retail_checked = False
@@ -22260,7 +22260,7 @@ def api_mis_create_deal():
         rebate_type_error = False
         
         if wholesale_checked and retail_checked:
-            warnings.append('Ã¢Å¡Â  REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
+            warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
             log("REBATE TYPE ERROR: Both checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -22277,7 +22277,7 @@ def api_mis_create_deal():
                 pass
                 
         elif not wholesale_checked and not retail_checked:
-            warnings.append('Ã¢Å¡Â  REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
+            warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
             log("REBATE TYPE ERROR: Neither checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -22330,67 +22330,67 @@ def api_mis_create_deal():
         # 1. WEEKDAY (multi-select)
         if weekdays_to_select:
             if not atomic_multi_select("Weekday", weekdays_to_select, "Weekday"):
-                warnings.append('Ã¢Å¡Â  Could not fill Weekday')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Weekday')
         
         # 2. STORE (multi-select) - only if specific stores needed
         if stores_to_select:
             if not atomic_multi_select("Store", stores_to_select, "Store"):
-                warnings.append('Ã¢Å¡Â  Could not fill Store')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Store')
         
         # 3. BRAND (single-select)
         if primary_brand:
             if not atomic_single_select("Brand", primary_brand, "Brand"):
-                warnings.append('Ã¢Å¡Â  Could not fill Brand')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Brand')
         
         # 4. LINKED BRAND (single-select)
         if linked_brand:
             if not atomic_single_select("Linked Brand", linked_brand, "Linked Brand"):
-                warnings.append('Ã¢Å¡Â  Could not fill Linked Brand')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Linked Brand')
         
         # 5. CATEGORY (multi-select)
         if categories_to_select:
             if not atomic_multi_select("Category", categories_to_select, "Category"):
-                warnings.append('Ã¢Å¡Â  Could not fill Category')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Category')
         
         # 6. DISCOUNT RATE (text input)
         if discount is not None and str(discount).strip() != '':
             if not atomic_text_input("discount_rate", discount, "Discount Rate"):
-                warnings.append('Ã¢Å¡Â  Could not fill Discount Rate')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Discount Rate')
         
         # 7. REBATE TYPE (single-select)
         if rebate_type:
             if not atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
-                warnings.append('Ã¢Å¡Â  Could not fill Rebate Type')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Rebate Type')
         
         # 8. VENDOR REBATE % (text input)
         if vendor_contrib is not None and str(vendor_contrib).strip() != '':
             if not atomic_text_input("rebate_percent", vendor_contrib, "Vendor Rebate"):
-                warnings.append('Ã¢Å¡Â  Could not fill Vendor Rebate')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Vendor Rebate')
         
         # 9. TOGGLE: After Wholesale
         if after_wholesale:
             if not atomic_toggle("rebate_wholesale_discount", True, "After Wholesale"):
-                warnings.append('Ã¢Å¡Â  Could not toggle After Wholesale')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not toggle After Wholesale')
         
         # 10. START DATE (text input)
         if start_date:
             if not atomic_text_input("date_start", start_date, "Start Date"):
-                warnings.append('Ã¢Å¡Â  Could not fill Start Date')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Start Date')
         
         # 11. END DATE (text input)
         if end_date:
             if not atomic_text_input("date_end", end_date, "End Date"):
-                warnings.append('Ã¢Å¡Â  Could not fill End Date')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill End Date')
         
         # 12. MIN WEIGHT (text input)
         if min_weight is not None:
             if not atomic_text_input("min_weight", min_weight, "Min Weight"):
-                warnings.append('Ã¢Å¡Â  Could not fill Min Weight')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Min Weight')
         
         # 13. MAX WEIGHT (text input)
         if max_weight is not None:
             if not atomic_text_input("max_weight", max_weight, "Max Weight"):
-                warnings.append('Ã¢Å¡Â  Could not fill Max Weight')
+                warnings.append('ÃƒÂ¢Ã…Â¡Ã‚Â  Could not fill Max Weight')
         
         # ============================================
         # FORM FILL COMPLETE
@@ -22421,19 +22421,19 @@ def api_mis_create_deal():
             
             inject_mis_validation(driver, expected_data)
             log("Validation system injected with Phase 2 field comparison", "SUCCESS")
-            print("[VALIDATION-DIAGNOSTIC] âœ… Validation injection successful!")
+            print("[VALIDATION-DIAGNOSTIC] Ã¢Å“â€¦ Validation injection successful!")
             
         except Exception as e:
             # ENHANCED ERROR LOGGING
             import traceback
             error_details = traceback.format_exc()
-            print(f"[VALIDATION-DIAGNOSTIC] âŒ Validation injection FAILED!")
+            print(f"[VALIDATION-DIAGNOSTIC] Ã¢ÂÅ’ Validation injection FAILED!")
             print(f"[VALIDATION-DIAGNOSTIC] Error type: {type(e).__name__}")
             print(f"[VALIDATION-DIAGNOSTIC] Error message: {str(e)}")
             print(f"[VALIDATION-DIAGNOSTIC] Full traceback:\n{error_details}")
             
             log(f"Warning: Could not inject validation: {e}", "WARN")
-            warnings.append(f'âš ï¸ Validation system not loaded: {type(e).__name__}')
+            warnings.append(f'Ã¢Å¡Â Ã¯Â¸Â Validation system not loaded: {type(e).__name__}')
         
         # Clear automation flag
         GLOBAL_DATA['automation_in_progress'] = False
@@ -22638,7 +22638,7 @@ def api_gsheet_conflict_audit():
                 row_detail = {
                     'section': section_key,
                     'row_num': true_row,
-                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] [EMOJI]Ãƒâ€šÃ‚Â  MISSING' else '-',
+                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  MISSING' else '-',
                     'discount': discount,
                     'vendor_contrib': vendor_contrib,
                     'locations': locations,
@@ -24972,7 +24972,7 @@ def api_blaze_zombie_disable():
                 # Verify it's now unchecked
                 is_checked_after = status_toggle.get_attribute('checked')
                 if is_checked_after:
-                    print("[ZOMBIE] [!] [EMOJI]Ãƒâ€šÃ‚Â Toggle may not have changed - trying direct input click")
+                    print("[ZOMBIE] [!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Toggle may not have changed - trying direct input click")
                     driver.execute_script("arguments[0].click();", status_toggle)
                     time.sleep(0.5)
             else:
@@ -25069,7 +25069,7 @@ def api_blaze_zombie_disable():
             print("[ZOMBIE] [OK] Save completed")
             
         except Exception as e:
-            print(f"[ZOMBIE] [!] [EMOJI]Ãƒâ€šÃ‚Â Save wait issue: {e}, but proceeding...")
+            print(f"[ZOMBIE] [!] [EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Save wait issue: {e}, but proceeding...")
         
         # Small delay before next operation
         time.sleep(1)
@@ -26091,7 +26091,7 @@ def navigate_to_product():
                                 print(f"[NAVIGATE] [OK] Store changed successfully to: '{current_store}'")
                                 break
                             else:
-                                print(f"[NAVIGATE] [OK][EMOJI]Ãƒâ€šÃ‚Â Store change failed, retrying...")
+                                print(f"[NAVIGATE] [OK][EMOJI]ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Store change failed, retrying...")
                                 
                         except NoSuchElementException:
                             return jsonify({
@@ -26198,7 +26198,7 @@ def background_validation_monitor():
                 if not is_active:
                     # Inject validation in manual mode (no expected data)
                     inject_mis_validation(driver, expected_data=None)
-                    print("[VALIDATION-MONITOR] âœ… Injected manual validation (was missing)")
+                    print("[VALIDATION-MONITOR] Ã¢Å“â€¦ Injected manual validation (was missing)")
                     
             except Exception:
                 # Silently skip on any error (don't crash the monitor)
@@ -26206,7 +26206,7 @@ def background_validation_monitor():
                 
         except Exception as e:
             # Log but don't crash
-            print(f"[VALIDATION-MONITOR] âš ï¸ Error: {e}")
+            print(f"[VALIDATION-MONITOR] Ã¢Å¡Â Ã¯Â¸Â Error: {e}")
             time.sleep(30)  # Wait longer on error
 
 def open_browser_to_dashboard():
