@@ -20504,7 +20504,9 @@ def inject_mis_validation(driver, expected_data=None):
             const modalTitle = modal.querySelector('.modal-title');
             if (!modalTitle) return false;
             
-            return modalTitle.textContent.includes(CONFIG.modalTitleText);
+            // v12.12.5: Check for BOTH "Add New" and "Edit" modals
+            const titleText = modalTitle.textContent || '';
+            return titleText.includes('Daily Discount') || titleText.includes('Discount');
         }}
         
         // ============================================
