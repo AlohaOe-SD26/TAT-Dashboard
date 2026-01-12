@@ -19948,30 +19948,81 @@ def api_mis_lookup_mis_id():
                             # DEBUG: Print column names
                             print(f"[MIS LOOKUP] 🔍 Available columns: {list(google_df.columns)}")
                             
-                            # Try multiple possible column names for Discount
+                            # ENHANCED COLUMN DETECTION: Search for columns CONTAINING keywords
+                            # This handles newlines, extra spaces, and variations
+                            
+                            # Find Discount column (handles "Deal Discount Value/Type", "Discount", "Discount %", etc.)
                             discount_value = ''
-                            for disc_col in ['Discount', 'Discount %', 'Discount Rate', 'discount']:
-                                if disc_col in google_df.columns:
-                                    discount_value = str(base_row.get(disc_col, '')).strip()
+                            discount_col_found = None
+                            for col in google_df.columns:
+                                col_lower = col.lower()
+                                # Look for columns containing "discount" but NOT "type" (to avoid "Discount Type" columns)
+                                if 'discount' in col_lower and 'type' not in col_lower:
+                                    discount_value = str(base_row.get(col, '')).strip()
                                     if discount_value:
-                                        print(f"[MIS LOOKUP] Found Discount in column '{disc_col}': '{discount_value}'")
+                                        discount_col_found = col
+                                        print(f"[MIS LOOKUP] ✅ Found Discount in column '{col}': '{discount_value}'")
                                         break
                             
-                            # Try multiple possible column names for Vendor %
+                            if not discount_col_found:
+                                print(f"[MIS LOOKUP] ⚠️ Could not find Discount column")
+                            
+                            # Find Vendor % column (handles "Brand Contribution % (Credit)", "Vendor %", etc.)
                             vendor_value = ''
-                            for vendor_col in ['Vendor %', 'Vendor Contribution', 'Vendor', 'vendor %']:
-                                if vendor_col in google_df.columns:
-                                    vendor_value = str(base_row.get(vendor_col, '')).strip()
+                            vendor_col_found = None
+                            for col in google_df.columns:
+                                col_lower = col.lower()
+                                # Look for columns containing "contribution" OR "vendor"
+                                if 'contribution' in col_lower or 'vendor' in col_lower:
+                                    vendor_value = str(base_row.get(col, '')).strip()
                                     if vendor_value:
-                                        print(f"[MIS LOOKUP] Found Vendor % in column '{vendor_col}': '{vendor_value}'")
+                                        vendor_col_found = col
+                                        print(f"[MIS LOOKUP] ✅ Found Vendor % in column '{col}': '{vendor_value}'")
                                         break
+                            
+                            if not vendor_col_found:
+                                print(f"[MIS LOOKUP] ⚠️ Could not find Vendor % column")
                             
                             # Extract locations with "All Locations Except" handling
                             locations_raw = str(base_row.get('Locations', 'All Locations')).strip()
                             
+                            # MULTI-BRAND HANDLING: Parse MIS ID position and use correct brand
+                            brand_value = str(base_row.get('Brand', '')).strip()
+                            
+                            # Check if this is a multi-brand deal (MIS ID contains W1/W2 format)
+                            sheet_mis_id = str(base_row.get(id_col, '')).strip()
+                            if ',' in sheet_mis_id and ':' in sheet_mis_id:
+                                # Multi-brand deal: "W1: 771, W2: 772"
+                                print(f"[MIS LOOKUP] 🏷️ Multi-brand deal detected in MIS ID: {sheet_mis_id}")
+                                
+                                # Parse to find which position our MIS ID is in
+                                parts = [p.strip() for p in sheet_mis_id.split(',')]
+                                mis_position = None
+                                
+                                for idx, part in enumerate(parts):
+                                    # Extract just the number from "W1: 771" or "771"
+                                    if ':' in part:
+                                        num = part.split(':')[1].strip()
+                                    else:
+                                        num = part.strip()
+                                    
+                                    if mis_id == num or mis_id in num:
+                                        mis_position = idx
+                                        print(f"[MIS LOOKUP] Found MIS ID {mis_id} at position {idx} (part: '{part}')")
+                                        break
+                                
+                                # If we found the position, use the corresponding brand
+                                if mis_position is not None and brand_value:
+                                    brands = [b.strip() for b in brand_value.split(',')]
+                                    if mis_position < len(brands):
+                                        brand_value = brands[mis_position]
+                                        print(f"[MIS LOOKUP] Using brand at position {mis_position}: '{brand_value}'")
+                                    else:
+                                        print(f"[MIS LOOKUP] ⚠️ Position {mis_position} out of range for brands: {brands}")
+                            
                             # Found it! Extract row data
                             row_data = {
-                                'brand': str(base_row.get('Brand', '')).strip(),
+                                'brand': brand_value,
                                 'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
                                 'weekday': combined_weekday,
                                 'categories': str(base_row.get('Categories', '')).strip(),
@@ -20124,6 +20175,155 @@ def api_mis_validate_lookup():
     
     except Exception as e:
         print(f"[V2-LOOKUP] ❌ Error: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/mis/compare-to-sheet', methods=['POST'])
+def api_mis_compare_to_sheet():
+    """
+    V2: Manual "Compare to Google Sheet" button handler.
+    User clicks button in validation banner to search Google Sheet for current MIS ID.
+    """
+    try:
+        data = request.get_json()
+        mis_id = str(data.get('mis_id', '')).strip()
+        
+        if not mis_id:
+            return jsonify({'success': False, 'error': 'No MIS ID provided'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized'})
+        
+        print(f"\n{'='*60}")
+        print(f"[COMPARE-TO-SHEET] 🔍 Manual comparison requested for MIS ID: {mis_id}")
+        print(f"{'='*60}")
+        
+        # Check if Google Sheet data available
+        google_df = GLOBAL_DATA.get('google_df')
+        
+        if google_df is None or google_df.empty:
+            print(f"[COMPARE-TO-SHEET] ⚠️ No Google Sheet data loaded")
+            return jsonify({
+                'success': False, 
+                'error': 'No Google Sheet loaded. Please run Audit first.'
+            })
+        
+        print(f"[COMPARE-TO-SHEET] Google Sheet loaded with {len(google_df)} rows")
+        
+        # Search for MIS ID (reuse same logic as lookup)
+        found_data = None
+        
+        # Find ID column
+        id_col = None
+        for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+            if col in google_df.columns:
+                id_col = col
+                break
+        
+        if not id_col:
+            return jsonify({
+                'success': False,
+                'error': 'Could not find MIS ID column in Google Sheet'
+            })
+        
+        # Search for matching rows (same logic as api_mis_lookup_mis_id)
+        matching_rows = []
+        for idx, row in google_df.iterrows():
+            sheet_mis_id = str(row.get(id_col, '')).strip()
+            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                matching_rows.append(row)
+        
+        if not matching_rows:
+            print(f"[COMPARE-TO-SHEET] ❌ MIS ID {mis_id} not found in Google Sheet")
+            # Switch to manual mode
+            inject_mis_validation(driver, expected_data=None)
+            return jsonify({
+                'success': True,
+                'mode': 'manual',
+                'message': f'MIS ID {mis_id} not in Google Sheet - staying in manual mode'
+            })
+        
+        # Found it! Extract data (same logic as lookup)
+        print(f"[COMPARE-TO-SHEET] ✅ Found {len(matching_rows)} matching row(s)")
+        
+        base_row = matching_rows[0]
+        
+        # Combine weekdays for multi-day
+        all_weekdays = []
+        for match_row in matching_rows:
+            weekday = str(match_row.get('Weekday', '')).strip()
+            if weekday and weekday not in all_weekdays:
+                all_weekdays.append(weekday)
+        combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
+        
+        # Find Discount column
+        discount_value = ''
+        for col in google_df.columns:
+            if 'discount' in col.lower() and 'type' not in col.lower():
+                discount_value = str(base_row.get(col, '')).strip()
+                if discount_value:
+                    break
+        
+        # Find Vendor % column
+        vendor_value = ''
+        for col in google_df.columns:
+            if 'contribution' in col.lower() or 'vendor' in col.lower():
+                vendor_value = str(base_row.get(col, '')).strip()
+                if vendor_value:
+                    break
+        
+        # Multi-brand handling
+        brand_value = str(base_row.get('Brand', '')).strip()
+        sheet_mis_id = str(base_row.get(id_col, '')).strip()
+        
+        if ',' in sheet_mis_id and ':' in sheet_mis_id:
+            parts = [p.strip() for p in sheet_mis_id.split(',')]
+            mis_position = None
+            for idx, part in enumerate(parts):
+                if ':' in part:
+                    num = part.split(':')[1].strip()
+                else:
+                    num = part.strip()
+                if mis_id == num or mis_id in num:
+                    mis_position = idx
+                    break
+            
+            if mis_position is not None and brand_value:
+                brands = [b.strip() for b in brand_value.split(',')]
+                if mis_position < len(brands):
+                    brand_value = brands[mis_position]
+                    print(f"[COMPARE-TO-SHEET] Multi-brand: Using brand at position {mis_position}: '{brand_value}'")
+        
+        # Build expected data
+        expected_data = {
+            'brand': brand_value,
+            'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
+            'weekday': combined_weekday,
+            'categories': str(base_row.get('Categories', '')).strip(),
+            'discount': discount_value,
+            'vendor_contrib': vendor_value,
+            'locations': str(base_row.get('Locations', 'All Locations')).strip(),
+            'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
+            'after_wholesale': str(base_row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+        }
+        
+        print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
+        print(f"[COMPARE-TO-SHEET] Discount: '{expected_data['discount']}', Vendor %: '{expected_data['vendor_contrib']}'")
+        
+        # Inject automation validation
+        inject_mis_validation(driver, expected_data)
+        
+        print(f"[COMPARE-TO-SHEET] ✅ Switched to automation mode")
+        
+        return jsonify({
+            'success': True,
+            'mode': 'automation',
+            'message': f'Found MIS ID {mis_id} in Google Sheet - switched to automation mode'
+        })
+    
+    except Exception as e:
+        print(f"[COMPARE-TO-SHEET] ❌ Error: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -20805,6 +21005,7 @@ def inject_mis_validation(driver, expected_data=None):
             originalSaveButton: null,
             errorBox: null,
             forceButton: null,
+            compareButton: null,  // V2: Compare to Google Sheet button
             summaryBanner: null,
             saveButtonListener: null,
             cancelButtonListener: null
@@ -21719,6 +21920,129 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         // ============================================
+        // COMPARE TO GOOGLE SHEET BUTTON (V2 Feature)
+        // ============================================
+        function createCompareButton() {{
+            if (validationState.compareButton) return;
+            
+            const compareBtn = document.createElement('button');
+            compareBtn.id = 'compare-to-sheet-btn';
+            compareBtn.textContent = 'Compare to Google Sheet';
+            compareBtn.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 160px;
+                z-index: 99999;
+                background: #17a2b8;
+                color: #fff;
+                border: 2px solid #138496;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            `;
+            compareBtn.title = 'Search Google Sheet for this MIS ID and switch to automation validation';
+            
+            compareBtn.onclick = async function() {{
+                log('🔍 User clicked Compare to Google Sheet', 'INFO');
+                
+                // Extract MIS ID from current form
+                const formMisId = extractMisIdFromForm();
+                
+                if (!formMisId) {{
+                    log('⚠️ Could not extract MIS ID from form', 'WARN');
+                    alert('Could not find MIS ID in current entry');
+                    return;
+                }}
+                
+                log(`Extracted MIS ID from form: ${{formMisId}}`, 'INFO');
+                
+                // Call backend to search Google Sheet
+                try {{
+                    compareBtn.disabled = true;
+                    compareBtn.textContent = 'Searching...';
+                    
+                    const response = await fetch('/api/mis/compare-to-sheet', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ mis_id: formMisId }})
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {{
+                        log(`✅ ${{result.message}}`, 'SUCCESS');
+                        // Backend will send validation message via inject_mis_validation
+                        // Just need to wait a moment for it to process
+                    }} else {{
+                        log(`❌ ${{result.error}}`, 'ERROR');
+                        alert(result.error || 'Failed to compare with Google Sheet');
+                    }}
+                }} catch (error) {{
+                    log(`❌ Compare request failed: ${{error}}`, 'ERROR');
+                    alert('Failed to connect to backend');
+                }} finally {{
+                    compareBtn.disabled = false;
+                    compareBtn.textContent = 'Compare to Google Sheet';
+                }}
+            }};
+            
+            document.body.appendChild(compareBtn);
+            validationState.compareButton = compareBtn;
+            log('Compare to Google Sheet button created', 'INFO');
+        }}
+        
+        function removeCompareButton() {{
+            if (validationState.compareButton) {{
+                validationState.compareButton.remove();
+                validationState.compareButton = null;
+                log('Compare to Google Sheet button removed (modal closed)', 'INFO');
+            }}
+        }}
+        
+        // Extract MIS ID from the current form
+        function extractMisIdFromForm() {{
+            // Try multiple possible locations for MIS ID
+            
+            // Method 1: Direct input field (if exists)
+            const misIdField = document.querySelector('#mis_id, #daily_discount_id, [name="mis_id"], [name="id"]');
+            if (misIdField && misIdField.value) {{
+                return misIdField.value.trim();
+            }}
+            
+            // Method 2: Look in modal title or header
+            const modal = document.querySelector('.modal-content');
+            if (modal) {{
+                const title = modal.querySelector('.modal-title, h4, h3');
+                if (title) {{
+                    // Extract numbers from title like "Edit Daily Discount #771"
+                    const match = title.textContent.match(/#?(\d+)/);
+                    if (match) {{
+                        return match[1];
+                    }}
+                }}
+            }}
+            
+            // Method 3: Look for any visible element with MIS ID
+            const labels = document.querySelectorAll('label, span, div');
+            for (const label of labels) {{
+                if (label.textContent.toLowerCase().includes('mis id') || 
+                    label.textContent.toLowerCase().includes('discount id')) {{
+                    const next = label.nextElementSibling || label.parentElement;
+                    if (next) {{
+                        const match = next.textContent.match(/(\d+)/);
+                        if (match) {{
+                            return match[1];
+                        }}
+                    }}
+                }}
+            }}
+            
+            return null;
+        }}
+        
+        // ============================================
         // VALIDATION LOOP
         // ============================================
         function runValidation() {{
@@ -21731,11 +22055,13 @@ def inject_mis_validation(driver, expected_data=None):
                     log('Modal detected - Starting validation', 'INFO');
                     log(`Validation mode: ${{VALIDATION_MODE}}`, 'INFO');
                     createForceButton();
+                    createCompareButton();  // V2: Add Compare to Google Sheet button
                     attachSaveButtonListener();
                     attachCancelButtonListener();
                 }} else {{
                     log('Modal closed - Cleaning up', 'INFO');
                     removeForceButton();
+                    removeCompareButton();  // V2: Remove Compare button
                     removeSummaryBanner();
                     validationState.saveButtonHidden = false;
                     validationState.rebateTypeValid = false;
