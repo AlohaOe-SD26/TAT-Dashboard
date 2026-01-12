@@ -22086,7 +22086,7 @@ def inject_mis_validation(driver, expected_data=None):
                 const title = modal.querySelector('.modal-title, h4, h3');
                 if (title) {{
                     // Extract numbers from title like "Edit Daily Discount #771"
-                    const match = title.textContent.match(/#?(\d+)/);
+                    const match = title.textContent.match(/#?(\\d+)/);
                     if (match) {{
                         return match[1];
                     }}
@@ -22100,7 +22100,7 @@ def inject_mis_validation(driver, expected_data=None):
                     label.textContent.toLowerCase().includes('discount id')) {{
                     const next = label.nextElementSibling || label.parentElement;
                     if (next) {{
-                        const match = next.textContent.match(/(\d+)/);
+                        const match = next.textContent.match(/(\\d+)/);
                         if (match) {{
                             return match[1];
                         }}
