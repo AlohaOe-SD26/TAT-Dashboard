@@ -20297,7 +20297,7 @@ def api_mis_compare_to_sheet():
             })
         
         # Found it! Extract data (same logic as lookup)
-        print(f"[COMPARE-TO-SHEET] âœ… Found {len(matching_rows)} matching row(s)")
+        print(f"[COMPARE-TO-SHEET] ✅ Found {len(matching_rows)} matching row(s)")
         
         base_row = matching_rows[0]
         
@@ -20309,18 +20309,38 @@ def api_mis_compare_to_sheet():
                 all_weekdays.append(weekday)
         combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
         
-        # Find Discount column (enhanced - avoid "After Wholesale Discount")
+        # Find Discount column (v12.12.7 - enhanced detection)
+        # Priority order: exact "Discount", then variations with value/rate/%
         discount_value = ''
+        discount_col_candidates = []
         for col in google_df.columns:
-            col_lower = col.lower()
-            if ('discount' in col_lower and 
-                ('value' in col_lower or 'rate' in col_lower or '%' in col_lower) and
-                'wholesale' not in col_lower and 
-                'type' not in col_lower):
-                discount_value = str(base_row.get(col, '')).strip()
-                if discount_value:
-                    print(f"[COMPARE-TO-SHEET] Found Discount in column '{col}': '{discount_value}'")
-                    break
+            col_lower = col.lower().strip()
+            col_clean = col_lower.replace('\n', ' ').replace('\r', ' ')
+            
+            # Skip columns that are clearly NOT the discount value
+            if 'wholesale' in col_lower or 'blaze' in col_lower:
+                continue
+            
+            # Exact match for "Discount" column (highest priority)
+            if col_clean == 'discount':
+                discount_col_candidates.insert(0, col)
+            # "Deal Discount Value/Type" or similar with line breaks
+            elif 'deal discount' in col_clean or 'discount value' in col_clean:
+                discount_col_candidates.insert(0, col)
+            # Generic discount columns
+            elif 'discount' in col_lower and 'type' not in col_lower:
+                discount_col_candidates.append(col)
+        
+        # Try candidates in priority order
+        for col in discount_col_candidates:
+            val = str(base_row.get(col, '')).strip()
+            if val:
+                discount_value = val
+                print(f"[COMPARE-TO-SHEET] Found Discount in column '{col}': '{discount_value}'")
+                break
+        
+        if not discount_value:
+            print(f"[COMPARE-TO-SHEET] ⚠️ No discount value found. Columns searched: {discount_col_candidates}")
         
         # Find Vendor % column
         vendor_value = ''
@@ -21511,69 +21531,154 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
-            // Stores (ENHANCED LOGIC - 3 cases)
-            if (EXPECTED_DATA.locations) {{
+            // Stores (v12.12.7 - ENHANCED LOGIC with store mapping)
+            // Handle: "All Locations", "All Locations Except: X, Y", specific stores, blank
+            if (EXPECTED_DATA.locations !== undefined) {{
                 const actual = getStoreValues();
-                const expectedText = EXPECTED_DATA.locations.trim();
+                const expectedText = (EXPECTED_DATA.locations || '').trim();
                 const expectedLower = expectedText.toLowerCase();
                 
-                // Case 1: "All Locations"
-                if (expectedLower === 'all locations' || expectedLower === 'all') {{
-                    if (actual.length > 0) {{
+                // Store name mapping: Google Sheet name -> MIS display name
+                const STORE_MAP = {{
+                    'beverly hills': 'beverly',
+                    'beverly': 'beverly',
+                    'davis': 'davis',
+                    'dixon': 'dixon',
+                    'el sobrante': 'el sobrante',
+                    'fresno (palm)': 'fresno',
+                    'fresno': 'fresno',
+                    'fresno shaw': 'fresno shaw',
+                    'fresno (shaw)': 'fresno shaw',
+                    'hawthorne': 'hawthorne',
+                    'koreatown': 'koreatown',
+                    'laguna woods': 'laguna woods',
+                    'oxnard': 'oxnard',
+                    'riverside': 'riverside',
+                    'west hollywood': 'west hollywood'
+                }};
+                
+                // Master list of MIS store names
+                const MASTER_STORES_MIS = [
+                    'Beverly', 'Davis', 'Dixon', 'El Sobrante', 'Fresno', 'Fresno Shaw',
+                    'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'
+                ];
+                
+                // Helper: Normalize store name from Google Sheet to MIS format
+                function normalizeStoreName(name) {{
+                    const lower = name.toLowerCase().trim();
+                    return STORE_MAP[lower] || lower;
+                }}
+                
+                // Helper: Check if two store names match (case-insensitive, with mapping)
+                function storesMatch(actual, expected) {{
+                    const actualNorm = normalizeStoreName(actual);
+                    const expectedNorm = normalizeStoreName(expected);
+                    return actualNorm === expectedNorm;
+                }}
+                
+                // Get actual store count
+                const actualCount = actual.length;
+                const allStoresCount = MASTER_STORES_MIS.length; // 12
+                
+                log(`Store validation: actual=${{actual.join(', ')}} (count: ${{actualCount}}), expected="${{expectedText}}"`, 'DEBUG');
+                
+                // Case 1: "All Locations" OR blank/empty = expects blank OR all 12 stores
+                if (expectedLower === 'all locations' || expectedLower === 'all' || expectedLower === '') {{
+                    // Valid states: blank (0 stores) OR all 12 stores selected
+                    if (actualCount === 0 || actualCount === allStoresCount) {{
+                        // CORRECT - no warning needed
+                        log(`Store validation: All Locations - CORRECT (actual: ${{actualCount}} stores)`, 'DEBUG');
+                    }} else {{
                         warnings.stores = {{
-                            expected: 'All Locations (blank)',
-                            actual: actual.join(', '),
-                            message: `Store mismatch: Expected "All Locations" (blank), found "${{actual.join(', ')}}"`
+                            expected: 'All Locations (blank or all 12 stores)',
+                            actual: actual.join(', ') || '(blank)',
+                            message: `Store mismatch: Expected "All Locations" (blank or all 12), found ${{actualCount}} stores: "${{actual.join(', ')}}"`
                         }};
                     }}
                 }}
                 // Case 2: "All Locations Except: X, Y"
-                else if (expectedText.toLowerCase().includes('except')) {{
-                    const exceptMatch = expectedText.match(/except[:\\s]*(.+?)(?:\\)|$)/i);
+                else if (expectedLower.includes('except')) {{
+                    // Parse exceptions - handle various formats
+                    const exceptMatch = expectedText.match(/except[:\\s,]*(.+?)(?:\\)|$)/i);
                     if (exceptMatch) {{
                         const exceptionsText = exceptMatch[1];
-                        const exceptions = exceptionsText.split(',').map(s => s.trim().toLowerCase());
+                        // Split by comma, filter empty strings
+                        const rawExceptions = exceptionsText.split(',')
+                            .map(s => s.trim())
+                            .filter(s => s && s !== '');
                         
-                        const masterStores = [
-                            'Beverly', 'Davis', 'Dixon', 'El Sobrante', 'Fresno', 'Fresno Shaw',
-                            'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'
-                        ];
+                        // Normalize exception names to MIS format
+                        const exceptionsNorm = rawExceptions.map(e => normalizeStoreName(e));
                         
-                        const expectedStores = masterStores.filter(store => {{
-                            const storeLower = store.toLowerCase();
-                            return !exceptions.some(exc => storeLower.includes(exc) || exc.includes(storeLower));
+                        log(`Store exceptions (raw): ${{rawExceptions.join(', ')}}`, 'DEBUG');
+                        log(`Store exceptions (normalized): ${{exceptionsNorm.join(', ')}}`, 'DEBUG');
+                        
+                        // Build expected stores list: all stores EXCEPT the exceptions
+                        const expectedStores = MASTER_STORES_MIS.filter(store => {{
+                            const storeNorm = store.toLowerCase();
+                            // Check if this store is in the exception list
+                            const isException = exceptionsNorm.some(exc => 
+                                storeNorm === exc || 
+                                storeNorm.includes(exc) || 
+                                exc.includes(storeNorm)
+                            );
+                            return !isException;
                         }});
                         
-                        const actualLower = actual.map(s => s.toLowerCase());
-                        const expectedLower = expectedStores.map(s => s.toLowerCase());
+                        log(`Expected stores after exclusions: ${{expectedStores.join(', ')}}`, 'DEBUG');
                         
-                        const missing = expectedStores.filter(s => !actualLower.includes(s.toLowerCase()));
-                        const extra = actual.filter(s => !expectedLower.includes(s.toLowerCase()));
+                        // Compare actual vs expected
+                        const actualNorm = actual.map(s => s.toLowerCase());
+                        const expectedNorm = expectedStores.map(s => s.toLowerCase());
+                        
+                        const missing = expectedStores.filter(s => !actualNorm.includes(s.toLowerCase()));
+                        const extra = actual.filter(s => !expectedNorm.includes(s.toLowerCase()));
                         
                         if (missing.length > 0 || extra.length > 0) {{
+                            let msg = `Store mismatch:`;
+                            if (missing.length > 0) msg += ` Missing: ${{missing.join(', ')}}.`;
+                            if (extra.length > 0) msg += ` Extra: ${{extra.join(', ')}}.`;
+                            
                             warnings.stores = {{
                                 expected: expectedStores.join(', '),
                                 actual: actual.join(', ') || '(blank)',
-                                message: `Store mismatch: Expected "${{expectedStores.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
+                                message: msg
                             }};
+                        }} else {{
+                            log(`Store validation: All Locations Except - CORRECT`, 'DEBUG');
                         }}
                     }}
                 }}
-                // Case 3: Specific stores
+                // Case 3: Specific stores listed
                 else {{
-                    const expected = expectedText.split(',').map(s => s.trim());
-                    const expectedLower = expected.map(s => s.toLowerCase());
-                    const actualLower = actual.map(s => s.toLowerCase());
+                    // Parse expected stores from comma-separated list
+                    const expectedStores = expectedText.split(',')
+                        .map(s => s.trim())
+                        .filter(s => s && s !== '');
                     
-                    const missing = expected.filter(e => !actualLower.includes(e.toLowerCase()));
-                    const extra = actual.filter(a => !expectedLower.includes(a.toLowerCase()));
+                    // Normalize expected store names to MIS format for comparison
+                    const expectedStoresNorm = expectedStores.map(s => normalizeStoreName(s));
+                    const actualNorm = actual.map(s => s.toLowerCase());
+                    
+                    log(`Specific stores expected (raw): ${{expectedStores.join(', ')}}`, 'DEBUG');
+                    log(`Specific stores expected (normalized): ${{expectedStoresNorm.join(', ')}}`, 'DEBUG');
+                    
+                    // Find missing and extra stores
+                    const missing = expectedStores.filter((s, i) => !actualNorm.includes(expectedStoresNorm[i]));
+                    const extra = actual.filter(s => !expectedStoresNorm.includes(s.toLowerCase()));
                     
                     if (missing.length > 0 || extra.length > 0) {{
+                        let msg = `Store mismatch:`;
+                        if (missing.length > 0) msg += ` Missing: ${{missing.join(', ')}}.`;
+                        if (extra.length > 0) msg += ` Extra: ${{extra.join(', ')}}.`;
+                        
                         warnings.stores = {{
-                            expected: expected.join(', '),
+                            expected: expectedStores.join(', '),
                             actual: actual.join(', ') || '(blank)',
-                            message: `Store mismatch: Expected "${{expected.join(', ')}}", found "${{actual.join(', ') || '(blank)'}}"`
+                            message: msg
                         }};
+                    }} else {{
+                        log(`Store validation: Specific stores - CORRECT`, 'DEBUG');
                     }}
                 }}
             }}
