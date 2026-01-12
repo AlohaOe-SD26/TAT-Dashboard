@@ -19951,13 +19951,18 @@ def api_mis_lookup_mis_id():
                             # ENHANCED COLUMN DETECTION: Search for columns CONTAINING keywords
                             # This handles newlines, extra spaces, and variations
                             
-                            # Find Discount column (handles "Deal Discount Value/Type", "Discount", "Discount %", etc.)
+                            # Find Discount column (handles "Deal Discount Value/Type", "Discount %", etc.)
+                            # IMPORTANT: Exclude "After Wholesale Discount" by requiring value/rate/% keywords
                             discount_value = ''
                             discount_col_found = None
                             for col in google_df.columns:
                                 col_lower = col.lower()
-                                # Look for columns containing "discount" but NOT "type" (to avoid "Discount Type" columns)
-                                if 'discount' in col_lower and 'type' not in col_lower:
+                                # Look for columns with "discount" AND ("value" OR "rate" OR "%")
+                                # Exclude columns with "wholesale" or "type"
+                                if ('discount' in col_lower and 
+                                    ('value' in col_lower or 'rate' in col_lower or '%' in col_lower) and
+                                    'wholesale' not in col_lower and 
+                                    'type' not in col_lower):
                                     discount_value = str(base_row.get(col, '')).strip()
                                     if discount_value:
                                         discount_col_found = col
@@ -20020,6 +20025,23 @@ def api_mis_lookup_mis_id():
                                     else:
                                         print(f"[MIS LOOKUP] ⚠️ Position {mis_position} out of range for brands: {brands}")
                             
+                            # Find After Wholesale Discount column
+                            after_wholesale_value = False
+                            after_ws_col_found = None
+                            for col in google_df.columns:
+                                col_lower = col.lower()
+                                # Look for columns containing both "wholesale" and "discount"
+                                if 'wholesale' in col_lower and 'discount' in col_lower:
+                                    cell_value = str(base_row.get(col, '')).strip()
+                                    after_ws_col_found = col
+                                    # Check for TRUE/checked/yes/1
+                                    after_wholesale_value = cell_value.lower() in ['yes', 'true', '1', 'checked', 'x', 'TRUE']
+                                    print(f"[MIS LOOKUP] Found After Wholesale in column '{col}': '{cell_value}' → {after_wholesale_value}")
+                                    break
+                            
+                            if not after_ws_col_found:
+                                print(f"[MIS LOOKUP] ⚠️ Could not find After Wholesale Discount column")
+                            
                             # Found it! Extract row data
                             row_data = {
                                 'brand': brand_value,
@@ -20030,7 +20052,7 @@ def api_mis_lookup_mis_id():
                                 'vendor_contrib': vendor_value,
                                 'locations': locations_raw,
                                 'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
-                                'after_wholesale': str(base_row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                                'after_wholesale': after_wholesale_value
                             }
                             
                             print(f"[MIS LOOKUP] ✅ Found row data in Google Sheet!")
@@ -20257,12 +20279,17 @@ def api_mis_compare_to_sheet():
                 all_weekdays.append(weekday)
         combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
         
-        # Find Discount column
+        # Find Discount column (enhanced - avoid "After Wholesale Discount")
         discount_value = ''
         for col in google_df.columns:
-            if 'discount' in col.lower() and 'type' not in col.lower():
+            col_lower = col.lower()
+            if ('discount' in col_lower and 
+                ('value' in col_lower or 'rate' in col_lower or '%' in col_lower) and
+                'wholesale' not in col_lower and 
+                'type' not in col_lower):
                 discount_value = str(base_row.get(col, '')).strip()
                 if discount_value:
+                    print(f"[COMPARE-TO-SHEET] Found Discount in column '{col}': '{discount_value}'")
                     break
         
         # Find Vendor % column
@@ -20271,7 +20298,18 @@ def api_mis_compare_to_sheet():
             if 'contribution' in col.lower() or 'vendor' in col.lower():
                 vendor_value = str(base_row.get(col, '')).strip()
                 if vendor_value:
+                    print(f"[COMPARE-TO-SHEET] Found Vendor % in column '{col}': '{vendor_value}'")
                     break
+        
+        # Find After Wholesale Discount column
+        after_wholesale_value = False
+        for col in google_df.columns:
+            col_lower = col.lower()
+            if 'wholesale' in col_lower and 'discount' in col_lower:
+                cell_value = str(base_row.get(col, '')).strip()
+                after_wholesale_value = cell_value.lower() in ['yes', 'true', '1', 'checked', 'x', 'TRUE']
+                print(f"[COMPARE-TO-SHEET] Found After Wholesale in column '{col}': '{cell_value}' → {after_wholesale_value}")
+                break
         
         # Multi-brand handling
         brand_value = str(base_row.get('Brand', '')).strip()
@@ -20305,7 +20343,7 @@ def api_mis_compare_to_sheet():
             'vendor_contrib': vendor_value,
             'locations': str(base_row.get('Locations', 'All Locations')).strip(),
             'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
-            'after_wholesale': str(base_row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+            'after_wholesale': after_wholesale_value
         }
         
         print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
@@ -21389,14 +21427,19 @@ def inject_mis_validation(driver, expected_data=None):
                 const actual = getDiscountValue();
                 let expected = String(EXPECTED_DATA.discount);
                 
-                // Normalize: Strip "%" from expected for comparison
+                // Normalize: Strip "%" from both and convert to numbers for comparison
                 expected = expected.replace('%', '').trim();
+                const actualClean = actual ? actual.replace('%', '').trim() : '';
                 
-                if (actual && actual !== expected) {{
+                // Convert to numbers to handle "30.00" vs "30"
+                const expectedNum = parseFloat(expected);
+                const actualNum = parseFloat(actualClean);
+                
+                if (!isNaN(expectedNum) && !isNaN(actualNum) && expectedNum !== actualNum) {{
                     warnings.discount = {{
                         expected: expected + '%',
-                        actual: actual + '%',
-                        message: `Discount mismatch: Expected "${{expected}}%", found "${{actual}}%"`
+                        actual: actualClean + '%',
+                        message: `Discount mismatch: Expected "${{expected}}%", found "${{actualClean}}%"`
                     }};
                 }}
             }}
@@ -21406,14 +21449,19 @@ def inject_mis_validation(driver, expected_data=None):
                 const actual = getVendorContribValue();
                 let expected = String(EXPECTED_DATA.vendor_contrib);
                 
-                // Normalize: Strip "%" from expected for comparison
+                // Normalize: Strip "%" from both and convert to numbers for comparison
                 expected = expected.replace('%', '').trim();
+                const actualClean = actual ? actual.replace('%', '').trim() : '';
                 
-                if (actual && actual !== expected) {{
+                // Convert to numbers to handle "30.00" vs "30"
+                const expectedNum = parseFloat(expected);
+                const actualNum = parseFloat(actualClean);
+                
+                if (!isNaN(expectedNum) && !isNaN(actualNum) && expectedNum !== actualNum) {{
                     warnings.vendor_contrib = {{
                         expected: expected + '%',
-                        actual: actual + '%',
-                        message: `Vendor Contribution mismatch: Expected "${{expected}}%", found "${{actual}}%"`
+                        actual: actualClean + '%',
+                        message: `Vendor Contribution mismatch: Expected "${{expected}}%", found "${{actualClean}}%"`
                     }};
                 }}
             }}
