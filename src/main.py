@@ -15370,123 +15370,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-class ValidationMonitor {
-    constructor() {
-        this.interval = null;
-        this.expectedData = null;
-        this.isManualMode = false;
-
-        // --- AMNESIA FIX: RESTORE CACHED DATA ---
-        // If the modal refreshed (DOM change), check if we have data cached globally
-        if (window.MIS_CACHED_DATA) {
-            console.log("[Validation] Restoring cached automation data...");
-            this.expectedData = window.MIS_CACHED_DATA;
-            this.isManualMode = false;
-            // Short delay to ensure DOM is ready before validating
-            setTimeout(() => this.validateFields(), 500); 
-        }
-
-        this.init();
-    }
-
-    init() {
-        // Start polling for the modal every 500ms
-        this.interval = setInterval(() => this.checkModal(), 500);
-    }
-
-    setExpectedData(data) {
-        console.log("[Validation] Received expected data:", data);
-        this.expectedData = data;
-        this.isManualMode = false;
-        
-        // --- AMNESIA FIX: SAVE TO CACHE ---
-        window.MIS_CACHED_DATA = data;
-        
-        this.validateFields();
-    }
-
-    checkModal() {
-        // Only run validation if the modal is actually open
-        const modal = document.querySelector('.modal-content'); // Adjust selector if needed
-        if (!modal) return;
-
-        // If we have data, keep validating. 
-        if (this.expectedData) {
-            this.validateFields();
-        }
-    }
-
-    validateFields() {
-        if (!this.expectedData) return;
-        
-        let errorCount = 0;
-        const d = this.expectedData;
-
-        // 1. Validate Rebate Type (Dropdown)
-        const rebateSelect = document.querySelector('select[name="rebateType"]');
-        if (rebateSelect) {
-            const val = rebateSelect.value;
-            // Critical Error: Rebate Type required
-            if (val === "" || val === "- Select -" || val === "null") {
-                this.markField(rebateSelect, "error", "Rebate Type is required");
-                errorCount++;
-            } else {
-                this.markField(rebateSelect, "success");
-            }
-        }
-
-        // 2. Validate Wholesale Toggle (FIXED CHECKBOX LOGIC)
-        // Adjust selector to match your specific checkbox ID or Name
-        const wholesaleBox = document.querySelector('input[name="isWholesale"], input.wholesale-toggle');
-        
-        if (wholesaleBox && wholesaleBox.type === 'checkbox') {
-            // FIX: Use .checked for boolean comparison, NOT .value
-            const actualState = wholesaleBox.checked;
-            
-            // Normalize expected data to boolean
-            let expectedState = false;
-            if (typeof d.isWholesale === 'boolean') {
-                expectedState = d.isWholesale;
-            } else if (typeof d.isWholesale === 'string') {
-                expectedState = d.isWholesale.toLowerCase() === 'true';
-            }
-
-            if (actualState !== expectedState) {
-                this.markField(wholesaleBox, "warning", `Expected: ${expectedState ? 'Checked' : 'Unchecked'}`);
-                // Note: Toggles are usually advisory (warning), not blocking (error)
-            } else {
-                this.markField(wholesaleBox, "success");
-            }
-        }
-
-        // Update the banner with the error count
-        this.updateBanner(errorCount > 0);
-    }
-
-    markField(element, status, msg = "") {
-        // Reset styles first
-        element.style.border = "";
-        element.title = "";
-
-        if (status === "error") {
-            element.style.border = "3px solid red";
-            element.title = msg || "Critical Error";
-        } else if (status === "warning") {
-            element.style.border = "3px solid orange";
-            element.title = msg || "Warning";
-        } else {
-            element.style.border = "2px solid green";
-        }
-    }
-
-    updateBanner(hasCriticalErrors) {
-        // Implementation of banner update logic (or create if missing)
-        // This usually toggles a hidden div or updates text content
-    }
-}
-
-// Global instance initialization
-window.validationMonitor = new ValidationMonitor();
 
     </script>
     
@@ -20348,78 +20231,171 @@ def api_mis_validate_lookup():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/mis/compare-to-sheet', methods=['POST'])
-def compare_to_sheet():
+def api_mis_compare_to_sheet():
     """
-    Compare a given MIS ID (from the browser extension/modal) against the loaded Google Sheet data.
-    Returns the matching row data if found.
+    V2: Manual "Compare to Google Sheet" button handler.
+    User clicks button in validation banner to search Google Sheet for current MIS ID.
     """
     try:
-        data = request.json
-        if not data:
-            return jsonify({'status': 'ERROR', 'message': 'No data provided'}), 400
-
-        target_id = str(data.get('mis_id', '')).strip()
-        if not target_id:
-            return jsonify({'status': 'ERROR', 'message': 'Missing MIS ID'}), 400
-
-        print(f"[COMPARE] Searching for MIS ID: {target_id}")
-
-        # Helper to clean sheet IDs (remove "W1:", "Gap:", etc.) for comparison
-        def clean_id(raw_val):
-            if pd.isna(raw_val): return ""
-            # Remove common tags like "W1:", "Gap:", "Part 1:"
-            s = str(raw_val).strip()
-            # Split by newline or comma in case of multiple IDs, check each
-            parts = re.split(r'[,\n]', s)
-            cleaned_parts = []
-            for p in parts:
-                # Remove prefix (anything before colon)
-                if ':' in p:
-                    p = p.split(':', 1)[1]
-                cleaned_parts.append(p.strip())
-            return cleaned_parts
-
-        match_found = None
+        data = request.get_json()
+        mis_id = str(data.get('mis_id', '')).strip()
         
-        # Search through all loaded sheet sections
-        if GLOBAL_DATA['mis']['deals_data']:
-            for section, df in GLOBAL_DATA['mis']['deals_data'].items():
-                if df is None or df.empty: continue
-                
-                # Determine which column holds the ID
-                id_col = next((c for c in df.columns if c.lower() in ['mis id', 'id', 'mis_id']), None)
-                if not id_col: continue
-
-                # Iterate rows to find match
-                for idx, row in df.iterrows():
-                    sheet_ids = clean_id(row[id_col])
-                    
-                    # Check if target_id is in the list of IDs for this row
-                    if target_id in sheet_ids:
-                        # MATCH FOUND!
-                        # Convert row to dict and handle NaN values
-                        row_data = row.where(pd.notnull(row), "").to_dict()
-                        
-                        # Add extra context
-                        row_data['SECTION_FOUND'] = section
-                        row_data['ROW_INDEX'] = idx + 2 # Approx sheet row
-                        match_found = row_data
-                        break
-                
-                if match_found: break
-
-        if match_found:
-            print(f"[COMPARE] Match found in {match_found['SECTION_FOUND']} section")
-            return jsonify({'status': 'MATCH', 'data': match_found})
-        else:
-            print("[COMPARE] No match found in Google Sheet")
-            return jsonify({'status': 'NO_MATCH', 'message': 'ID not found in active sheet'}), 200
-
+        if not mis_id:
+            return jsonify({'success': False, 'error': 'No MIS ID provided'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized'})
+        
+        print(f"\n{'='*60}")
+        print(f"[COMPARE-TO-SHEET] ðŸ” Manual comparison requested for MIS ID: {mis_id}")
+        print(f"{'='*60}")
+        
+        # Check if Google Sheet data available
+        google_df = GLOBAL_DATA.get('google_df')
+        
+        if google_df is None or google_df.empty:
+            print(f"[COMPARE-TO-SHEET] âš ï¸ No Google Sheet data loaded")
+            return jsonify({
+                'success': False, 
+                'error': 'No Google Sheet loaded. Please run Audit first.'
+            })
+        
+        print(f"[COMPARE-TO-SHEET] Google Sheet loaded with {len(google_df)} rows")
+        
+        # Search for MIS ID (reuse same logic as lookup)
+        found_data = None
+        
+        # Find ID column
+        id_col = None
+        for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+            if col in google_df.columns:
+                id_col = col
+                break
+        
+        if not id_col:
+            return jsonify({
+                'success': False,
+                'error': 'Could not find MIS ID column in Google Sheet'
+            })
+        
+        # Search for matching rows (same logic as api_mis_lookup_mis_id)
+        matching_rows = []
+        for idx, row in google_df.iterrows():
+            sheet_mis_id = str(row.get(id_col, '')).strip()
+            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                matching_rows.append(row)
+        
+        if not matching_rows:
+            print(f"[COMPARE-TO-SHEET] âŒ MIS ID {mis_id} not found in Google Sheet")
+            # Switch to manual mode
+            inject_mis_validation(driver, expected_data=None)
+            return jsonify({
+                'success': True,
+                'mode': 'manual',
+                'message': f'MIS ID {mis_id} not in Google Sheet - staying in manual mode'
+            })
+        
+        # Found it! Extract data (same logic as lookup)
+        print(f"[COMPARE-TO-SHEET] âœ… Found {len(matching_rows)} matching row(s)")
+        
+        base_row = matching_rows[0]
+        
+        # Combine weekdays for multi-day
+        all_weekdays = []
+        for match_row in matching_rows:
+            weekday = str(match_row.get('Weekday', '')).strip()
+            if weekday and weekday not in all_weekdays:
+                all_weekdays.append(weekday)
+        combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
+        
+        # Find Discount column (enhanced - avoid "After Wholesale Discount")
+        discount_value = ''
+        for col in google_df.columns:
+            col_lower = col.lower()
+            if ('discount' in col_lower and 
+                ('value' in col_lower or 'rate' in col_lower or '%' in col_lower) and
+                'wholesale' not in col_lower and 
+                'type' not in col_lower):
+                discount_value = str(base_row.get(col, '')).strip()
+                if discount_value:
+                    print(f"[COMPARE-TO-SHEET] Found Discount in column '{col}': '{discount_value}'")
+                    break
+        
+        # Find Vendor % column
+        vendor_value = ''
+        for col in google_df.columns:
+            if 'contribution' in col.lower() or 'vendor' in col.lower():
+                vendor_value = str(base_row.get(col, '')).strip()
+                if vendor_value:
+                    print(f"[COMPARE-TO-SHEET] Found Vendor % in column '{col}': '{vendor_value}'")
+                    break
+        
+        # Find After Wholesale Discount column
+        after_wholesale_value = False
+        for col in google_df.columns:
+            col_lower = col.lower()
+            if 'wholesale' in col_lower and 'discount' in col_lower:
+                cell_value = str(base_row.get(col, '')).strip()
+                after_wholesale_value = cell_value.lower() in ['yes', 'true', '1', 'checked', 'x', 'TRUE']
+                print(f"[COMPARE-TO-SHEET] Found After Wholesale in column '{col}': '{cell_value}' â†’ {after_wholesale_value}")
+                break
+        
+        # Multi-brand handling
+        brand_value = str(base_row.get('Brand', '')).strip()
+        sheet_mis_id = str(base_row.get(id_col, '')).strip()
+        
+        if ',' in sheet_mis_id and ':' in sheet_mis_id:
+            parts = [p.strip() for p in sheet_mis_id.split(',')]
+            mis_position = None
+            for idx, part in enumerate(parts):
+                if ':' in part:
+                    num = part.split(':')[1].strip()
+                else:
+                    num = part.strip()
+                if mis_id == num or mis_id in num:
+                    mis_position = idx
+                    break
+            
+            if mis_position is not None and brand_value:
+                brands = [b.strip() for b in brand_value.split(',')]
+                if mis_position < len(brands):
+                    brand_value = brands[mis_position]
+                    print(f"[COMPARE-TO-SHEET] Multi-brand: Using brand at position {mis_position}: '{brand_value}'")
+        
+        # Build expected data
+        expected_data = {
+            'brand': brand_value,
+            'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
+            'weekday': combined_weekday,
+            'categories': str(base_row.get('Categories', '')).strip(),
+            'discount': discount_value,
+            'vendor_contrib': vendor_value,
+            'locations': str(base_row.get('Locations', 'All Locations')).strip(),
+            'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
+            'after_wholesale': after_wholesale_value
+        }
+        
+        print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
+        print(f"[COMPARE-TO-SHEET] Discount: '{expected_data['discount']}', Vendor %: '{expected_data['vendor_contrib']}'")
+        print(f"[COMPARE-TO-SHEET] Rebate Type: '{expected_data['rebate_type']}'")
+        print(f"[COMPARE-TO-SHEET] Locations: '{expected_data['locations']}'")
+        
+        # v12.12.6: Return expected_data to JavaScript instead of inject_mis_validation
+        # JavaScript will directly update VALIDATION_MODE and EXPECTED_DATA
+        print(f"[COMPARE-TO-SHEET] ✅ Returning expected_data to JavaScript")
+        
+        return jsonify({
+            'success': True,
+            'mode': 'automation',
+            'message': f'Found MIS ID {mis_id} in Google Sheet - switched to automation mode',
+            'expected_data': expected_data  # NEW: Send data to JavaScript
+        })
+    
     except Exception as e:
-        print(f"[CRITICAL] Backend Crash in compare-to-sheet: {e}")
+        print(f"[COMPARE-TO-SHEET] âŒ Error: {e}")
         traceback.print_exc()
-        # Return 500 but with JSON structure so frontend handles it gracefully
-        return jsonify({'status': 'CRASH', 'message': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/mis/search-brand', methods=['POST'])
 def api_mis_search_brand():
@@ -22251,10 +22227,29 @@ def inject_mis_validation(driver, expected_data=None):
                 
                 if (result.success) {{
                     log(`✅ ${{result.message}}`, 'SUCCESS');
-                    if (result.mode === 'automation') {{
-                        log('Switched to AUTOMATION mode - validation will use Google Sheet data', 'INFO');
+                    
+                    if (result.mode === 'automation' && result.expected_data) {{
+                        // v12.12.6: DIRECTLY UPDATE validation mode and expected data
+                        VALIDATION_MODE = 'automation';
+                        EXPECTED_DATA = result.expected_data;
+                        
+                        log('🎯 DIRECTLY SET AUTOMATION MODE', 'INFO');
+                        log(`Expected Data: Brand=${{EXPECTED_DATA.brand}}, Weekday=${{EXPECTED_DATA.weekday}}`, 'DEBUG');
+                        log(`Expected Data: Discount=${{EXPECTED_DATA.discount}}, Vendor=${{EXPECTED_DATA.vendor_contrib}}`, 'DEBUG');
+                        log(`Expected Data: Rebate Type=${{EXPECTED_DATA.rebate_type}}`, 'DEBUG');
+                        
+                        // Clear existing validation state to force re-validation with new data
+                        validationState.fieldWarnings = {{}};
+                        if (validationState.summaryBanner) {{
+                            validationState.summaryBanner.remove();
+                            validationState.summaryBanner = null;
+                        }}
+                        
+                        log('Validation state cleared - will re-validate with Google Sheet data', 'INFO');
                     }} else {{
                         log('MIS ID not found in Google Sheet - staying in manual mode', 'WARN');
+                        VALIDATION_MODE = 'manual';
+                        EXPECTED_DATA = null;
                     }}
                 }} else {{
                     log(`❌ ${{result.error}}`, 'ERROR');
