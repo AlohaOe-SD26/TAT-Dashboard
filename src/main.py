@@ -21998,8 +21998,12 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         // ============================================
-        // COMPARE TO GOOGLE SHEET BUTTON (V2 Feature)
+        // COMPARE TO GOOGLE SHEET BUTTON (V2.1 - Listening Mode)
         // ============================================
+        let listeningMode = false;
+        let datatableClickHandler = null;
+        const FLASK_BACKEND = 'http://127.0.0.1:5100';
+        
         function createCompareButton() {{
             if (validationState.compareButton) return;
             
@@ -22019,58 +22023,225 @@ def inject_mis_validation(driver, expected_data=None):
                 font-weight: bold;
                 cursor: pointer;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                transition: all 0.3s ease;
             `;
-            compareBtn.title = 'Search Google Sheet for this MIS ID and switch to automation validation';
+            compareBtn.title = 'Click to enter listening mode, then click a row in the datatable';
             
-            compareBtn.onclick = async function() {{
-                log('ðŸ” User clicked Compare to Google Sheet', 'INFO');
-                
-                // Extract MIS ID from current form
-                const formMisId = extractMisIdFromForm();
-                
-                if (!formMisId) {{
-                    log('âš ï¸ Could not extract MIS ID from form', 'WARN');
-                    alert('Could not find MIS ID in current entry');
-                    return;
-                }}
-                
-                log(`Extracted MIS ID from form: ${{formMisId}}`, 'INFO');
-                
-                // Call backend to search Google Sheet
-                // CRITICAL: Use absolute URL because this script runs in MIS browser tab
-                const FLASK_BACKEND = 'http://127.0.0.1:5100';
-                try {{
-                    compareBtn.disabled = true;
-                    compareBtn.textContent = 'Searching...';
-                    
-                    const response = await fetch(`${{FLASK_BACKEND}}/api/mis/compare-to-sheet`, {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ mis_id: formMisId }})
-                    }});
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {{
-                        log(`âœ… ${{result.message}}`, 'SUCCESS');
-                        // Backend will send validation message via inject_mis_validation
-                        // Just need to wait a moment for it to process
-                    }} else {{
-                        log(`âŒ ${{result.error}}`, 'ERROR');
-                        alert(result.error || 'Failed to compare with Google Sheet');
-                    }}
-                }} catch (error) {{
-                    log(`âŒ Compare request failed: ${{error}}`, 'ERROR');
-                    alert('Failed to connect to backend');
-                }} finally {{
-                    compareBtn.disabled = false;
-                    compareBtn.textContent = 'Compare to Google Sheet';
+            compareBtn.onclick = function() {{
+                if (!listeningMode) {{
+                    enterListeningMode(compareBtn);
+                }} else {{
+                    exitListeningMode(compareBtn);
                 }}
             }};
             
             document.body.appendChild(compareBtn);
             validationState.compareButton = compareBtn;
             log('Compare to Google Sheet button created', 'INFO');
+        }}
+        
+        function enterListeningMode(btn) {{
+            listeningMode = true;
+            log('🎯 Entering LISTENING MODE - Click a row in the datatable', 'INFO');
+            
+            // Update button appearance
+            btn.textContent = '🎯 Click a Row...';
+            btn.style.background = '#ffc107';
+            btn.style.color = '#000';
+            btn.style.border = '2px solid #e0a800';
+            btn.style.animation = 'pulse 1.5s infinite';
+            btn.title = 'Click a MIS ID or Edit button in the datatable (or click here to cancel)';
+            
+            // Add pulse animation if not exists
+            if (!document.getElementById('compare-btn-pulse-style')) {{
+                const style = document.createElement('style');
+                style.id = 'compare-btn-pulse-style';
+                style.textContent = `
+                    @keyframes pulse {{
+                        0% {{ box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }}
+                        70% {{ box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }}
+                        100% {{ box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }}
+                    }}
+                `;
+                document.head.appendChild(style);
+            }}
+            
+            // Attach click listener to datatable
+            attachDatatableListener();
+        }}
+        
+        function exitListeningMode(btn) {{
+            listeningMode = false;
+            log('Exiting listening mode', 'INFO');
+            
+            // Restore button appearance
+            btn.textContent = 'Compare to Google Sheet';
+            btn.style.background = '#17a2b8';
+            btn.style.color = '#fff';
+            btn.style.border = '2px solid #138496';
+            btn.style.animation = 'none';
+            btn.title = 'Click to enter listening mode, then click a row in the datatable';
+            
+            // Remove datatable listener
+            removeDatatableListener();
+        }}
+        
+        function attachDatatableListener() {{
+            // Find the datatable - try multiple selectors
+            const datatable = document.querySelector('#daily-discount-table, .dataTable, table.table, #DataTables_Table_0');
+            
+            if (!datatable) {{
+                log('⚠️ Could not find datatable to attach listener', 'WARN');
+                alert('Could not find datatable. Make sure you are on the Daily Discount page.');
+                return;
+            }}
+            
+            log('🔗 Attaching click listener to datatable', 'DEBUG');
+            
+            datatableClickHandler = async function(event) {{
+                // Check if we clicked on a MIS ID link or Edit button
+                const target = event.target;
+                const row = target.closest('tr');
+                
+                if (!row) return;
+                
+                let misId = null;
+                
+                // Method 1: Clicked directly on a link/cell containing the MIS ID
+                // MIS IDs are typically 3-7 digit numbers
+                if (target.tagName === 'A' || target.tagName === 'TD' || target.tagName === 'SPAN') {{
+                    const text = target.textContent.trim();
+                    const match = text.match(/^(\\d{{3,7}})$/);
+                    if (match) {{
+                        misId = match[1];
+                        log(`Clicked MIS ID directly: ${{misId}}`, 'INFO');
+                    }}
+                }}
+                
+                // Method 2: Clicked Edit button - find MIS ID from the row
+                if (!misId && (target.classList.contains('edit') || 
+                              target.classList.contains('btn-edit') ||
+                              target.classList.contains('fa-edit') ||
+                              target.classList.contains('fa-pencil') ||
+                              target.textContent.toLowerCase().includes('edit') ||
+                              target.closest('button')?.textContent.toLowerCase().includes('edit') ||
+                              target.closest('a')?.classList.contains('edit'))) {{
+                    // Search the row for a cell containing just a number (MIS ID)
+                    const cells = row.querySelectorAll('td');
+                    for (const cell of cells) {{
+                        const text = cell.textContent.trim();
+                        const match = text.match(/^(\\d{{3,7}})$/);
+                        if (match) {{
+                            misId = match[1];
+                            log(`Found MIS ID from row (edit click): ${{misId}}`, 'INFO');
+                            break;
+                        }}
+                    }}
+                    
+                    // Also check for links within the row
+                    if (!misId) {{
+                        const links = row.querySelectorAll('a');
+                        for (const link of links) {{
+                            const text = link.textContent.trim();
+                            const match = text.match(/^(\\d{{3,7}})$/);
+                            if (match) {{
+                                misId = match[1];
+                                log(`Found MIS ID from row link: ${{misId}}`, 'INFO');
+                                break;
+                            }}
+                        }}
+                    }}
+                }}
+                
+                // Method 3: Check first cell which often contains ID
+                if (!misId) {{
+                    const firstCell = row.querySelector('td:first-child');
+                    if (firstCell) {{
+                        const text = firstCell.textContent.trim();
+                        const match = text.match(/^(\\d{{3,7}})$/);
+                        if (match) {{
+                            misId = match[1];
+                            log(`Found MIS ID from first cell: ${{misId}}`, 'INFO');
+                        }}
+                    }}
+                }}
+                
+                // Method 4: Check if any cell in the row has data-id or similar attribute
+                if (!misId) {{
+                    const cellWithId = row.querySelector('[data-id], [data-mis-id], [data-discount-id]');
+                    if (cellWithId) {{
+                        misId = cellWithId.dataset.id || cellWithId.dataset.misId || cellWithId.dataset.discountId;
+                        if (misId) {{
+                            log(`Found MIS ID from data attribute: ${{misId}}`, 'INFO');
+                        }}
+                    }}
+                }}
+                
+                // Method 5: Row itself might have data-id
+                if (!misId && row.dataset.id) {{
+                    misId = row.dataset.id;
+                    log(`Found MIS ID from row data-id: ${{misId}}`, 'INFO');
+                }}
+                
+                if (misId) {{
+                    log(`🎯 Captured MIS ID: ${{misId}} - calling backend`, 'INFO');
+                    await compareToGoogleSheet(misId);
+                    exitListeningMode(validationState.compareButton);
+                }}
+            }};
+            
+            datatable.addEventListener('click', datatableClickHandler);
+            log('✅ Datatable click listener attached', 'DEBUG');
+        }}
+        
+        function removeDatatableListener() {{
+            if (datatableClickHandler) {{
+                const datatable = document.querySelector('#daily-discount-table, .dataTable, table.table, #DataTables_Table_0');
+                if (datatable) {{
+                    datatable.removeEventListener('click', datatableClickHandler);
+                    log('Datatable click listener removed', 'DEBUG');
+                }}
+                datatableClickHandler = null;
+            }}
+        }}
+        
+        async function compareToGoogleSheet(misId) {{
+            log(`🔍 Comparing MIS ID ${{misId}} to Google Sheet...`, 'INFO');
+            
+            const btn = validationState.compareButton;
+            if (btn) {{
+                btn.textContent = 'Searching...';
+                btn.disabled = true;
+            }}
+            
+            try {{
+                const response = await fetch(`${{FLASK_BACKEND}}/api/mis/compare-to-sheet`, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ mis_id: misId }})
+                }});
+                
+                const result = await response.json();
+                
+                if (result.success) {{
+                    log(`✅ ${{result.message}}`, 'SUCCESS');
+                    if (result.mode === 'automation') {{
+                        log('Switched to AUTOMATION mode - validation will use Google Sheet data', 'INFO');
+                    }} else {{
+                        log('MIS ID not found in Google Sheet - staying in manual mode', 'WARN');
+                    }}
+                }} else {{
+                    log(`❌ ${{result.error}}`, 'ERROR');
+                    alert(result.error || 'Failed to compare with Google Sheet');
+                }}
+            }} catch (error) {{
+                log(`❌ Compare request failed: ${{error}}`, 'ERROR');
+                alert('Failed to connect to backend. Is the Flask server running?');
+            }} finally {{
+                if (btn) {{
+                    btn.disabled = false;
+                }}
+            }}
         }}
         
         function removeCompareButton() {{
