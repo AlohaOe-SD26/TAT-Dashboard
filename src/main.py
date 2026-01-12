@@ -4753,6 +4753,15 @@ def handle_exception(error):
         'error': f'Server Error: {str(error)}'
     }), 500
 
+# v12.12.5 FIX: CORS support for requests from MIS browser tab
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS headers to allow requests from MIS browser tab"""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
 # HTML TEMPLATE (COMPLETE WITH MULTI-DAY SUPPORT)
 HTML_TEMPLATE = r"""
 <!DOCTYPE html>
@@ -22028,11 +22037,13 @@ def inject_mis_validation(driver, expected_data=None):
                 log(`Extracted MIS ID from form: ${{formMisId}}`, 'INFO');
                 
                 // Call backend to search Google Sheet
+                // CRITICAL: Use absolute URL because this script runs in MIS browser tab
+                const FLASK_BACKEND = 'http://127.0.0.1:5100';
                 try {{
                     compareBtn.disabled = true;
                     compareBtn.textContent = 'Searching...';
                     
-                    const response = await fetch('/api/mis/compare-to-sheet', {{
+                    const response = await fetch(`${{FLASK_BACKEND}}/api/mis/compare-to-sheet`, {{
                         method: 'POST',
                         headers: {{ 'Content-Type': 'application/json' }},
                         body: JSON.stringify({{ mis_id: formMisId }})
