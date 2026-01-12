@@ -20230,6 +20230,59 @@ def api_mis_validate_lookup():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
+
+def find_locations_value(row, columns):
+    """
+    v12.12.8: Find locations value from row with multiple possible column names.
+    Returns the location string or "All Locations" as default.
+    """
+    import pandas as pd
+    
+    # Priority order for column names
+    location_col_names = [
+        "Locations (Discount Applies at)",
+        "Locations",
+        "Location", 
+        "Store Locations",
+        "Stores"
+    ]
+    
+    def clean_value(val):
+        """Clean cell value, handling NaN, None, etc."""
+        if val is None:
+            return ""
+        if pd.isna(val):
+            return ""
+        s = str(val).strip()
+        if s.lower() in ['nan', 'none', 'null', '-']:
+            return ""
+        return s
+    
+    # Try exact matches first
+    for col_name in location_col_names:
+        if col_name in columns:
+            val = clean_value(row.get(col_name, ""))
+            if val:
+                print(f"[COMPARE-TO-SHEET] Found Locations in column '{col_name}': '{val}'")
+                return val
+    
+    # Try case-insensitive partial matches
+    for col in columns:
+        col_lower = col.lower()
+        if "location" in col_lower or "store" in col_lower:
+            if "marketing" not in col_lower:  # Skip marketing columns
+                val = clean_value(row.get(col, ""))
+                if val:
+                    print(f"[COMPARE-TO-SHEET] Found Locations in column '{col}': '{val}'")
+                    return val
+    
+    # Log what columns were available for debugging
+    location_cols = [c for c in columns if 'location' in c.lower() or 'store' in c.lower()]
+    print(f"[COMPARE-TO-SHEET] WARNING: No locations value found!")
+    print(f"[COMPARE-TO-SHEET] Available location-like columns: {location_cols}")
+    print(f"[COMPARE-TO-SHEET] Defaulting to 'All Locations'")
+    return "All Locations"
+
 @app.route('/api/mis/compare-to-sheet', methods=['POST'])
 def api_mis_compare_to_sheet():
     """
@@ -20391,7 +20444,7 @@ def api_mis_compare_to_sheet():
             'categories': str(base_row.get('Categories', '')).strip(),
             'discount': discount_value,
             'vendor_contrib': vendor_value,
-            'locations': str(base_row.get('Locations', 'All Locations')).strip(),
+            'locations': find_locations_value(base_row, google_df.columns),
             'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
             'after_wholesale': after_wholesale_value
         }
@@ -22352,9 +22405,31 @@ def inject_mis_validation(driver, expected_data=None):
                         
                         log('Validation state cleared - will re-validate with Google Sheet data', 'INFO');
                     }} else {{
+                        // v12.12.8: MIS ID NOT FOUND - Show RED button notification
                         log('MIS ID not found in Google Sheet - staying in manual mode', 'WARN');
                         VALIDATION_MODE = 'manual';
                         EXPECTED_DATA = null;
+                        
+                        // Change button to RED to alert user
+                        if (btn) {{
+                            btn.textContent = '⚠️ Not Found - Manual Mode';
+                            btn.style.background = '#dc3545';  // RED
+                            btn.style.color = '#000';  // BLACK text
+                            btn.style.border = '2px solid #c82333';
+                            btn.style.animation = 'none';
+                            btn.title = 'MIS ID was not found in Google Sheet. Using manual validation mode.';
+                            
+                            // Reset button after 5 seconds
+                            setTimeout(() => {{
+                                if (btn && btn.textContent.includes('Not Found')) {{
+                                    btn.textContent = 'Compare to Google Sheet';
+                                    btn.style.background = '#17a2b8';
+                                    btn.style.color = '#fff';
+                                    btn.style.border = '2px solid #138496';
+                                    btn.title = 'Click to enter listening mode, then click a row in the datatable';
+                                }}
+                            }}, 5000);
+                        }}
                     }}
                 }} else {{
                     log(`❌ ${{result.error}}`, 'ERROR');
