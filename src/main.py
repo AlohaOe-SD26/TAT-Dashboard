@@ -22161,6 +22161,7 @@ def inject_mis_validation(driver, expected_data=None):
         // COMPARE TO GOOGLE SHEET BUTTON (V2.1 - Listening Mode)
         // ============================================
         let listeningMode = false;
+        let notFoundMode = false;  // v12.12.8: Track if MIS ID was not found
         let datatableClickHandler = null;
         const FLASK_BACKEND = 'http://127.0.0.1:5100';
         
@@ -22202,6 +22203,7 @@ def inject_mis_validation(driver, expected_data=None):
         
         function enterListeningMode(btn) {{
             listeningMode = true;
+            notFoundMode = false;  // v12.12.8: Reset not-found flag when entering listening mode
             log('🎯 Entering LISTENING MODE - Click a row in the datatable', 'INFO');
             
             // Update button appearance
@@ -22234,7 +22236,15 @@ def inject_mis_validation(driver, expected_data=None):
             listeningMode = false;
             log('Exiting listening mode', 'INFO');
             
-            // Restore button appearance
+            // v12.12.8: Don't reset button if in "Not Found" mode - keep RED
+            if (notFoundMode) {{
+                log('Preserving NOT FOUND button state (RED)', 'DEBUG');
+                // Just remove the listener, don't reset button appearance
+                removeDatatableListener();
+                return;
+            }}
+            
+            // Restore button appearance (only if NOT in notFoundMode)
             btn.textContent = 'Compare to Google Sheet';
             btn.style.background = '#17a2b8';
             btn.style.color = '#fff';
@@ -22404,11 +22414,13 @@ def inject_mis_validation(driver, expected_data=None):
                         }}
                         
                         log('Validation state cleared - will re-validate with Google Sheet data', 'INFO');
+                        notFoundMode = false;  // Clear the flag on successful find
                     }} else {{
                         // v12.12.8: MIS ID NOT FOUND - Show RED button notification
                         log('MIS ID not found in Google Sheet - staying in manual mode', 'WARN');
                         VALIDATION_MODE = 'manual';
                         EXPECTED_DATA = null;
+                        notFoundMode = true;  // Set flag to preserve RED button in exitListeningMode
                         
                         // Change button to RED to alert user
                         if (btn) {{
@@ -22427,6 +22439,7 @@ def inject_mis_validation(driver, expected_data=None):
                                     btn.style.color = '#fff';
                                     btn.style.border = '2px solid #138496';
                                     btn.title = 'Click to enter listening mode, then click a row in the datatable';
+                                    notFoundMode = false;  // Clear the flag when button resets
                                 }}
                             }}, 5000);
                         }}
