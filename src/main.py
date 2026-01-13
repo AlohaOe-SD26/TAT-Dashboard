@@ -1,4 +1,47 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.4 COMPLETE VALIDATION SYSTEM
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.11 VALIDATION RE-INJECT BUTTON
+# v12.12.11 CHANGELOG (VALIDATION RE-INJECT BUTTON):
+#   - NEW: "Re-inject Validation" button in Audit tab
+#     * Placed next to subtab buttons (visible across all Audit subtabs)
+#     * Utility-style button (green/distinct color) to stand out as action, not tab
+#     * Purpose: Re-inject validation code into MIS browser tab after page refresh
+#     * Solves: When MIS tab refreshes/logs out, validation code disappears
+#     * One-click re-injection of: Force Show Save, Compare to Google Sheet,
+#       Manual Validation banner, and all validation "catch" code
+#   - IMPLEMENTATION NOTES FOR FUTURE AI AGENTS:
+#     * Option 1 (IMPLEMENTED): Manual button - user clicks to re-inject
+#       - Simple, predictable, no race conditions
+#       - User has full control over when injection happens
+#       - Won't interfere with other automation operations
+#     * Option 2 (FUTURE CONSIDERATION): Automatic polling/re-injection
+#       - Would need background thread or JS interval to detect missing code
+#       - Risks: race conditions, injection mid-operation, resource usage
+#       - Would need safeguards: only poll when idle, no modal open, etc.
+#       - More complex but hands-free experience
+#       - If implementing Option 2, consider:
+#         > Polling interval (e.g., every 5 seconds)
+#         > "Is page ready?" detection (check for specific DOM elements)
+#         > "Is operation in progress?" flag to prevent mid-automation injection
+#         > User preference toggle to enable/disable auto-injection
+# v12.12.10 CHANGELOG (AFTER WHOLESALE FIX):
+#   - FIXED: After Wholesale toggle validation now works correctly
+#     * Priority-based column name detection (exact match first)
+#     * Direct boolean handling for Google Sheets checkboxes
+#     * Column priority: "After Wholesale Discount" > "After Wholesale" > fallbacks
+# v12.12.9 CHANGELOG (NOT FOUND BUTTON FIX):
+#   - FIXED: "Not Found - Manual Mode" RED button now displays correctly
+#     * Added notFoundMode flag to preserve RED state after exitListeningMode()
+#     * Button stays RED for 5 seconds before auto-resetting
+#     * exitListeningMode() now checks flag before resetting button appearance
+# v12.12.8 CHANGELOG (LOCATIONS COLUMN FIX):
+#   - FIXED: Locations column detection with multiple fallback names
+#     * Added find_locations_value() helper function
+#     * Searches: "Locations (Discount Applies at)", "Locations", "Location", etc.
+#     * Handles NaN/None values properly with pd.isna() check
+# v12.12.7 CHANGELOG (DISCOUNT + STORE VALIDATION FIX):
+#   - FIXED: Discount column detection accepts standalone "Discount" column
+#   - FIXED: Store validation with proper name mapping (Google Sheet -> MIS)
+#     * "Beverly Hills" -> "Beverly", "Fresno (Palm)" -> "Fresno"
+#   - FIXED: "All Locations" now accepts blank OR all 12 stores selected
 # v12.11 CHANGELOG (COMPREHENSIVE BANNER - SHOWS ALL ERRORS):
 #   - FIXED: Banner now shows ALL errors (critical AND advisory) in single list
 #     * Was: Banner only showed advisory warnings, ignored critical errors
@@ -6067,6 +6110,7 @@ HTML_TEMPLATE = r"""
             <button class="sub-nav-btn" onclick="switchMISTab('cleanup-audit', this)" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">&#x1F9F9; Cleanup Audit</button>
             <button class="sub-nav-btn" onclick="switchMISTab('split-audit', this)" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">&#x2702; Up-Down Planning</button>
             <button class="sub-nav-btn" onclick="switchMISTab('conflict', this)">Conflict Audit - Active</button>
+            <button id="reinject-validation-btn" onclick="reinjectValidation()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Re-inject validation code into MIS browser tab after page refresh">&#x1F504; Re-inject Validation</button>
         </div>
 
         <div class="content" style="padding:40px;">
@@ -6952,6 +6996,132 @@ HTML_TEMPLATE = r"""
             }
             
             currentMISTab = tabName;
+        }
+        
+        // ============================================
+        // TOAST NOTIFICATION (v12.12.11)
+        // ============================================
+        function showToast(message, type = 'info') {
+            // Add animation styles if not exists
+            if (!document.getElementById('toast-styles')) {
+                const style = document.createElement('style');
+                style.id = 'toast-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Remove existing toast if any
+            const existingToast = document.getElementById('app-toast');
+            if (existingToast) existingToast.remove();
+            
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 8px;
+                font-weight: bold;
+                z-index: 999999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideIn 0.3s ease;
+                max-width: 400px;
+            `;
+            
+            // Set colors based on type
+            if (type === 'success') {
+                toast.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                toast.style.color = 'white';
+            } else if (type === 'error') {
+                toast.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                toast.style.color = 'white';
+            } else {
+                toast.style.background = 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)';
+                toast.style.color = 'white';
+            }
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+        
+        // ============================================
+        // RE-INJECT VALIDATION (v12.12.11)
+        // ============================================
+        async function reinjectValidation() {
+            const btn = document.getElementById('reinject-validation-btn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // Update button to show loading state
+                btn.innerHTML = '⏳ Injecting...';
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                
+                const response = await fetch('/api/mis/inject-validation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Success - flash green
+                    btn.innerHTML = '✅ Injected!';
+                    btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    
+                    // Show notification
+                    showToast('Validation code re-injected successfully! Open a Daily Discount modal to see it.', 'success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }, 2000);
+                } else {
+                    // Error
+                    btn.innerHTML = '❌ Failed';
+                    btn.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                    
+                    showToast(result.error || 'Failed to inject validation code', 'error');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Re-inject validation error:', error);
+                btn.innerHTML = '❌ Error';
+                btn.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+                
+                showToast('Failed to connect to server. Is the browser initialized?', 'error');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }, 3000);
+            }
         }
         
         // ============================================
@@ -20404,15 +20574,46 @@ def api_mis_compare_to_sheet():
                     print(f"[COMPARE-TO-SHEET] Found Vendor % in column '{col}': '{vendor_value}'")
                     break
         
-        # Find After Wholesale Discount column
+        # Find After Wholesale Discount column (v12.12.10 - enhanced detection)
         after_wholesale_value = False
-        for col in google_df.columns:
-            col_lower = col.lower()
-            if 'wholesale' in col_lower and 'discount' in col_lower:
-                cell_value = str(base_row.get(col, '')).strip()
-                after_wholesale_value = cell_value.lower() in ['yes', 'true', '1', 'checked', 'x', 'TRUE']
-                print(f"[COMPARE-TO-SHEET] Found After Wholesale in column '{col}': '{cell_value}' â†’ {after_wholesale_value}")
+        after_wholesale_col = None
+        
+        # Priority order for column names
+        priority_cols = [
+            'After Wholesale Discount',  # Exact match (user's column)
+            'After Wholesale',
+            'Rebate After Wholesale Discount?',
+            'Wholesale Discount'
+        ]
+        
+        # Try priority matches first
+        for priority_name in priority_cols:
+            if priority_name in google_df.columns:
+                after_wholesale_col = priority_name
                 break
+        
+        # Fallback: search for any column with wholesale + discount
+        if not after_wholesale_col:
+            for col in google_df.columns:
+                col_lower = col.lower()
+                if 'wholesale' in col_lower and ('discount' in col_lower or 'after' in col_lower):
+                    after_wholesale_col = col
+                    break
+        
+        if after_wholesale_col:
+            cell_value = base_row.get(after_wholesale_col, '')
+            
+            # Handle Google Sheets checkbox (returns actual boolean)
+            if isinstance(cell_value, bool):
+                after_wholesale_value = cell_value
+                print(f"[COMPARE-TO-SHEET] After Wholesale column '{after_wholesale_col}': {cell_value} (boolean) -> {after_wholesale_value}")
+            else:
+                # Handle string values
+                cell_str = str(cell_value).strip().lower()
+                after_wholesale_value = cell_str in ['yes', 'true', '1', 'checked', 'x']
+                print(f"[COMPARE-TO-SHEET] After Wholesale column '{after_wholesale_col}': '{cell_value}' (string) -> {after_wholesale_value}")
+        else:
+            print(f"[COMPARE-TO-SHEET] WARNING: No After Wholesale column found. Available columns with 'wholesale': {[c for c in google_df.columns if 'wholesale' in c.lower()]}")
         
         # Multi-brand handling
         brand_value = str(base_row.get('Brand', '')).strip()
