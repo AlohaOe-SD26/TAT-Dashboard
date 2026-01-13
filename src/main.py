@@ -1,4 +1,38 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.11 VALIDATION RE-INJECT BUTTON
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.12 MONTHLY + SALE VALIDATION
+# v12.12.12 CHANGELOG (MONTHLY + SALE DEAL VALIDATION):
+#   - NEW: Section-aware validation for Monthly and Sale deals
+#     * Backend detects section type from _section column added to combined_df
+#     * Monthly deals: Uses "Weekday/Day of Month" column with ordinal parsing (1st, 10th)
+#     * Sale deals: Uses "Sale Runs:" column with date-weekday parsing (01/16/26 - Friday)
+#   - NEW: Monthly deal validation
+#     * Verifies start_date == end_date (monthly deals are single-day)
+#     * Calculates expected weekday from date using tab month/year
+#     * Flags weekday/date mismatch if wrong weekday selected for the date
+#     * Example: If 01/01/2026 entered, validates that Thursday is selected
+#   - NEW: Sale deal validation
+#     * Parses multiple sale dates from comma-separated format
+#     * Validates date range covers all expected sale dates
+#     * Validates selected weekdays match expected sale days
+#     * Warns if end date extends beyond last sale date (advisory, not blocking)
+#   - NEW: "Other Entries Expected" bordered section in validation banner
+#     * Shows only when multiple entries needed (e.g., "1st, 10th" but only 1st validated)
+#     * Displays expected Start/End Date and Weekday for remaining entries
+#     * Positioned on right side of banner with distinct border for visibility
+#   - BACKEND: New helper functions
+#     * find_weekday_column_value(): Section-aware column detection
+#     * parse_monthly_ordinals(): Extracts day numbers from "1st, 10th" strings
+#     * parse_sale_dates(): Extracts date-weekday pairs from sale date strings
+#     * calculate_expected_dates(): Computes dates/weekdays based on section and tab name
+#   - BACKEND: expected_data now includes
+#     * section_type: 'weekly', 'monthly', or 'sale'
+#     * all_expected_entries: Array of expected entry objects
+#     * raw_date_value: Original value from Google Sheet
+#     * tab_name: Current sheet tab for date calculations
+#   - JAVASCRIPT: New date getter functions
+#     * getStartDateValue(), getEndDateValue()
+#     * getWeekdayFromDate(): Calculates weekday from date string
+#     * findMatchingEntry(): Matches MIS dates to expected entries
+#     * getOtherExpectedEntries(): Finds entries not covered by current MIS entry
 # v12.12.11 CHANGELOG (VALIDATION RE-INJECT BUTTON):
 #   - NEW: "Re-inject Validation" button in Audit tab
 #     * Placed next to subtab buttons (visible across all Audit subtabs)
@@ -19029,11 +19063,22 @@ def api_mis_match():
         sections_data = fetch_google_sheet_data(tab_name)
         
         # v12.12.5: Combine all sections into single DataFrame for MIS lookup validation
-        combined_df = pd.concat([
-            sections_data.get('weekly', pd.DataFrame()),
-            sections_data.get('monthly', pd.DataFrame()),
-            sections_data.get('sale', pd.DataFrame())
-        ], ignore_index=True)
+        # v12.12.12: Add _section column to track which section each row came from
+        weekly_df = sections_data.get('weekly', pd.DataFrame()).copy()
+        monthly_df = sections_data.get('monthly', pd.DataFrame()).copy()
+        sale_df = sections_data.get('sale', pd.DataFrame()).copy()
+        
+        if not weekly_df.empty:
+            weekly_df['_section'] = 'weekly'
+        if not monthly_df.empty:
+            monthly_df['_section'] = 'monthly'
+        if not sale_df.empty:
+            sale_df['_section'] = 'sale'
+        
+        combined_df = pd.concat([weekly_df, monthly_df, sale_df], ignore_index=True)
+        
+        # Also store sections_data for direct access
+        GLOBAL_DATA['sections_data'] = sections_data
         
         # v12.12.5: AGGRESSIVE DEBUG
         print(f"\n{'ðŸ”¥'*30}")
@@ -20453,6 +20498,206 @@ def find_locations_value(row, columns):
     print(f"[COMPARE-TO-SHEET] Defaulting to 'All Locations'")
     return "All Locations"
 
+def find_weekday_column_value(row, columns, section_type):
+    """
+    v12.12.12: Section-aware weekday/date column detection.
+    - Weekly: Uses "Weekday" column
+    - Monthly: Uses "Weekday/Day of Month" or column containing "day of month"
+    - Sale: Uses column containing "Sale Runs:" 
+    
+    Returns: (column_value, column_name)
+    """
+    import pandas as pd
+    
+    def clean_value(val):
+        if val is None or pd.isna(val):
+            return ""
+        s = str(val).strip()
+        if s.lower() in ['nan', 'none', 'null', '-']:
+            return ""
+        return s
+    
+    if section_type == 'monthly':
+        # Look for "Day of Month" column
+        priority_cols = [
+            'Weekday/\nDay of Month',
+            'Weekday/Day of Month', 
+            'Day of Month',
+            'Monthly Date'
+        ]
+        
+        # Try exact matches
+        for col_name in priority_cols:
+            if col_name in columns:
+                val = clean_value(row.get(col_name, ""))
+                if val:
+                    print(f"[COMPARE-TO-SHEET] Monthly: Found in column '{col_name}': '{val}'")
+                    return (val, col_name)
+        
+        # Try partial match for "day of month"
+        for col in columns:
+            col_lower = col.lower().replace('\n', ' ')
+            if 'day of month' in col_lower or 'monthly' in col_lower:
+                val = clean_value(row.get(col, ""))
+                if val:
+                    print(f"[COMPARE-TO-SHEET] Monthly: Found in column '{col}': '{val}'")
+                    return (val, col)
+        
+        print(f"[COMPARE-TO-SHEET] WARNING: No 'Day of Month' column found for monthly deal")
+        return ("", None)
+    
+    elif section_type == 'sale':
+        # Look for "Sale Runs:" column
+        for col in columns:
+            col_lower = col.lower().replace('\n', ' ')
+            if 'sale runs' in col_lower or 'sale date' in col_lower:
+                val = clean_value(row.get(col, ""))
+                if val:
+                    print(f"[COMPARE-TO-SHEET] Sale: Found in column '{col}': '{val}'")
+                    return (val, col)
+        
+        print(f"[COMPARE-TO-SHEET] WARNING: No 'Sale Runs' column found for sale deal")
+        return ("", None)
+    
+    else:
+        # Weekly - use standard Weekday column
+        weekday_cols = ['Weekday', 'Day', 'Days']
+        for col_name in weekday_cols:
+            if col_name in columns:
+                val = clean_value(row.get(col_name, ""))
+                if val:
+                    return (val, col_name)
+        
+        # Fallback
+        val = clean_value(row.get('Weekday', ""))
+        return (val, 'Weekday')
+
+def parse_monthly_ordinals(day_str: str) -> list:
+    """
+    v12.12.12: Parse monthly ordinal strings like "1st", "10th", "1st, 15th"
+    Returns list of day numbers: [1, 15]
+    """
+    import re
+    
+    if not day_str:
+        return []
+    
+    # Find all ordinal patterns: 1st, 2nd, 3rd, 4th, 5th, etc.
+    ordinal_pattern = r'(\d+)(?:st|nd|rd|th)'
+    matches = re.findall(ordinal_pattern, day_str.lower())
+    
+    days = [int(m) for m in matches if 1 <= int(m) <= 31]
+    print(f"[COMPARE-TO-SHEET] Parsed monthly ordinals: '{day_str}' -> days {days}")
+    return days
+
+def parse_sale_dates(sale_str: str) -> list:
+    """
+    v12.12.12: Parse sale date strings like "01/16/26 - Friday" or "01/16/26 - Friday, 01/17/26 - Saturday"
+    Returns list of dicts: [{'date': '01/16/26', 'weekday': 'Friday', 'date_obj': date}, ...]
+    """
+    import re
+    from datetime import datetime
+    
+    if not sale_str:
+        return []
+    
+    results = []
+    
+    # Pattern: MM/DD/YY - Weekday
+    pattern = r'(\d{1,2}/\d{1,2}/\d{2,4})\s*-\s*(\w+)'
+    matches = re.findall(pattern, sale_str)
+    
+    for date_str, weekday in matches:
+        try:
+            # Parse date (handle 2-digit and 4-digit years)
+            if len(date_str.split('/')[-1]) == 2:
+                date_obj = datetime.strptime(date_str, '%m/%d/%y').date()
+            else:
+                date_obj = datetime.strptime(date_str, '%m/%d/%Y').date()
+            
+            results.append({
+                'date': date_str,
+                'weekday': weekday.strip().title(),
+                'date_obj': date_obj
+            })
+        except ValueError as e:
+            print(f"[COMPARE-TO-SHEET] Warning: Could not parse sale date '{date_str}': {e}")
+    
+    print(f"[COMPARE-TO-SHEET] Parsed sale dates: '{sale_str}' -> {len(results)} dates")
+    return results
+
+def calculate_expected_dates(section_type: str, date_value: str, tab_name: str) -> dict:
+    """
+    v12.12.12: Calculate expected dates/weekdays based on section type.
+    
+    Returns dict with:
+    - 'all_entries': List of all expected entries from Google Sheet
+    - 'weekday': Weekday string for MIS (for weekly deals, direct; for monthly/sale, calculated)
+    """
+    from datetime import date, timedelta
+    import calendar
+    
+    result = {
+        'all_entries': [],
+        'weekday': '',
+        'section_type': section_type,
+        'raw_value': date_value
+    }
+    
+    if section_type == 'weekly':
+        # Weekly deals: weekday is used directly
+        result['weekday'] = date_value
+        result['all_entries'] = [{'weekday': date_value, 'type': 'weekly'}]
+        return result
+    
+    # Get month/year from tab name
+    tab_month, tab_year = parse_tab_month_year(tab_name)
+    print(f"[COMPARE-TO-SHEET] Tab '{tab_name}' -> Month: {tab_month}, Year: {tab_year}")
+    
+    if section_type == 'monthly':
+        # Parse ordinal days
+        days = parse_monthly_ordinals(date_value)
+        
+        for day in days:
+            try:
+                # Create date for this day in the target month
+                entry_date = date(tab_year, tab_month, day)
+                weekday_name = calendar.day_name[entry_date.weekday()]
+                
+                result['all_entries'].append({
+                    'day': day,
+                    'ordinal': f"{day}{'st' if day == 1 else 'nd' if day == 2 else 'rd' if day == 3 else 'th'}",
+                    'date': entry_date.strftime('%m/%d/%Y'),
+                    'date_short': entry_date.strftime('%m/%d/%y'),
+                    'weekday': weekday_name,
+                    'type': 'monthly'
+                })
+            except ValueError as e:
+                print(f"[COMPARE-TO-SHEET] Warning: Invalid date - day {day} in {tab_month}/{tab_year}: {e}")
+        
+        # Set weekday to comma-separated list of all expected weekdays
+        all_weekdays = [e['weekday'] for e in result['all_entries']]
+        result['weekday'] = ', '.join(all_weekdays) if all_weekdays else ''
+        
+    elif section_type == 'sale':
+        # Parse sale date strings
+        sale_dates = parse_sale_dates(date_value)
+        
+        for sd in sale_dates:
+            result['all_entries'].append({
+                'date': sd['date'],
+                'date_obj': sd['date_obj'],
+                'weekday': sd['weekday'],
+                'type': 'sale'
+            })
+        
+        # Set weekday to comma-separated list of all expected weekdays
+        all_weekdays = list(set([e['weekday'] for e in result['all_entries']]))
+        result['weekday'] = ', '.join(sorted(all_weekdays)) if all_weekdays else ''
+    
+    print(f"[COMPARE-TO-SHEET] Calculated {len(result['all_entries'])} expected entries for {section_type}")
+    return result
+
 @app.route('/api/mis/compare-to-sheet', methods=['POST'])
 def api_mis_compare_to_sheet():
     """
@@ -20524,13 +20769,27 @@ def api_mis_compare_to_sheet():
         
         base_row = matching_rows[0]
         
-        # Combine weekdays for multi-day
-        all_weekdays = []
-        for match_row in matching_rows:
-            weekday = str(match_row.get('Weekday', '')).strip()
-            if weekday and weekday not in all_weekdays:
-                all_weekdays.append(weekday)
-        combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
+        # v12.12.12: Detect section type from _section column
+        section_type = str(base_row.get('_section', 'weekly')).strip().lower()
+        if section_type not in ['weekly', 'monthly', 'sale']:
+            section_type = 'weekly'
+        print(f"[COMPARE-TO-SHEET] Section type: {section_type}")
+        
+        # v12.12.12: Get tab name for date calculations
+        tab_name = GLOBAL_DATA.get('mis', {}).get('current_sheet', '')
+        print(f"[COMPARE-TO-SHEET] Current tab: '{tab_name}'")
+        
+        # v12.12.12: Section-aware weekday/date extraction
+        date_value, date_col = find_weekday_column_value(base_row, google_df.columns, section_type)
+        print(f"[COMPARE-TO-SHEET] Date/Weekday value from '{date_col}': '{date_value}'")
+        
+        # Calculate expected dates/weekdays based on section type
+        date_info = calculate_expected_dates(section_type, date_value, tab_name)
+        combined_weekday = date_info['weekday']
+        all_expected_entries = date_info['all_entries']
+        
+        print(f"[COMPARE-TO-SHEET] Calculated weekday(s): '{combined_weekday}'")
+        print(f"[COMPARE-TO-SHEET] All expected entries: {len(all_expected_entries)}")
         
         # Find Discount column (v12.12.7 - enhanced detection)
         # Priority order: exact "Discount", then variations with value/rate/%
@@ -20638,6 +20897,14 @@ def api_mis_compare_to_sheet():
                     print(f"[COMPARE-TO-SHEET] Multi-brand: Using brand at position {mis_position}: '{brand_value}'")
         
         # Build expected data
+        # v12.12.12: Serialize all_expected_entries for JSON (convert date objects)
+        serialized_entries = []
+        for entry in all_expected_entries:
+            ser_entry = entry.copy()
+            if 'date_obj' in ser_entry:
+                ser_entry['date_obj'] = ser_entry['date_obj'].isoformat() if ser_entry['date_obj'] else None
+            serialized_entries.append(ser_entry)
+        
         expected_data = {
             'brand': brand_value,
             'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
@@ -20647,14 +20914,19 @@ def api_mis_compare_to_sheet():
             'vendor_contrib': vendor_value,
             'locations': find_locations_value(base_row, google_df.columns),
             'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
-            'after_wholesale': after_wholesale_value
+            'after_wholesale': after_wholesale_value,
+            # v12.12.12: Section-specific data
+            'section_type': section_type,
+            'all_expected_entries': serialized_entries,
+            'raw_date_value': date_value,
+            'tab_name': tab_name
         }
         
         print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
         print(f"[COMPARE-TO-SHEET] Discount: '{expected_data['discount']}', Vendor %: '{expected_data['vendor_contrib']}'")
         print(f"[COMPARE-TO-SHEET] Rebate Type: '{expected_data['rebate_type']}'")
         print(f"[COMPARE-TO-SHEET] Locations: '{expected_data['locations']}'")
-        
+        print(f"[COMPARE-TO-SHEET] Section: {section_type}, Expected entries: {len(serialized_entries)}")
         # v12.12.6: Return expected_data to JavaScript instead of inject_mis_validation
         # JavaScript will directly update VALIDATION_MODE and EXPECTED_DATA
         print(f"[COMPARE-TO-SHEET] ✅ Returning expected_data to JavaScript")
@@ -21328,7 +21600,10 @@ def inject_mis_validation(driver, expected_data=None):
             rebateTypeId: 'daily_discount_type_id',
             rebateTypeContainerId: 'select2-daily_discount_type_id-container',
             vendorContribId: 'rebate_percent',
-            afterWholesaleId: 'rebate_wholesale_discount'
+            afterWholesaleId: 'rebate_wholesale_discount',
+            // v12.12.12: Date fields for Monthly/Sale validation
+            startDateId: 'date_start',
+            endDateId: 'date_end'
         }};
         
         // Expected data from Google Sheet (Phase 2) - CAN BE CLEARED
@@ -21568,6 +21843,125 @@ def inject_mis_validation(driver, expected_data=None):
             const checkbox = document.getElementById(CONFIG.afterWholesaleId);
             if (!checkbox) return false;
             return checkbox.checked;
+        }}
+        
+        // v12.12.12: Date field getters for Monthly/Sale validation
+        function getStartDateValue() {{
+            const input = document.getElementById(CONFIG.startDateId);
+            if (!input) return null;
+            return input.value.trim();
+        }}
+        
+        function getEndDateValue() {{
+            const input = document.getElementById(CONFIG.endDateId);
+            if (!input) return null;
+            return input.value.trim();
+        }}
+        
+        // v12.12.12: Calculate weekday from date string
+        function getWeekdayFromDate(dateStr) {{
+            if (!dateStr) return null;
+            
+            // Handle MM/DD/YYYY or MM/DD/YY format
+            let dateParts;
+            if (dateStr.includes('/')) {{
+                dateParts = dateStr.split('/');
+            }} else if (dateStr.includes('-')) {{
+                // Handle YYYY-MM-DD format
+                const parts = dateStr.split('-');
+                dateParts = [parts[1], parts[2], parts[0]];
+            }} else {{
+                return null;
+            }}
+            
+            if (dateParts.length < 3) return null;
+            
+            let month = parseInt(dateParts[0], 10) - 1;
+            let day = parseInt(dateParts[1], 10);
+            let year = parseInt(dateParts[2], 10);
+            
+            // Handle 2-digit year
+            if (year < 100) {{
+                year = year + 2000;
+            }}
+            
+            const date = new Date(year, month, day);
+            const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            return weekdays[date.getDay()];
+        }}
+        
+        // v12.12.12: Find which expected entry matches the current MIS dates
+        function findMatchingEntry(allEntries, startDate, endDate) {{
+            if (!allEntries || allEntries.length === 0) return null;
+            
+            for (const entry of allEntries) {{
+                if (entry.type === 'monthly') {{
+                    // For monthly, start and end date should be the same and match the entry date
+                    if (entry.date && startDate === endDate) {{
+                        // Compare dates (handle format differences)
+                        const entryDateStr = entry.date_short || entry.date;
+                        if (startDate === entryDateStr || startDate.includes(entry.date.split('/')[1])) {{
+                            return entry;
+                        }}
+                        // Also try matching by day of month
+                        const startDay = parseInt(startDate.split('/')[1], 10);
+                        if (startDay === entry.day) {{
+                            return entry;
+                        }}
+                    }}
+                }} else if (entry.type === 'sale') {{
+                    // For sale, check if the date falls within range
+                    const entryDate = entry.date;
+                    if (startDate <= entryDate && endDate >= entryDate) {{
+                        return entry;
+                    }}
+                }}
+            }}
+            return null;
+        }}
+        
+        // v12.12.12: Get other entries that are NOT covered by current MIS entry
+        function getOtherExpectedEntries(allEntries, startDate, endDate, selectedWeekdays) {{
+            if (!allEntries || allEntries.length <= 1) return [];
+            
+            const others = [];
+            const selectedWeekdaysLower = (selectedWeekdays || []).map(w => w.toLowerCase());
+            
+            for (const entry of allEntries) {{
+                let isCovered = false;
+                
+                if (entry.type === 'monthly') {{
+                    // Check if this day is covered by current MIS entry
+                    const startDay = parseInt(startDate.split('/')[1], 10);
+                    if (startDate === endDate && startDay === entry.day) {{
+                        isCovered = true;
+                    }}
+                }} else if (entry.type === 'sale') {{
+                    // Check if this date is in range AND weekday is selected
+                    if (entry.date_obj) {{
+                        const entryDateParts = entry.date.split('/');
+                        const entryDateStr = entry.date;
+                        // Date in range check
+                        if (startDate <= entryDateStr && endDate >= entryDateStr) {{
+                            // Weekday selected check
+                            if (selectedWeekdaysLower.includes(entry.weekday.toLowerCase())) {{
+                                isCovered = true;
+                            }}
+                        }}
+                    }}
+                }} else if (entry.type === 'weekly') {{
+                    // For weekly, check if weekday is in selected weekdays
+                    if (selectedWeekdaysLower.includes(entry.weekday.toLowerCase())) {{
+                        isCovered = true;
+                    }}
+                }}
+                
+                if (!isCovered) {{
+                    others.push(entry);
+                }}
+            }}
+            
+            return others;
         }}
         
         // ============================================
@@ -21937,6 +22331,118 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
             }}
             
+            // v12.12.12: Section-specific date validation for Monthly and Sale deals
+            const sectionType = EXPECTED_DATA.section_type || 'weekly';
+            const allExpectedEntries = EXPECTED_DATA.all_expected_entries || [];
+            
+            if (sectionType === 'monthly' && allExpectedEntries.length > 0) {{
+                log(`Monthly deal validation - ${{allExpectedEntries.length}} expected entries`, 'DEBUG');
+                
+                const startDate = getStartDateValue();
+                const endDate = getEndDateValue();
+                const selectedWeekdays = getWeekdayValues();
+                
+                log(`MIS Dates: Start=${{startDate}}, End=${{endDate}}, Weekdays=${{selectedWeekdays.join(', ')}}`, 'DEBUG');
+                
+                // Monthly deals: start and end date should be the same (single day)
+                if (startDate && endDate && startDate !== endDate) {{
+                    warnings.date_range = {{
+                        expected: 'Same date (single day)',
+                        actual: `${{startDate}} to ${{endDate}}`,
+                        message: `Monthly deals should have same start/end date (single day). Found range: ${{startDate}} - ${{endDate}}`
+                    }};
+                }}
+                
+                // Verify weekday matches the date
+                if (startDate && selectedWeekdays.length > 0) {{
+                    const calculatedWeekday = getWeekdayFromDate(startDate);
+                    if (calculatedWeekday) {{
+                        const selectedWeekdayLower = selectedWeekdays[0].toLowerCase();
+                        const calculatedLower = calculatedWeekday.toLowerCase();
+                        
+                        if (selectedWeekdayLower !== calculatedLower) {{
+                            warnings.weekday_date_mismatch = {{
+                                expected: calculatedWeekday,
+                                actual: selectedWeekdays[0],
+                                message: `Weekday/Date mismatch: ${{startDate}} is a ${{calculatedWeekday}}, but "${{selectedWeekdays[0]}}" is selected`
+                            }};
+                        }} else {{
+                            log(`Monthly weekday validation: CORRECT (${{startDate}} is ${{calculatedWeekday}})`, 'DEBUG');
+                        }}
+                    }}
+                }}
+                
+                // Find other expected entries (for multi-day monthly deals like "1st, 10th")
+                if (startDate) {{
+                    const startDay = parseInt(startDate.split('/')[1], 10);
+                    const otherEntries = allExpectedEntries.filter(e => e.day !== startDay);
+                    
+                    if (otherEntries.length > 0) {{
+                        warnings._otherEntriesExpected = otherEntries;
+                        log(`Other entries expected: ${{otherEntries.length}} more`, 'DEBUG');
+                    }}
+                }}
+            }}
+            
+            if (sectionType === 'sale' && allExpectedEntries.length > 0) {{
+                log(`Sale deal validation - ${{allExpectedEntries.length}} expected entries`, 'DEBUG');
+                
+                const startDate = getStartDateValue();
+                const endDate = getEndDateValue();
+                const selectedWeekdays = getWeekdayValues();
+                
+                log(`MIS Dates: Start=${{startDate}}, End=${{endDate}}, Weekdays=${{selectedWeekdays.join(', ')}}`, 'DEBUG');
+                
+                // Check if all expected sale dates are within the MIS date range
+                // and their weekdays are selected
+                const coveredEntries = [];
+                const uncoveredEntries = [];
+                
+                for (const entry of allExpectedEntries) {{
+                    const entryDateStr = entry.date;
+                    const entryWeekday = entry.weekday;
+                    
+                    // Simple date comparison (MM/DD/YY format)
+                    // Check if entryDate is within startDate to endDate
+                    let isInRange = false;
+                    let weekdaySelected = false;
+                    
+                    if (startDate && endDate) {{
+                        // Compare dates
+                        isInRange = (entryDateStr >= startDate && entryDateStr <= endDate);
+                    }}
+                    
+                    if (selectedWeekdays.length > 0) {{
+                        weekdaySelected = selectedWeekdays.some(w => w.toLowerCase() === entryWeekday.toLowerCase());
+                    }}
+                    
+                    if (isInRange && weekdaySelected) {{
+                        coveredEntries.push(entry);
+                    }} else {{
+                        uncoveredEntries.push(entry);
+                    }}
+                }}
+                
+                log(`Sale validation: ${{coveredEntries.length}} covered, ${{uncoveredEntries.length}} uncovered`, 'DEBUG');
+                
+                // If some entries are not covered, add to warnings
+                if (uncoveredEntries.length > 0) {{
+                    warnings._otherEntriesExpected = uncoveredEntries;
+                }}
+                
+                // Check if end date extends beyond the last sale date (advisory warning)
+                if (endDate && allExpectedEntries.length > 0) {{
+                    const lastSaleDate = allExpectedEntries[allExpectedEntries.length - 1].date;
+                    if (endDate > lastSaleDate) {{
+                        warnings.end_date_extended = {{
+                            expected: lastSaleDate,
+                            actual: endDate,
+                            message: `End date (${{endDate}}) extends beyond last sale date (${{lastSaleDate}}) - may not cause issues but should be ${{lastSaleDate}} for cleanliness`
+                        }};
+                    }}
+                }}
+            }}
+            
             return warnings;
         }}
         
@@ -22103,6 +22609,52 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         // ============================================
+        // v12.12.12: OTHER ENTRIES EXPECTED SECTION BUILDER
+        // ============================================
+        function buildOtherEntriesSection(otherEntries) {{
+            if (!otherEntries || otherEntries.length === 0) return '';
+            
+            let entriesHtml = '';
+            for (const entry of otherEntries) {{
+                if (entry.type === 'monthly') {{
+                    entriesHtml += `
+                        <div style="margin: 4px 0; font-size: 0.85em;">
+                            <strong>${{entry.ordinal}}</strong>: 
+                            Start/End: ${{entry.date_short || entry.date}}, 
+                            Weekday: ${{entry.weekday}}
+                        </div>
+                    `;
+                }} else if (entry.type === 'sale') {{
+                    entriesHtml += `
+                        <div style="margin: 4px 0; font-size: 0.85em;">
+                            <strong>${{entry.date}}</strong> (${{entry.weekday}})
+                        </div>
+                    `;
+                }}
+            }}
+            
+            return `
+                <div style="
+                    border: 2px solid rgba(255,255,255,0.6);
+                    border-radius: 6px;
+                    padding: 10px;
+                    margin-left: 15px;
+                    min-width: 200px;
+                    max-width: 300px;
+                    background: rgba(255,255,255,0.1);
+                ">
+                    <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.95em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px;">
+                        ÃƒÂ°Ã…Â¸Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Other Entries Expected
+                    </div>
+                    <div style="font-weight: normal; font-size: 0.85em; margin-bottom: 8px;">
+                        ${{otherEntries.length}} more MIS ${{otherEntries.length === 1 ? 'entry' : 'entries'}} needed:
+                    </div>
+                    ${{entriesHtml}}
+                </div>
+            `;
+        }}
+        
+        // ============================================
         // PERSISTENT SUMMARY BANNER
         // ============================================
         function createSummaryBanner(warnings, criticalErrors) {{
@@ -22112,8 +22664,17 @@ def inject_mis_validation(driver, expected_data=None):
                 validationState.summaryBanner = null;
             }}
             
+            // v12.12.12: Extract _otherEntriesExpected from warnings (not a real warning)
+            const otherEntriesExpected = warnings ? warnings._otherEntriesExpected : null;
+            const displayWarnings = {{}};
+            for (const [key, value] of Object.entries(warnings || {{}})) {{
+                if (key !== '_otherEntriesExpected') {{
+                    displayWarnings[key] = value;
+                }}
+            }}
+            
             const criticalCount = Object.keys(criticalErrors || {{}}).length;
-            const warningCount = Object.keys(warnings || {{}}).length;
+            const warningCount = Object.keys(displayWarnings || {{}}).length;
             const totalIssues = criticalCount + warningCount;
             
             const banner = document.createElement('div');
@@ -22130,27 +22691,43 @@ def inject_mis_validation(driver, expected_data=None):
                     border-radius: 4px;
                     font-weight: bold;
                     text-align: center;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
                 `;
                 
+                let mainContent = '';
                 if (VALIDATION_MODE === 'automation') {{
-                    banner.innerHTML = `
-                        <div style="font-size: 1.1em;">
-                            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ All Fields Correct - Ready to Save!
-                        </div>
-                        <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
-                            Automation mode: Validating against Google Sheet
+                    mainContent = `
+                        <div style="flex: 1;">
+                            <div style="font-size: 1.1em;">
+                                ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ All Fields Correct - Ready to Save!
+                            </div>
+                            <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
+                                Automation mode: Validating against Google Sheet
+                            </div>
                         </div>
                     `;
                 }} else {{
-                    banner.innerHTML = `
-                        <div style="font-size: 1.1em;">
-                            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Critical Fields Filled - Ready to Save!
-                        </div>
-                        <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
-                            Manual mode: Validating Rebate Type + Weekday only
+                    mainContent = `
+                        <div style="flex: 1;">
+                            <div style="font-size: 1.1em;">
+                                ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Critical Fields Filled - Ready to Save!
+                            </div>
+                            <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
+                                Manual mode: Validating Rebate Type + Weekday only
+                            </div>
                         </div>
                     `;
                 }}
+                
+                // v12.12.12: Add "Other Entries Expected" section if needed
+                let otherEntriesSection = '';
+                if (otherEntriesExpected && otherEntriesExpected.length > 0) {{
+                    otherEntriesSection = buildOtherEntriesSection(otherEntriesExpected);
+                }}
+                
+                banner.innerHTML = mainContent + otherEntriesSection;
             }} else {{
                 // HAS ISSUES - RED for critical, ORANGE for advisory only
                 const hasCritical = criticalCount > 0;
@@ -22164,6 +22741,9 @@ def inject_mis_validation(driver, expected_data=None):
                     border-radius: 4px;
                     font-weight: bold;
                     text-align: left;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
                 `;
                 
                 // Build comprehensive error list
@@ -22183,7 +22763,11 @@ def inject_mis_validation(driver, expected_data=None):
                     stores: 'Stores/Locations',
                     discount: 'Discount',
                     vendor_contrib: 'Vendor Contribution',
-                    after_wholesale: 'After Wholesale'
+                    after_wholesale: 'After Wholesale',
+                    // v12.12.12: Date-related fields for Monthly/Sale
+                    date_range: 'Date Range',
+                    weekday_date_mismatch: 'Weekday/Date Match',
+                    end_date_extended: 'End Date'
                 }};
                 
                 // Add CRITICAL errors first (with ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ and BLOCKS SAVE)
@@ -22200,7 +22784,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
                 
                 // Add ADVISORY warnings second (with ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â§)
-                for (const [key, warning] of Object.entries(warnings || {{}})) {{
+                for (const [key, warning] of Object.entries(displayWarnings || {{}})) {{
                     const fieldName = advisoryFieldNames[key] || key;
                     errorList += `
                         <div style="margin: 5px 0; padding-left: 15px; font-size: 0.9em;">
@@ -22229,16 +22813,25 @@ def inject_mis_validation(driver, expected_data=None):
                     subtitleText = 'Advisory warnings - you can still save if Rebate Type and Weekday are filled';
                 }}
                 
+                // v12.12.12: Add "Other Entries Expected" section if needed
+                let otherEntriesSection = '';
+                if (otherEntriesExpected && otherEntriesExpected.length > 0) {{
+                    otherEntriesSection = buildOtherEntriesSection(otherEntriesExpected);
+                }}
+                
                 banner.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 8px;">
-                        ${{headerText}}
+                    <div style="flex: 1;">
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            ${{headerText}}
+                        </div>
+                        <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
+                            ${{subtitleText}}
+                        </div>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
+                            ${{errorList}}
+                        </div>
                     </div>
-                    <div style="font-weight: normal; text-align: center; font-size: 0.85em; margin-bottom: 10px;">
-                        ${{subtitleText}}
-                    </div>
-                    <div style="border-top: 1px solid rgba(255,255,255,0.3); padding-top: 8px;">
-                        ${{errorList}}
-                    </div>
+                    ${{otherEntriesSection}}
                 `;
             }}
             
