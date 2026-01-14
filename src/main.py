@@ -1077,6 +1077,43 @@ CREDENTIALS_FILE = ACTIVE_PROFILE['credentials_file']
 CHROME_PROFILE_DIR = ACTIVE_PROFILE['chrome_profile_dir']
 BLAZE_CONFIG_FILE = ACTIVE_PROFILE['blaze_config_file']
 
+# FALLBACK: If no profile found, check for legacy files in script directory
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+if TOKEN_FILE is None:
+    # Try legacy token locations
+    legacy_token_paths = [
+        SCRIPT_DIR / 'token.json',
+        SCRIPT_DIR / 'blaze_token.json',
+        SCRIPT_DIR.parent / 'token.json',
+        BASE_DIR / 'token.json',
+    ]
+    for path in legacy_token_paths:
+        if path.exists():
+            TOKEN_FILE = path
+            print(f"[FALLBACK] Using legacy token: {path}")
+            break
+    if TOKEN_FILE is None:
+        TOKEN_FILE = SCRIPT_DIR / 'token.json'  # Default location for new tokens
+        print(f"[FALLBACK] Token will be created at: {TOKEN_FILE}")
+
+if CREDENTIALS_FILE is None:
+    # Try legacy credentials locations
+    legacy_creds_paths = [
+        SCRIPT_DIR / 'credentials.json',
+        SCRIPT_DIR / 'client_secret.json',
+        SCRIPT_DIR.parent / 'credentials.json',
+        BASE_DIR / 'credentials.json',
+    ]
+    for path in legacy_creds_paths:
+        if path.exists():
+            CREDENTIALS_FILE = path
+            print(f"[FALLBACK] Using legacy credentials: {path}")
+            break
+    if CREDENTIALS_FILE is None:
+        CREDENTIALS_FILE = SCRIPT_DIR / 'credentials.json'  # Expected location
+        print(f"[FALLBACK] Credentials expected at: {CREDENTIALS_FILE}")
+
 # Ensure chrome profile directory exists
 if CHROME_PROFILE_DIR:
     CHROME_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
@@ -1085,8 +1122,9 @@ if CHROME_PROFILE_DIR:
 # CREDENTIALS LOADING (Profile-Aware)
 # ============================================================================
 def load_credentials_config() -> dict:
-    """Load credentials from profile-specific blaze config file."""
-    if BLAZE_CONFIG_FILE.exists():
+    """Load credentials from profile-specific blaze config file with legacy fallback."""
+    # Try profile-specific config first
+    if BLAZE_CONFIG_FILE and BLAZE_CONFIG_FILE.exists():
         try:
             with open(BLAZE_CONFIG_FILE, 'r') as f:
                 config = json.load(f)
@@ -1094,10 +1132,27 @@ def load_credentials_config() -> dict:
                 return config
         except Exception as e:
             print(f"[WARN] Failed to load profile config: {e}")
-            return {}
-    else:
-        print(f"[INFO] No profile config found: {BLAZE_CONFIG_FILE.name}")
-        return {}
+    
+    # FALLBACK: Try legacy BLAZE_MIS_CREDENTIALS.json in various locations
+    legacy_paths = [
+        Path(__file__).resolve().parent / 'BLAZE_MIS_CREDENTIALS.json',  # Same dir as script
+        Path(__file__).resolve().parent.parent / 'BLAZE_MIS_CREDENTIALS.json',  # One level up
+        BASE_DIR / 'BLAZE_MIS_CREDENTIALS.json',  # BASE_DIR
+        Path.cwd() / 'BLAZE_MIS_CREDENTIALS.json',  # Current working directory
+    ]
+    
+    for legacy_path in legacy_paths:
+        if legacy_path.exists():
+            try:
+                with open(legacy_path, 'r') as f:
+                    config = json.load(f)
+                    print(f"[CONFIG] Loaded LEGACY credentials: {legacy_path}")
+                    return config
+            except Exception as e:
+                print(f"[WARN] Failed to load legacy config from {legacy_path}: {e}")
+    
+    print(f"[INFO] No credentials config found (checked profile and legacy paths)")
+    return {}
 
 # Safe imports
 from flask import Flask, render_template_string, request, jsonify, send_file
@@ -1143,6 +1198,19 @@ BRAND_LIST_FILE = BASE_DIR / 'brand_list.txt'
 FILTERS_DIR = BASE_DIR / 'Custom_Filters'
 GROUPS_FILE = BASE_DIR / 'promotion_groups.json'
 BLAZE_TOKEN_FILE = BASE_DIR / 'blaze_token.json'
+
+# FALLBACK: Check script directory for these files if not found in BASE_DIR
+if not BLAZE_TOKEN_FILE.exists():
+    fallback_blaze_token = SCRIPT_DIR / 'blaze_token.json'
+    if fallback_blaze_token.exists():
+        BLAZE_TOKEN_FILE = fallback_blaze_token
+        print(f"[FALLBACK] Using blaze_token.json from script directory")
+
+if not BRAND_LIST_FILE.exists():
+    fallback_brand_list = SCRIPT_DIR / 'brand_list.txt'
+    if fallback_brand_list.exists():
+        BRAND_LIST_FILE = fallback_brand_list
+        print(f"[FALLBACK] Using brand_list.txt from script directory")
 
 
 # Store Name Normalization Map (Google Sheet -> MIS CSV)
