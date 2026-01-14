@@ -1,4 +1,15 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.12 MONTHLY + SALE VALIDATION
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.12.13 FUNCTION NAME COLLISION FIX
+# v12.12.13 CHANGELOG (CRITICAL BUG FIX):
+#   - FIXED: Function name collision breaking Up-Down Planning tab
+#     * Bug: Two functions named parse_sale_dates() with different signatures
+#     * Line 3325: parse_sale_dates(date_str, target_month, target_year) -> List[date]
+#     * Line 20593: parse_sale_dates(sale_str) -> list (added in v12.12.12)
+#     * Python overwrote first definition, breaking 5 call sites expecting 3 args
+#     * Error: "parse_sale_dates() takes 1 positional argument but 3 were given"
+#   - SOLUTION: Renamed v12.12.12 function to parse_sale_dates_for_validation()
+#     * Original function at line 3325 preserved for Split Audit date expansion
+#     * Validation function renamed to avoid collision
+#     * Single call site updated at line ~20687
 # v12.12.12 CHANGELOG (MONTHLY + SALE DEAL VALIDATION):
 #   - NEW: Section-aware validation for Monthly and Sale deals
 #     * Backend detects section type from _section column added to combined_df
@@ -21,7 +32,7 @@
 #   - BACKEND: New helper functions
 #     * find_weekday_column_value(): Section-aware column detection
 #     * parse_monthly_ordinals(): Extracts day numbers from "1st, 10th" strings
-#     * parse_sale_dates(): Extracts date-weekday pairs from sale date strings
+#     * parse_sale_dates_for_validation(): Extracts date-weekday pairs from sale date strings
 #     * calculate_expected_dates(): Computes dates/weekdays based on section and tab name
 #   - BACKEND: expected_data now includes
 #     * section_type: 'weekly', 'monthly', or 'sale'
@@ -20590,10 +20601,13 @@ def parse_monthly_ordinals(day_str: str) -> list:
     print(f"[COMPARE-TO-SHEET] Parsed monthly ordinals: '{day_str}' -> days {days}")
     return days
 
-def parse_sale_dates(sale_str: str) -> list:
+def parse_sale_dates_for_validation(sale_str: str) -> list:
     """
     v12.12.12: Parse sale date strings like "01/16/26 - Friday" or "01/16/26 - Friday, 01/17/26 - Saturday"
     Returns list of dicts: [{'date': '01/16/26', 'weekday': 'Friday', 'date_obj': date}, ...]
+    
+    NOTE: This is separate from parse_sale_dates() at line ~3325 which takes 3 args and returns List[date]
+    for the Split Audit date expansion. This function is for validation comparison only.
     """
     import re
     from datetime import datetime
@@ -20681,7 +20695,7 @@ def calculate_expected_dates(section_type: str, date_value: str, tab_name: str) 
         
     elif section_type == 'sale':
         # Parse sale date strings
-        sale_dates = parse_sale_dates(date_value)
+        sale_dates = parse_sale_dates_for_validation(date_value)
         
         for sd in sale_dates:
             result['all_entries'].append({
