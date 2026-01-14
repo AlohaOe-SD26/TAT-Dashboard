@@ -1077,6 +1077,11 @@ CREDENTIALS_FILE = ACTIVE_PROFILE['credentials_file']
 CHROME_PROFILE_DIR = ACTIVE_PROFILE['chrome_profile_dir']
 BLAZE_CONFIG_FILE = ACTIVE_PROFILE['blaze_config_file']
 
+# DEBUG: Show what was set
+print(f"[DEBUG] TOKEN_FILE: {TOKEN_FILE}")
+print(f"[DEBUG] CREDENTIALS_FILE: {CREDENTIALS_FILE}")
+print(f"[DEBUG] BLAZE_CONFIG_FILE: {BLAZE_CONFIG_FILE}")
+
 # FALLBACK: If no profile found, check for legacy files in script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -1122,14 +1127,52 @@ if CHROME_PROFILE_DIR:
 # CREDENTIALS LOADING (Profile-Aware)
 # ============================================================================
 def load_credentials_config() -> dict:
-    """Load credentials from profile-specific blaze config file with legacy fallback."""
+    """
+    Load credentials from profile-specific blaze config file with legacy fallback.
+    Handles both flat format (mis_username) and nested format (mis.username).
+    """
+    def normalize_config(config: dict) -> dict:
+        """Convert nested format to flat format if needed."""
+        # Check if it's already flat format
+        if 'mis_username' in config or 'blaze_email' in config:
+            return config
+        
+        # Convert nested format to flat format
+        normalized = {}
+        
+        # Handle MIS credentials
+        if 'mis' in config and isinstance(config['mis'], dict):
+            mis = config['mis']
+            normalized['mis_username'] = mis.get('username', mis.get('email', ''))
+            normalized['mis_password'] = mis.get('password', '')
+        
+        # Handle Blaze credentials  
+        if 'blaze' in config and isinstance(config['blaze'], dict):
+            blaze = config['blaze']
+            normalized['blaze_email'] = blaze.get('email', blaze.get('username', ''))
+            normalized['blaze_password'] = blaze.get('password', '')
+            # Also keep nested blaze for code that uses .get('blaze', {})
+            normalized['blaze'] = blaze
+        
+        # Handle Google Sheet
+        if 'google_sheet' in config and isinstance(config['google_sheet'], dict):
+            gs = config['google_sheet']
+            normalized['default_spreadsheet_id'] = gs.get('default_url', gs.get('spreadsheet_id', ''))
+        
+        # Copy any other top-level keys
+        for key, value in config.items():
+            if key not in ['mis', 'blaze', 'google_sheet'] and key not in normalized:
+                normalized[key] = value
+        
+        return normalized
+    
     # Try profile-specific config first
     if BLAZE_CONFIG_FILE and BLAZE_CONFIG_FILE.exists():
         try:
             with open(BLAZE_CONFIG_FILE, 'r') as f:
                 config = json.load(f)
                 print(f"[CONFIG] Loaded profile config: {BLAZE_CONFIG_FILE.name}")
-                return config
+                return normalize_config(config)
         except Exception as e:
             print(f"[WARN] Failed to load profile config: {e}")
     
@@ -1147,7 +1190,7 @@ def load_credentials_config() -> dict:
                 with open(legacy_path, 'r') as f:
                     config = json.load(f)
                     print(f"[CONFIG] Loaded LEGACY credentials: {legacy_path}")
-                    return config
+                    return normalize_config(config)
             except Exception as e:
                 print(f"[WARN] Failed to load legacy config from {legacy_path}: {e}")
     
