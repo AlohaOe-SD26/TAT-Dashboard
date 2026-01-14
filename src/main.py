@@ -8165,9 +8165,10 @@ HTML_TEMPLATE = r"""
                     }
                     
                     // v88: MIS Entry Plan table with Discount, Vendor %, Location columns
+                    // v12.12.14: Added Automate column for Create/End Date buttons
                     html += '<hr><p class="mb-1"><strong>MIS Entry Plan:</strong></p>';
                     html += '<table class="table table-sm table-bordered" style="table-layout:fixed; width:100%;"><thead class="table-light"><tr>';
-                    html += '<th style="width:90px;">Action</th><th style="width:140px;">Date Range</th><th style="width:100px;">Discount</th><th style="width:90px;">Vendor %</th><th style="width:140px;">Location</th><th style="width:110px;">MIS ID</th><th style="width:80px;">Approve</th><th style="width:80px;">Apply</th><th style="width:170px;">Notes</th>';
+                    html += '<th style="width:90px;">Action</th><th style="width:140px;">Date Range</th><th style="width:100px;">Discount</th><th style="width:90px;">Vendor %</th><th style="width:140px;">Location</th><th style="width:110px;">MIS ID</th><th style="width:90px;">Automate</th><th style="width:80px;">Approve</th><th style="width:80px;">Apply</th><th style="width:150px;">Notes</th>';
                     html += '</tr></thead><tbody>';
                     
                     split.plan.forEach(function(step, stepIdx) {
@@ -8273,6 +8274,52 @@ HTML_TEMPLATE = r"""
                             } else {
                                 html += '<input type="text" class="form-control form-control-sm" placeholder="New MIS ID" id="split-patch-id-' + idx + '-' + stepIdx + '" style="width:100px;" data-split-idx="' + idx + '" data-step-idx="' + stepIdx + '" data-google-row="' + (split.google_row || '') + '" data-section="' + sectionKey + '">';
                             }
+                        }
+                        html += '</td>';
+                        
+                        // v12.12.14: Automate column - Create/End Date buttons
+                        html += '<td>';
+                        const dateRange = step.dates || '';
+                        const googleRow = split.google_row || '';
+                        const intGoogleRow = split.interrupting_deal?.google_row || '';
+                        
+                        if (step.action === 'CREATE_PART1') {
+                            // Original row: End Date button if MIS ID exists, Create if not
+                            const hasMisId = (sectionIds.parts && sectionIds.parts.length > 0) || (split.original_mis_id && !split.original_mis_id.includes(':'));
+                            const existingMisId = (sectionIds.parts && sectionIds.parts[0]) || split.original_mis_id || '';
+                            if (hasMisId && existingMisId) {
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + existingMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                            } else {
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                            }
+                        } else if (step.action === 'GAP') {
+                            // Interrupting row: Create button (uses interrupting deal's google row)
+                            const gapMisId = split.interrupting_deal?.mis_id || '';
+                            const gapGoogleRow = split.interrupting_deal?.google_row || '';
+                            const gapSection = (intSection || 'monthly').toLowerCase();
+                            if (gapMisId) {
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + gapMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + gapGoogleRow + '\\', \\'' + gapSection + '\\')" title="Update End Date in MIS">End Date</button>';
+                            } else {
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + gapGoogleRow + '\\', \\'' + gapSection + '\\')" title="Create deal in MIS">Create</button>';
+                            }
+                        } else if (step.action === 'PATCH') {
+                            // Patch row: Create button
+                            const patchMisId = sectionIds.patch || '';
+                            if (patchMisId) {
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + patchMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                            } else {
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                            }
+                        } else if (step.action === 'CREATE_PART2') {
+                            // Continued row: Create button
+                            const contMisId = (sectionIds.parts && sectionIds.parts.length > 1) ? sectionIds.parts[1] : '';
+                            if (contMisId) {
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + contMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                            } else {
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                            }
+                        } else {
+                            html += '-';
                         }
                         html += '</td>';
                         
@@ -8665,6 +8712,157 @@ HTML_TEMPLATE = r"""
             } catch (err) {
                 alert('Error: ' + err.message);
                 if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply'; }
+            }
+        }
+
+        // ============================================
+        // v12.12.14: AUTOMATION FUNCTIONS FOR UP-DOWN PLANNING
+        // ============================================
+        
+        // Automate End Date update in MIS
+        async function automateEndDate(splitIdx, stepIdx, misId, dateRange, googleRow, sectionType) {
+            console.log('[AUTOMATE END DATE] Starting...', {splitIdx, stepIdx, misId, dateRange, googleRow, sectionType});
+            
+            if (!misId) {
+                alert('Error: No MIS ID available for this entry.');
+                return;
+            }
+            
+            // Parse dateRange to get the end date (format: "MM/DD - MM/DD" or "MM/DD")
+            let newEndDate = '';
+            if (dateRange.includes(' - ')) {
+                // Range format: get the end date (second part)
+                const parts = dateRange.split(' - ');
+                newEndDate = parts[1].trim();
+            } else {
+                // Single date format
+                newEndDate = dateRange.trim();
+            }
+            
+            if (!newEndDate) {
+                alert('Error: Could not parse end date from: ' + dateRange);
+                return;
+            }
+            
+            // Add year if not present
+            if (!newEndDate.match(/\\/\\d{4}$/) && !newEndDate.match(/\\/\\d{2}$/)) {
+                const yearMatch = dateRange.match(/\\/(\\d{2,4})(?:[^0-9]|$)/);
+                const year = yearMatch ? yearMatch[1] : new Date().getFullYear().toString().slice(-2);
+                newEndDate = newEndDate + '/' + year;
+            }
+            
+            // Show loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'automate-loading';
+            loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10003; display:flex; justify-content:center; align-items:center; flex-direction:column;';
+            loadingOverlay.innerHTML = '<div class="spinner-border text-light" style="width:3rem; height:3rem;"></div><div style="color:white; margin-top:15px; font-size:1.2em;">Updating End Date in MIS...</div><div id="automate-status" style="color:#aaa; margin-top:10px; font-size:0.9em;">Opening MIS entry ' + misId + '...</div>';
+            document.body.appendChild(loadingOverlay);
+            
+            try {
+                const response = await fetch('/api/mis/automate-end-date', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        mis_id: misId,
+                        new_end_date: newEndDate,
+                        google_row: googleRow,
+                        section_type: sectionType,
+                        split_idx: splitIdx,
+                        step_idx: stepIdx
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('automate-loading')?.remove();
+                
+                if (data.success) {
+                    alert('✓ End Date field updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    
+                    // Visual feedback on the row
+                    const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
+                    if (row) {
+                        row.style.backgroundColor = '#fff3cd';
+                    }
+                } else {
+                    alert('Error updating end date: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                document.getElementById('automate-loading')?.remove();
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Automate Create Deal in MIS from Up-Down Planning
+        async function automateCreateDeal(splitIdx, stepIdx, dateRange, googleRow, sectionType) {
+            console.log('[AUTOMATE CREATE] Starting...', {splitIdx, stepIdx, dateRange, googleRow, sectionType});
+            
+            if (!googleRow) {
+                alert('Error: No Google Sheet row reference found for this entry.\\n\\nPlease ensure the deal has a valid Row value.');
+                return;
+            }
+            
+            // Parse dateRange to get start and end dates
+            let startDate = '', endDate = '';
+            if (dateRange.includes(' - ')) {
+                const parts = dateRange.split(' - ');
+                startDate = parts[0].trim();
+                endDate = parts[1].trim();
+            } else {
+                // Single date - use as both start and end
+                startDate = dateRange.trim();
+                endDate = dateRange.trim();
+            }
+            
+            if (!startDate) {
+                alert('Error: Could not parse dates from: ' + dateRange);
+                return;
+            }
+            
+            // Show loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'automate-loading';
+            loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10003; display:flex; justify-content:center; align-items:center; flex-direction:column;';
+            loadingOverlay.innerHTML = '<div class="spinner-border text-light" style="width:3rem; height:3rem;"></div><div style="color:white; margin-top:15px; font-size:1.2em;">Creating Deal in MIS...</div><div id="automate-status" style="color:#aaa; margin-top:10px; font-size:0.9em;">Looking up Google Sheet row ' + googleRow + '...</div>';
+            document.body.appendChild(loadingOverlay);
+            
+            try {
+                const response = await fetch('/api/mis/automate-create-deal', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        google_row: googleRow,
+                        start_date: startDate,
+                        end_date: endDate,
+                        date_range: dateRange,
+                        section_type: sectionType,
+                        split_idx: splitIdx,
+                        step_idx: stepIdx
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('automate-loading')?.remove();
+                
+                if (data.success) {
+                    let message = '✓ Deal form populated in MIS!\\n\\n';
+                    message += 'Brand: ' + (data.brand || 'N/A') + '\\n';
+                    message += 'Dates: ' + startDate + ' - ' + endDate + '\\n';
+                    message += 'Weekdays: ' + (data.weekdays_selected || 'N/A') + '\\n\\n';
+                    message += 'Please review and click Save in MIS if correct.\\n';
+                    message += 'Validation is active - check the banner for any warnings.';
+                    alert(message);
+                    
+                    // Visual feedback on the row
+                    const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
+                    if (row) {
+                        row.style.backgroundColor = '#d4edda';
+                    }
+                } else {
+                    alert('Error creating deal: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                document.getElementById('automate-loading')?.remove();
+                alert('Error: ' + error.message);
             }
         }
 
@@ -21326,6 +21524,531 @@ def api_mis_update_end_date():
             
         except Exception as e:
             return jsonify({'success': False, 'error': f'Could not find/update date_end field: {e}'})
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# ============================================
+# v12.12.14: AUTOMATION ENDPOINTS FOR UP-DOWN PLANNING
+# ============================================
+
+@app.route('/api/mis/automate-end-date', methods=['POST'])
+def api_mis_automate_end_date():
+    """
+    Automate End Date update for Up-Down Planning.
+    Opens MIS entry, changes end date field, injects validation.
+    Does NOT click Save - user reviews and saves manually.
+    """
+    try:
+        data = request.get_json()
+        mis_id = str(data.get('mis_id', '')).strip()
+        new_end_date = str(data.get('new_end_date', '')).strip()
+        google_row = data.get('google_row', '')
+        section_type = data.get('section_type', 'weekly')
+        
+        if not mis_id:
+            return jsonify({'success': False, 'error': 'No MIS ID provided'})
+        if not new_end_date:
+            return jsonify({'success': False, 'error': 'No end date provided'})
+        
+        # Strip any tag prefixes
+        mis_id = strip_mis_id_tag(mis_id)
+        
+        if not mis_id or not mis_id.isdigit():
+            return jsonify({'success': False, 'error': f'Invalid MIS ID format: {data.get("mis_id")}'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized. Please click Initialize first.'})
+        
+        # Ensure MIS session is ready
+        try:
+            creds = load_credentials_config()
+            mis_user = creds.get('mis_username', '')
+            mis_pass = creds.get('mis_password', '')
+            ensure_mis_ready(driver, mis_user, mis_pass)
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+        
+        print(f"\n{'='*60}")
+        print(f"[AUTOMATE END DATE] MIS ID: {mis_id}, New End Date: {new_end_date}")
+        print(f"[AUTOMATE END DATE] Google Row: {google_row}, Section: {section_type}")
+        print(f"{'='*60}")
+        
+        # Close any open modals first
+        try:
+            close_buttons = driver.find_elements(By.CSS_SELECTOR, "button.close[data-dismiss='modal'], .modal button.close, .btn-close")
+            for btn in close_buttons:
+                if btn.is_displayed():
+                    btn.click()
+                    time.sleep(0.3)
+                    break
+        except:
+            pass
+        
+        # Step 1: Filter by MIS ID
+        try:
+            search_input = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "input[type='search']"))
+            )
+            search_input.click()
+            search_input.send_keys(Keys.CONTROL + "a")
+            search_input.send_keys(Keys.DELETE)
+            search_input.send_keys(mis_id)
+            print(f"[AUTOMATE END DATE] Filtered by MIS ID: {mis_id}")
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not find search input: {e}'})
+        
+        time.sleep(1.5)
+        
+        # Step 2: Expand row and click Edit
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#daily-discount tbody tr"))
+            )
+            time.sleep(0.5)
+            
+            table_rows = driver.find_elements(By.CSS_SELECTOR, "#daily-discount tbody tr:not(.child)")
+            target_row = None
+            
+            for row in table_rows:
+                try:
+                    if mis_id in row.text:
+                        target_row = row
+                        break
+                except:
+                    continue
+            
+            if not target_row:
+                return jsonify({'success': False, 'error': f'Could not find row with MIS ID {mis_id}'})
+            
+            # Click first cell to expand
+            first_cell = target_row.find_element(By.CSS_SELECTOR, "td:first-child")
+            actions = ActionChains(driver)
+            actions.move_to_element(first_cell).click().perform()
+            time.sleep(1)
+            
+            # Find and click Edit button
+            edit_button = None
+            try:
+                edit_button = WebDriverWait(driver, 3).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "tr.child a.btn-table-dialog"))
+                )
+            except:
+                buttons = driver.find_elements(By.CSS_SELECTOR, "a.btn-table-dialog")
+                for btn in buttons:
+                    if btn.is_displayed():
+                        edit_button = btn
+                        break
+            
+            if not edit_button:
+                return jsonify({'success': False, 'error': 'Could not find Edit button'})
+            
+            edit_button.click()
+            print(f"[AUTOMATE END DATE] Clicked Edit button")
+            time.sleep(1.5)
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not open MIS entry: {e}'})
+        
+        # Step 3: Wait for modal and update end date
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".modal-content"))
+            )
+            time.sleep(0.5)
+            
+            # Find date_end field
+            date_field = None
+            for selector in ["#date_end", "input[name='date_end']", "input[id*='date_end']"]:
+                try:
+                    date_field = driver.find_element(By.CSS_SELECTOR, selector)
+                    if date_field:
+                        break
+                except:
+                    continue
+            
+            if not date_field:
+                return jsonify({'success': False, 'error': 'Could not find end date field'})
+            
+            # Clear and enter new date
+            date_field.click()
+            date_field.send_keys(Keys.CONTROL + "a")
+            date_field.send_keys(Keys.DELETE)
+            date_field.send_keys(new_end_date)
+            print(f"[AUTOMATE END DATE] Entered new end date: {new_end_date}")
+            
+            # Click elsewhere to trigger validation
+            try:
+                modal_body = driver.find_element(By.CSS_SELECTOR, ".modal-body")
+                modal_body.click()
+            except:
+                pass
+            
+            time.sleep(0.3)
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not update end date field: {e}'})
+        
+        # Step 4: Inject validation with expected data from Google Sheet
+        try:
+            expected_data = None
+            if google_row:
+                google_df = GLOBAL_DATA.get('google_df')
+                if google_df is not None and not google_df.empty:
+                    try:
+                        row_idx = int(google_row) - 2  # Sheet row to DataFrame index
+                        if 0 <= row_idx < len(google_df):
+                            row = google_df.iloc[row_idx]
+                            expected_data = {
+                                'brand': str(row.get('Brand', '')),
+                                'discount': str(row.get('Discount Value', row.get('Discount', ''))),
+                                'weekday': str(row.get('Weekday', '')),
+                                'vendor_contrib': str(row.get('Vendor Contribution', row.get('Vendor %', ''))),
+                                'section': section_type
+                            }
+                            print(f"[AUTOMATE END DATE] Got expected data from Google Sheet row {google_row}")
+                    except Exception as e:
+                        print(f"[AUTOMATE END DATE] Could not get Google Sheet data: {e}")
+            
+            # Inject validation
+            inject_mis_validation(driver, expected_data=expected_data)
+            print(f"[AUTOMATE END DATE] Validation injected")
+            
+        except Exception as e:
+            print(f"[AUTOMATE END DATE] Validation injection error: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'End date updated to {new_end_date}. Please review and save manually.',
+            'mis_id': mis_id,
+            'new_end_date': new_end_date
+        })
+        
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/mis/automate-create-deal', methods=['POST'])
+def api_mis_automate_create_deal():
+    """
+    Automate Create Deal for Up-Down Planning.
+    Clicks Add New, fills all fields from Google Sheet row, injects validation.
+    Does NOT click Save - user reviews and saves manually.
+    
+    Key feature: Calculates weekdays from date range and matches with Google Sheet weekday.
+    """
+    try:
+        data = request.get_json()
+        google_row = data.get('google_row', '')
+        start_date = str(data.get('start_date', '')).strip()
+        end_date = str(data.get('end_date', '')).strip()
+        date_range = str(data.get('date_range', '')).strip()
+        section_type = data.get('section_type', 'weekly')
+        
+        if not google_row:
+            return jsonify({'success': False, 'error': 'No Google Sheet row reference provided'})
+        
+        driver = GLOBAL_DATA['browser_instance']
+        if not driver:
+            return jsonify({'success': False, 'error': 'Browser not initialized. Please click Initialize first.'})
+        
+        # Ensure MIS session is ready
+        try:
+            creds = load_credentials_config()
+            mis_user = creds.get('mis_username', '')
+            mis_pass = creds.get('mis_password', '')
+            ensure_mis_ready(driver, mis_user, mis_pass)
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+        
+        # Get Google Sheet data
+        google_df = GLOBAL_DATA.get('google_df')
+        if google_df is None or google_df.empty:
+            return jsonify({'success': False, 'error': 'No Google Sheet data loaded. Please run audit first.'})
+        
+        try:
+            row_idx = int(google_row) - 2  # Sheet row to DataFrame index
+            if row_idx < 0 or row_idx >= len(google_df):
+                return jsonify({'success': False, 'error': f'Invalid Google Sheet row: {google_row}'})
+            
+            sheet_row = google_df.iloc[row_idx]
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not read Google Sheet row {google_row}: {e}'})
+        
+        # Extract deal data
+        brand = str(sheet_row.get('Brand', '')).strip()
+        discount = str(sheet_row.get('Discount Value', sheet_row.get('Discount', ''))).strip()
+        vendor_contrib = str(sheet_row.get('Vendor Contribution', sheet_row.get('Vendor %', ''))).strip()
+        sheet_weekday = str(sheet_row.get('Weekday', '')).strip()
+        locations = str(sheet_row.get('Location', sheet_row.get('Locations', ''))).strip()
+        categories = str(sheet_row.get('Category', sheet_row.get('Categories', ''))).strip()
+        
+        print(f"\n{'='*60}")
+        print(f"[AUTOMATE CREATE] Google Row: {google_row}, Section: {section_type}")
+        print(f"[AUTOMATE CREATE] Brand: {brand}, Discount: {discount}")
+        print(f"[AUTOMATE CREATE] Date Range: {start_date} - {end_date}")
+        print(f"[AUTOMATE CREATE] Sheet Weekday: {sheet_weekday}")
+        print(f"{'='*60}")
+        
+        # Calculate which weekdays fall within the date range
+        # and match with the Google Sheet weekday value
+        weekdays_to_select = []
+        try:
+            from datetime import datetime, timedelta
+            
+            # Parse dates (handle various formats)
+            def parse_date(date_str):
+                date_str = date_str.strip()
+                for fmt in ['%m/%d/%Y', '%m/%d/%y', '%m/%d']:
+                    try:
+                        d = datetime.strptime(date_str, fmt)
+                        if d.year < 100:
+                            d = d.replace(year=d.year + 2000)
+                        if d.year == 1900:  # No year specified
+                            d = d.replace(year=datetime.now().year)
+                        return d
+                    except:
+                        continue
+                return None
+            
+            start_dt = parse_date(start_date)
+            end_dt = parse_date(end_date)
+            
+            if start_dt and end_dt:
+                # Get all days in range
+                current = start_dt
+                days_in_range = []
+                while current <= end_dt:
+                    days_in_range.append(current.strftime('%A'))  # Full weekday name
+                    current += timedelta(days=1)
+                
+                print(f"[AUTOMATE CREATE] Days in range: {days_in_range}")
+                
+                # Parse sheet weekday (could be "Monday", "Mon", or "Monday, Tuesday")
+                sheet_weekdays = []
+                weekday_map = {
+                    'mon': 'Monday', 'tue': 'Tuesday', 'wed': 'Wednesday',
+                    'thu': 'Thursday', 'fri': 'Friday', 'sat': 'Saturday', 'sun': 'Sunday',
+                    'monday': 'Monday', 'tuesday': 'Tuesday', 'wednesday': 'Wednesday',
+                    'thursday': 'Thursday', 'friday': 'Friday', 'saturday': 'Saturday', 'sunday': 'Sunday'
+                }
+                
+                for part in sheet_weekday.replace(',', ' ').split():
+                    part_lower = part.lower().strip()
+                    if part_lower in weekday_map:
+                        sheet_weekdays.append(weekday_map[part_lower])
+                
+                print(f"[AUTOMATE CREATE] Sheet weekdays parsed: {sheet_weekdays}")
+                
+                # Find intersection: weekdays that are BOTH in date range AND in sheet
+                for day in days_in_range:
+                    if day in sheet_weekdays:
+                        if day not in weekdays_to_select:
+                            weekdays_to_select.append(day)
+                
+                print(f"[AUTOMATE CREATE] Weekdays to select: {weekdays_to_select}")
+            
+        except Exception as e:
+            print(f"[AUTOMATE CREATE] Weekday calculation error: {e}")
+        
+        # Close any open modals
+        try:
+            close_buttons = driver.find_elements(By.CSS_SELECTOR, "button.close[data-dismiss='modal'], .modal button.close, .btn-close")
+            for btn in close_buttons:
+                if btn.is_displayed():
+                    btn.click()
+                    time.sleep(0.3)
+                    break
+        except:
+            pass
+        
+        # Step 1: Click "Add New" button
+        try:
+            add_btn = None
+            for selector in ["a[href*='create']", "button:contains('Add')", ".btn-primary:contains('New')", "#add-new-btn", "a.btn-primary"]:
+                try:
+                    if ':contains' in selector:
+                        text = selector.split("'")[1]
+                        elements = driver.find_elements(By.XPATH, f"//*[contains(text(), '{text}')]")
+                    else:
+                        elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                    
+                    for el in elements:
+                        if el.is_displayed() and ('add' in el.text.lower() or 'new' in el.text.lower() or 'create' in el.text.lower()):
+                            add_btn = el
+                            break
+                    if add_btn:
+                        break
+                except:
+                    continue
+            
+            if not add_btn:
+                # Try finding by partial link text
+                try:
+                    add_btn = driver.find_element(By.PARTIAL_LINK_TEXT, "Add")
+                except:
+                    pass
+            
+            if not add_btn:
+                return jsonify({'success': False, 'error': 'Could not find Add New button'})
+            
+            add_btn.click()
+            print(f"[AUTOMATE CREATE] Clicked Add New button")
+            time.sleep(1.5)
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not click Add New: {e}'})
+        
+        # Step 2: Wait for modal and fill fields
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".modal-content"))
+            )
+            time.sleep(0.5)
+            
+            # Fill Brand (Select2)
+            if brand:
+                try:
+                    brand_container = driver.find_element(By.CSS_SELECTOR, "#select2-brand_id-container")
+                    brand_container.click()
+                    time.sleep(0.3)
+                    
+                    search_input = WebDriverWait(driver, 3).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ".select2-search__field"))
+                    )
+                    search_input.send_keys(brand)
+                    time.sleep(0.5)
+                    
+                    # Click first result
+                    result = WebDriverWait(driver, 3).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, ".select2-results__option--highlighted, .select2-results__option:first-child"))
+                    )
+                    result.click()
+                    print(f"[AUTOMATE CREATE] Selected brand: {brand}")
+                    time.sleep(0.3)
+                except Exception as e:
+                    print(f"[AUTOMATE CREATE] Could not set brand: {e}")
+            
+            # Fill Start Date
+            try:
+                start_field = driver.find_element(By.CSS_SELECTOR, "#date_start, input[name='date_start']")
+                start_field.click()
+                start_field.send_keys(Keys.CONTROL + "a")
+                start_field.send_keys(start_date)
+                print(f"[AUTOMATE CREATE] Set start date: {start_date}")
+            except Exception as e:
+                print(f"[AUTOMATE CREATE] Could not set start date: {e}")
+            
+            # Fill End Date
+            try:
+                end_field = driver.find_element(By.CSS_SELECTOR, "#date_end, input[name='date_end']")
+                end_field.click()
+                end_field.send_keys(Keys.CONTROL + "a")
+                end_field.send_keys(end_date)
+                print(f"[AUTOMATE CREATE] Set end date: {end_date}")
+            except Exception as e:
+                print(f"[AUTOMATE CREATE] Could not set end date: {e}")
+            
+            # Fill Discount
+            if discount:
+                try:
+                    disc_field = driver.find_element(By.CSS_SELECTOR, "#discount_rate, input[name='discount_rate']")
+                    disc_field.click()
+                    disc_field.send_keys(Keys.CONTROL + "a")
+                    disc_field.send_keys(discount.replace('%', ''))
+                    print(f"[AUTOMATE CREATE] Set discount: {discount}")
+                except Exception as e:
+                    print(f"[AUTOMATE CREATE] Could not set discount: {e}")
+            
+            # Fill Vendor Contribution
+            if vendor_contrib:
+                try:
+                    vendor_field = driver.find_element(By.CSS_SELECTOR, "#rebate_percent, input[name='rebate_percent']")
+                    vendor_field.click()
+                    vendor_field.send_keys(Keys.CONTROL + "a")
+                    vendor_field.send_keys(vendor_contrib.replace('%', ''))
+                    print(f"[AUTOMATE CREATE] Set vendor contrib: {vendor_contrib}")
+                except Exception as e:
+                    print(f"[AUTOMATE CREATE] Could not set vendor contrib: {e}")
+            
+            # Select Weekdays
+            weekdays_selected_str = ''
+            if weekdays_to_select:
+                try:
+                    # Find weekday checkboxes or multi-select
+                    weekday_container = driver.find_element(By.CSS_SELECTOR, "#weekday_ids, [name='weekday_ids[]']")
+                    
+                    # Weekday value mapping (MIS uses numeric IDs typically)
+                    weekday_values = {
+                        'Sunday': '0', 'Monday': '1', 'Tuesday': '2', 'Wednesday': '3',
+                        'Thursday': '4', 'Friday': '5', 'Saturday': '6'
+                    }
+                    
+                    for day in weekdays_to_select:
+                        try:
+                            # Try checkbox approach
+                            checkbox = driver.find_element(By.CSS_SELECTOR, f"input[value='{weekday_values.get(day, '')}']")
+                            if not checkbox.is_selected():
+                                checkbox.click()
+                            weekdays_selected_str += day + ', '
+                        except:
+                            # Try Select2 multi-select
+                            try:
+                                container = driver.find_element(By.CSS_SELECTOR, "#select2-weekday_ids-container, .select2-selection--multiple")
+                                container.click()
+                                time.sleep(0.2)
+                                
+                                option = driver.find_element(By.XPATH, f"//li[contains(@class, 'select2-results__option') and contains(text(), '{day}')]")
+                                option.click()
+                                weekdays_selected_str += day + ', '
+                                time.sleep(0.2)
+                            except:
+                                pass
+                    
+                    print(f"[AUTOMATE CREATE] Selected weekdays: {weekdays_selected_str}")
+                except Exception as e:
+                    print(f"[AUTOMATE CREATE] Could not set weekdays: {e}")
+            
+            # Click elsewhere to trigger any field validation
+            try:
+                modal_body = driver.find_element(By.CSS_SELECTOR, ".modal-body")
+                modal_body.click()
+            except:
+                pass
+            
+            time.sleep(0.3)
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Could not fill form fields: {e}'})
+        
+        # Step 3: Inject validation with expected data
+        try:
+            expected_data = {
+                'brand': brand,
+                'discount': discount,
+                'weekday': sheet_weekday,
+                'vendor_contrib': vendor_contrib,
+                'section': section_type
+            }
+            
+            inject_mis_validation(driver, expected_data=expected_data)
+            print(f"[AUTOMATE CREATE] Validation injected")
+            
+        except Exception as e:
+            print(f"[AUTOMATE CREATE] Validation injection error: {e}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Deal form populated. Please review and save manually.',
+            'brand': brand,
+            'weekdays_selected': weekdays_selected_str.rstrip(', '),
+            'start_date': start_date,
+            'end_date': end_date
+        })
         
     except Exception as e:
         traceback.print_exc()
