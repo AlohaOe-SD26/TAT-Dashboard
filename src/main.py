@@ -1077,11 +1077,6 @@ CREDENTIALS_FILE = ACTIVE_PROFILE['credentials_file']
 CHROME_PROFILE_DIR = ACTIVE_PROFILE['chrome_profile_dir']
 BLAZE_CONFIG_FILE = ACTIVE_PROFILE['blaze_config_file']
 
-# DEBUG: Show what was set
-print(f"[DEBUG] TOKEN_FILE: {TOKEN_FILE}")
-print(f"[DEBUG] CREDENTIALS_FILE: {CREDENTIALS_FILE}")
-print(f"[DEBUG] BLAZE_CONFIG_FILE: {BLAZE_CONFIG_FILE}")
-
 # FALLBACK: If no profile found, check for legacy files in script directory
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -8399,9 +8394,9 @@ HTML_TEMPLATE = r"""
                             const hasMisId = (sectionIds.parts && sectionIds.parts.length > 0) || (split.original_mis_id && !split.original_mis_id.includes(':'));
                             const existingMisId = (sectionIds.parts && sectionIds.parts[0]) || split.original_mis_id || '';
                             if (hasMisId && existingMisId) {
-                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + existingMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \'' + existingMisId.replace(/[^0-9]/g, '') + '\', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Update End Date in MIS">End Date</button>';
                             } else {
-                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Create deal in MIS">Create</button>';
                             }
                         } else if (step.action === 'GAP') {
                             // Interrupting row: Create button (uses interrupting deal's google row)
@@ -8409,25 +8404,25 @@ HTML_TEMPLATE = r"""
                             const gapGoogleRow = split.interrupting_deal?.google_row || '';
                             const gapSection = (intSection || 'monthly').toLowerCase();
                             if (gapMisId) {
-                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + gapMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + gapGoogleRow + '\\', \\'' + gapSection + '\\')" title="Update End Date in MIS">End Date</button>';
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \'' + gapMisId.replace(/[^0-9]/g, '') + '\', \'' + dateRange + '\', \'' + gapGoogleRow + '\', \'' + gapSection + '\')" title="Update End Date in MIS">End Date</button>';
                             } else {
-                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + gapGoogleRow + '\\', \\'' + gapSection + '\\')" title="Create deal in MIS">Create</button>';
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \'' + dateRange + '\', \'' + gapGoogleRow + '\', \'' + gapSection + '\')" title="Create deal in MIS">Create</button>';
                             }
                         } else if (step.action === 'PATCH') {
                             // Patch row: Create button
                             const patchMisId = sectionIds.patch || '';
                             if (patchMisId) {
-                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + patchMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \'' + patchMisId.replace(/[^0-9]/g, '') + '\', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Update End Date in MIS">End Date</button>';
                             } else {
-                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Create deal in MIS">Create</button>';
                             }
                         } else if (step.action === 'CREATE_PART2') {
                             // Continued row: Create button
                             const contMisId = (sectionIds.parts && sectionIds.parts.length > 1) ? sectionIds.parts[1] : '';
                             if (contMisId) {
-                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \\'' + contMisId.replace(/[^0-9]/g, '') + '\\', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Update End Date in MIS">End Date</button>';
+                                html += '<button class="btn btn-warning btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateEndDate(' + idx + ', ' + stepIdx + ', \'' + contMisId.replace(/[^0-9]/g, '') + '\', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Update End Date in MIS">End Date</button>';
                             } else {
-                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \\'' + dateRange + '\\', \\'' + googleRow + '\\', \\'' + sectionKey + '\\')" title="Create deal in MIS">Create</button>';
+                                html += '<button class="btn btn-success btn-sm" style="font-size:0.7em; padding:2px 6px;" onclick="automateCreateDeal(' + idx + ', ' + stepIdx + ', \'' + dateRange + '\', \'' + googleRow + '\', \'' + sectionKey + '\')" title="Create deal in MIS">Create</button>';
                             }
                         } else {
                             html += '-';
@@ -8887,7 +8882,7 @@ HTML_TEMPLATE = r"""
                 document.getElementById('automate-loading')?.remove();
                 
                 if (data.success) {
-                    alert('✓ End Date field updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('✓ End Date field updated to ' + newEndDate + '\n\nPlease review and click Save in MIS if correct.\n\nValidation is active - check the banner for any warnings.');
                     
                     // Visual feedback on the row
                     const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
@@ -8908,7 +8903,7 @@ HTML_TEMPLATE = r"""
             console.log('[AUTOMATE CREATE] Starting...', {splitIdx, stepIdx, dateRange, googleRow, sectionType});
             
             if (!googleRow) {
-                alert('Error: No Google Sheet row reference found for this entry.\\n\\nPlease ensure the deal has a valid Row value.');
+                alert('Error: No Google Sheet row reference found for this entry.\n\nPlease ensure the deal has a valid Row value.');
                 return;
             }
             
@@ -8955,10 +8950,10 @@ HTML_TEMPLATE = r"""
                 document.getElementById('automate-loading')?.remove();
                 
                 if (data.success) {
-                    let message = '✓ Deal form populated in MIS!\\n\\n';
+                    let message = '✓ Deal form populated in MIS!\n\n';
                     message += 'Brand: ' + (data.brand || 'N/A') + '\\n';
                     message += 'Dates: ' + startDate + ' - ' + endDate + '\\n';
-                    message += 'Weekdays: ' + (data.weekdays_selected || 'N/A') + '\\n\\n';
+                    message += 'Weekdays: ' + (data.weekdays_selected || 'N/A') + '\n\n';
                     message += 'Please review and click Save in MIS if correct.\\n';
                     message += 'Validation is active - check the banner for any warnings.';
                     alert(message);
@@ -10639,7 +10634,7 @@ HTML_TEMPLATE = r"""
             // Escape for JSON embedding
             const escapeForAttr = (str) => {
                 if (!str) return '';
-                return String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return String(str).replace(/'/g, "\'").replace(/"/g, "&quot;");
             };
 
             // --- HEADER ---
@@ -11091,7 +11086,7 @@ HTML_TEMPLATE = r"""
                     if (data.saved) {
                         alert('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ End date updated to ' + newDate + ' and SAVED successfully!');
                     } else {
-                        alert('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
+                        alert('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ End date updated to ' + newDate + '\n\n' + (data.message || 'Please verify in MIS.'));
                     }
                 } else {
                     editorEl.innerHTML = originalHtml;
@@ -11323,9 +11318,9 @@ HTML_TEMPLATE = r"""
                 document.getElementById('create-deal-loading')?.remove();
                 
                 if (data.success) {
-                    let message = 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Deal created in MIS!\\n\\n';
+                    let message = 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Deal created in MIS!\n\n';
                     if (data.warnings && data.warnings.length > 0) {
-                        message += 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
+                        message += 'ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â  Warnings:\\n' + data.warnings.join('\\n') + '\n\n';
                     }
                     message += 'Please review and click Save in MIS if everything looks correct.';
                     alert(message);
@@ -13492,8 +13487,8 @@ function handleMISCSV(input) {
                     const folderPath = data.folder;
                     const counts = data.counts;
                     
-                    let message = '[OK][EMOJI] Newsletter files generated successfully!\\n\\n';
-                    message += ' Saved to:\\n' + folderPath + '\\n\\n';
+                    let message = '[OK][EMOJI] Newsletter files generated successfully!\n\n';
+                    message += ' Saved to:\\n' + folderPath + '\n\n';
                     message += ' Files created:\\n';
                     if (data.files.excel) message += '  &#x2022; Excel (6 tabs)\\n';
                     if (data.files.club420_docx) message += '  &#x2022; CLUB420_Newsletter.docx\\n';
