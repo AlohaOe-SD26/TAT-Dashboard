@@ -1,4 +1,150 @@
-# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.15 AUTOMATION COMPLETE
+# [BLAZE MIS Project 2 - Phase 2 Implementation] - v12.20 SUPER REFACTOR
+# v12.20 CHANGELOG (SUPER REFACTOR - Validation Unification):
+#   - UNIFIED: 3 Validation Modes (Manual/Compare/Create) with consistent behavior
+#     * Mode 1 (Manual): Status Bar only, emptiness checks
+#     * Mode 2 (Compare): HUD Banner + Checklist, Google Sheet strict validation
+#     * Mode 3 (Create): HUD Banner + "True Value" Checklist, Pre-Flight validation
+#   - NEW: "True Value" Display in Create Mode
+#     * Shows original Google Sheet value when Pre-Flight differs
+#     * Format: "📋 True Value: [original]" in yellow/italic
+#     * Keeps user aware of deviations from master data
+#   - NEW: Brand Rebate Agreements Loader (FROM GOOGLE SHEET)
+#     * Loads from "Brand Rebates" tab in Google Sheet (NOT local CSV)
+#     * Changes by coworkers are immediately reflected
+#     * Validates "Rebate After Wholesale" toggle against master data
+#     * load_rebate_agreements_from_sheet() called when sheet connects
+#   - ENHANCED: get_aggregated_deal_data() - "One Ring" helper
+#     * Returns `after_wholesale_expected` from Brand Rebate Agreements
+#     * Centralized Linked Brand lookup from Settings tab
+#     * Proper multi-day weekday aggregation
+#   - ENHANCED: inject_checklist_banner() - Now accepts mode and sheet_data params
+#     * Backwards compatible (defaults to 'compare' mode)
+#     * Green border/title for Create mode, Blue for Compare mode
+#     * Mode label badge in header
+#   - UI FIX: Phase 1 Pre-Flight Modal now uses DATE DROPDOWNS
+#     * Changed from text inputs to Month/Day/Year dropdown selectors
+#     * Auto-populates days based on month/year selection
+#     * Parses existing dates from data if available
+#   - UNIFIED: Both Phase 1 and ID Matcher now use SAME automation endpoint
+#     * Phase 1 Pre-Flight now calls /api/mis/create-deal (robust ID Matcher logic)
+#     * Passes rebate_type and after_wholesale directly to avoid checkbox parsing
+#   - ENHANCED: /api/mis/create-deal endpoint
+#     * Accepts direct rebate_type from Pre-Flight data
+#     * Accepts direct after_wholesale from Pre-Flight data
+#     * Falls back to raw_row_data parsing if not provided (backward compatible)
+# v12.19.1 CHANGELOG (MULTI-DAY AGGREGATION FIX):
+#   - CRITICAL FIX: Multi-day deals now properly aggregate weekdays
+#     * Bug: Compare/Create validated Mon+Thu deals as "Monday Only"
+#     * Root Cause: Code used `iloc[0]` to grab first row instead of aggregating
+#     * Solution: New centralized `get_aggregated_deal_data()` helper function
+#   - NEW: get_aggregated_deal_data(mis_id, google_df, brand_filter) helper
+#     * Collects ALL matching rows for a MIS ID (not just first)
+#     * Aggregates unique weekdays from all rows: "Monday" + "Thursday" -> "Monday, Thursday"
+#     * Handles multi-brand MIS IDs (W1: 771, W2: 772)
+#     * Returns standardized result dict with is_multi_day flag
+#   - REFACTORED: api_mis_compare_to_sheet endpoint
+#     * Now uses get_aggregated_deal_data() instead of manual row extraction
+#     * Returns is_multi_day and row_count in response for UI feedback
+#     * Reduced from ~150 lines to ~45 lines (cleaner, DRY)
+#   - UNIFIED: Checklist Banner now shows multi-day weekday combinations
+#     * Mon+Thu deals show "Monday, Thursday" expected weekdays
+#     * Validation correctly expects BOTH days selected in MIS
+# v12.19 CHANGELOG (UNIVERSAL VALIDATION ARCHITECTURE v2):
+#   - NEW: DataMapper class for resilient column detection
+#     * Maps logical field names ('brand_name', 'rebate_wholesale_active') to column indices
+#     * Supports Default vs Custom file system (Factory Settings protected)
+#     * Smart Header Scan: Detects column shifts dynamically without corrupting defaults
+#     * JSON-based configuration in secrets/column_mapping/
+#   - NEW: column_map_default.json (Factory Settings)
+#     * Based on January 2026.csv column structure
+#     * Defines 20+ field mappings with multiple header name variants
+#     * CRITICAL: Never overwritten programmatically
+#   - NEW: Rebate Type Validation (Strict Checkbox Logic)
+#     * Uses Wholesale? (Col 18) and Retail? (Col 19) checkboxes
+#     * [TRUE, FALSE] -> 'Wholesale'
+#     * [FALSE, TRUE] -> 'Retail'
+#     * [TRUE, TRUE] -> Error: Conflict
+#     * [FALSE, FALSE] -> Error: No Type Defined
+#   - NEW: Weekday Grouping Logic
+#     * Weekly Section: Groups by Brand + Discount Name, expects ALL days active
+#     * Monthly Section: Parses "Weekday/Day of Month" for ordinals (1st, 10th)
+#     * Calculates expected weekday from date for validation
+#   - NEW: Column Mapper API Endpoints
+#     * GET /api/column-mapper/status - Current mapper state
+#     * GET /api/column-mapper/list-maps - Available column maps
+#     * POST /api/column-mapper/switch - Switch active map
+#     * POST /api/column-mapper/save-as - Save custom map
+#     * POST /api/column-mapper/reset - Reset to Factory Default
+#     * GET /api/column-mapper/debug - Full diagnostic state
+#   - UPDATED: fetch_google_sheet_data now uses DataMapper
+#     * Smart header scanning on sheet load
+#     * Adds computed _rebate_type and _rebate_error columns
+#     * Tags rows with _section column (weekly/monthly/sale)
+#   - UPDATED: /api/mis/compare-to-sheet uses DataMapper for rebate validation
+#     * Returns rebate_validation_error in expected_data if checkbox conflict
+#   - INFRASTRUCTURE: secrets/column_mapping/ directory for map storage
+#     * active_map.txt tracks currently active map
+#     * Supports multiple custom maps for different sheet layouts
+# v12.18.2 CHANGELOG (PRE-FLIGHT CONFIRMATION):
+#   - NEW: Pre-flight Confirmation Popup before Create automation
+#     * Shows all values that will be entered in MIS form
+#     * Allows modification of any field before proceeding
+#     * Multi-select dropdowns: Weekday, Category, Store (Ctrl+Click)
+#     * Single-select dropdown: Rebate Type
+#     * Text inputs: Discount, Vendor Rebate
+#     * Validates Weekday and Rebate Type are required
+#   - FIXED: Rebate Type now reads from Column R (Wholesale) and Column T (Retail)
+#   - FIXED: Weekday now reads from Column A for Weekly/Sale deals
+#   - FIXED: Monthly deals auto-calculate weekday from date range
+#   - IMPROVED: tier1_deals and weekly_deals now include all rebate fields
+#   - IMPROVED: interrupting_deal dict now includes weekday, retail, wholesale fields
+# v12.18.1 CHANGELOG (CHECKLIST BANNER IMPROVEMENTS):
+#   - FIXED: Weekday now passed from interrupting_deal for GAP rows
+#   - FIXED: Linked Brand lookup from Settings tab when not in sheet_data
+#   - FIXED: Rebate Type fields (retail/wholesale/after_wholesale) added to interrupting_deal
+#   - FIXED: Vendor Rebate validation with proper percentage normalization
+#   - FIXED: Linked Brand handles "no linked brand" case (empty = correct)
+#   - NEW: Category shows partial progress (2/4 selected) with color coding
+#     * Green text for matched categories
+#     * Yellow text for still-needed categories
+#     * Red text for extra (wrong) categories
+#   - NEW: Discount and Vendor Rebate now auto-filled again
+#   - IMPROVED: Debug logging shows sourceData and sheetPayload in console
+# v12.18 CHANGELOG (CHECKLIST BANNER):
+#   - NEW: Checklist Banner for Up-Down Planning Create button
+#     * Shows all expected values in a floating checklist panel
+#     * Only automates 5 reliable fields: Brand, Linked Brand, Rebate Type, Start Date, End Date
+#     * User manually fills: Weekday, Store, Category, Discount, Vendor Rebate, After Wholesale
+#     * Live validation with checkmarks ([EMOJI] correct, [EMOJI] mismatch, [EMOJI] empty)
+#     * Blocks save if Weekday or Rebate Type is empty
+#   - NEW: inject_checklist_banner() function for validation UI
+#   - FIXED: Multi-brand validation now correctly determines brand per MIS ID
+#     * New get_brand_for_mis_id() helper function
+#     * Parses "S1: 966, S2: 967" format to match position with brands
+#     * Supports S/W/M prefixes for Sale/Weekly/Monthly deals
+#   - IMPROVED: Enhanced logging for multi-brand row detection
+# v12.17 CHANGELOG (POPUP & VALIDATION FIXES):
+#   - FIXED: Stores dropdown now shows actual store names (Dixon, Davis, etc.)
+#     * Filters "All Locations", "All Locations Except:" special values
+#   - FIXED: Categories dropdown now shows actual categories (Flowers, Prerolls, etc.)
+#     * Filters "All Categories", "All Categories Except:" special values
+#   - FIXED: Rebate Type auto-populates from Google Sheet checkboxes
+#     * Added retail, wholesale, after_wholesale fields to matchesData
+#   - FIXED: Sale section dates auto-populate in Create popup
+#     * Parses date_raw field from "Sale Runs:" / "Contracted Duration" column
+#     * Supports "MM/DD/YY - MM/DD/YY" date range format
+#   - FIXED: Validation now uses Settings tab for Linked Brand lookup
+#     * Stores brand_settings in GLOBAL_DATA during matching
+#     * Falls back to Settings mapping if row doesn't have Linked Brand
+#   - FIXED: Validation Locations now uses resolve_location_columns()
+#     * Properly handles "Same as Marketing" and exception columns
+#   - NEW: Enhanced Create Deal Popup with ALL editable fields
+#     * Linked Brand, Rebate Type, Weekday, After Wholesale dropdowns
+#     * Category multi-select, Locations with mode selector
+#     * Min/Max Weight, Discount %, Vendor % inputs
+#   - NEW: /api/get-settings-dropdowns endpoint
+#     * Fetches Stores, Categories, Brand[EMOJI]LinkedBrand from Settings tab
+#   - NEW: JavaScript settingsCache with loadSettingsDropdownData()
 # v12.15 CHANGELOG (AUTOMATION ENDPOINTS FIXED):
 #   - FIXED: End Date button with comprehensive diagnostic logging
 #     * 11-step logging to identify exactly where failures occur
@@ -1330,6 +1476,290 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # Note: CHROME_PROFILE_DIR is defined dynamically based on selected profile above
 
 # ============================================================================
+# UNIVERSAL COLUMN MAPPING SYSTEM (v2 - DataMapper)
+# ============================================================================
+COLUMN_MAPPING_DIR = BASE_DIR / 'secrets' / 'column_mapping'
+COLUMN_MAPPING_DIR.mkdir(parents=True, exist_ok=True)
+ACTIVE_MAP_FILE = COLUMN_MAPPING_DIR / 'active_map.txt'
+DEFAULT_MAP_FILE = COLUMN_MAPPING_DIR / 'column_map_default.json'
+
+# Factory Default Column Map (embedded fallback if JSON not found)
+EMBEDDED_DEFAULT_MAP = {
+    "meta": {"name": "Embedded Default", "version": "1.0", "is_default": True},
+    "google_sheet": {
+        "header_row_index": 2,
+        "columns": {
+            "weekday_source": {"id": "weekday_source", "headers": ["Weekday"], "default_index": 0},
+            "contracted_duration": {"id": "contracted_duration", "headers": ["Contracted Duration", "Sale Runs:"], "default_index": 2},
+            "brand_name": {"id": "brand_name", "headers": ["Brand"], "default_index": 4},
+            "discount_name": {"id": "discount_name", "headers": ["Deal Information"], "default_index": 5},
+            "discount_value": {"id": "discount_value", "headers": ["Deal Discount Value/Type", "Deal Discount"], "default_index": 6},
+            "brand_contribution": {"id": "brand_contribution", "headers": ["Brand Contribution % (Credit)", "Brand Contribution %"], "default_index": 7},
+            "frequency": {"id": "frequency", "headers": ["Frequency"], "default_index": 9},
+            "weekday_day_of_month": {"id": "weekday_day_of_month", "headers": ["Weekday/ Day of Month", "Day of Month"], "default_index": 10},
+            "locations_discount": {"id": "locations_discount", "headers": ["Locations (Discount Applies at)", "Locations"], "default_index": 11},
+            "locations_marketing": {"id": "locations_marketing", "headers": ["Locations (Marketing)"], "default_index": 12},
+            "categories": {"id": "categories", "headers": ["Categories"], "default_index": 13},
+            "category_exceptions": {"id": "category_exceptions", "headers": ["Category Exceptions"], "default_index": 14},
+            "wholesale_discount": {"id": "wholesale_discount", "headers": ["Wholesale Discount %"], "default_index": 17},
+            "rebate_wholesale_active": {"id": "rebate_wholesale_active", "headers": ["Wholesale?", "Wholesale"], "default_index": 18},
+            "rebate_retail_active": {"id": "rebate_retail_active", "headers": ["Retail?", "Retail"], "default_index": 19},
+            "after_wholesale": {"id": "after_wholesale", "headers": ["After Wholesale Discount", "After Wholesale"], "default_index": 20},
+        }
+    }
+}
+
+
+class DataMapper:
+    """
+    Universal Field ID System - Maps logical field names to column indices.
+    Supports Default vs Custom file system to protect factory settings.
+    
+    Usage:
+        mapper = DataMapper()
+        brand = mapper.get_value(row, 'brand_name')
+        wholesale_checkbox = mapper.get_value(row, 'rebate_wholesale_active')
+    """
+    
+    def __init__(self, auto_load: bool = True):
+        self.current_map: dict = {}
+        self.active_map_name: str = 'column_map_default.json'
+        self.header_indices: dict = {}  # Cached: field_id -> runtime_index
+        self.headers_scanned: bool = False
+        
+        if auto_load:
+            self.load_active_map()
+    
+    def load_active_map(self) -> None:
+        """Load the active column map. Defaults to column_map_default.json."""
+        # Check which map is active
+        if ACTIVE_MAP_FILE.exists():
+            try:
+                self.active_map_name = ACTIVE_MAP_FILE.read_text().strip()
+            except Exception:
+                self.active_map_name = 'column_map_default.json'
+        
+        map_path = COLUMN_MAPPING_DIR / self.active_map_name
+        
+        if map_path.exists():
+            try:
+                with open(map_path, 'r', encoding='utf-8') as f:
+                    self.current_map = json.load(f)
+                print(f"[MAPPER] Loaded column map: {self.active_map_name}")
+                return
+            except Exception as e:
+                print(f"[MAPPER] Failed to load {self.active_map_name}: {e}")
+        
+        # Fallback to embedded default
+        self.current_map = EMBEDDED_DEFAULT_MAP.copy()
+        print("[MAPPER] Using embedded default column map")
+    
+    def load_map(self, map_name: str) -> bool:
+        """Load a specific column map by filename."""
+        map_path = COLUMN_MAPPING_DIR / map_name
+        if not map_path.exists():
+            print(f"[MAPPER] Map not found: {map_name}")
+            return False
+        
+        try:
+            with open(map_path, 'r', encoding='utf-8') as f:
+                self.current_map = json.load(f)
+            self.active_map_name = map_name
+            self.headers_scanned = False  # Reset header cache
+            
+            # Update active map tracker
+            ACTIVE_MAP_FILE.write_text(map_name)
+            print(f"[MAPPER] Switched to map: {map_name}")
+            return True
+        except Exception as e:
+            print(f"[MAPPER] Error loading {map_name}: {e}")
+            return False
+    
+    def save_map_as(self, new_name: str) -> bool:
+        """
+        Save current in-memory mapping to a new file.
+        CRITICAL: Never overwrites column_map_default.json programmatically.
+        """
+        if new_name == 'column_map_default.json':
+            print("[MAPPER] ERROR: Cannot overwrite Factory Default map!")
+            return False
+        
+        new_path = COLUMN_MAPPING_DIR / new_name
+        
+        try:
+            # Update metadata
+            save_map = self.current_map.copy()
+            if 'meta' not in save_map:
+                save_map['meta'] = {}
+            save_map['meta']['name'] = new_name.replace('.json', '')
+            save_map['meta']['is_default'] = False
+            save_map['meta']['saved_at'] = datetime.now().isoformat()
+            
+            with open(new_path, 'w', encoding='utf-8') as f:
+                json.dump(save_map, f, indent=2)
+            
+            # Set as active
+            ACTIVE_MAP_FILE.write_text(new_name)
+            self.active_map_name = new_name
+            print(f"[MAPPER] Saved and activated: {new_name}")
+            return True
+        except Exception as e:
+            print(f"[MAPPER] Save failed: {e}")
+            return False
+    
+    def reset_to_default(self) -> None:
+        """Revert to Factory Default column_map_default.json."""
+        self.active_map_name = 'column_map_default.json'
+        ACTIVE_MAP_FILE.write_text('column_map_default.json')
+        self.headers_scanned = False
+        self.load_active_map()
+        print("[MAPPER] Reset to Factory Default")
+    
+    def smart_scan_headers(self, header_row: list) -> dict:
+        """
+        Scan actual headers and update indices IN-MEMORY only.
+        Does NOT modify the default file.
+        Returns: dict of field_id -> detected_index
+        """
+        columns_config = self.current_map.get('google_sheet', {}).get('columns', {})
+        detected = {}
+        
+        # Normalize headers (strip whitespace, collapse newlines)
+        normalized_headers = [str(h).strip().replace('\n', ' ').lower() for h in header_row]
+        
+        for field_id, field_config in columns_config.items():
+            possible_headers = field_config.get('headers', [])
+            default_idx = field_config.get('default_index', -1)
+            
+            # Try to find by header name match
+            found_idx = -1
+            for possible_name in possible_headers:
+                normalized_search = possible_name.strip().replace('\n', ' ').lower()
+                for idx, actual_header in enumerate(normalized_headers):
+                    if normalized_search in actual_header or actual_header in normalized_search:
+                        found_idx = idx
+                        break
+                if found_idx >= 0:
+                    break
+            
+            # Fall back to default index if header not found
+            if found_idx < 0:
+                found_idx = default_idx
+            
+            detected[field_id] = found_idx
+            
+            # Log shifts
+            if found_idx != default_idx and found_idx >= 0:
+                print(f"[MAPPER] Header shift: {field_id} moved from {default_idx} to {found_idx}")
+        
+        self.header_indices = detected
+        self.headers_scanned = True
+        return detected
+    
+    def get_index(self, field_id: str) -> int:
+        """Get the current column index for a field ID."""
+        if self.headers_scanned and field_id in self.header_indices:
+            return self.header_indices[field_id]
+        
+        columns_config = self.current_map.get('google_sheet', {}).get('columns', {})
+        if field_id in columns_config:
+            return columns_config[field_id].get('default_index', -1)
+        return -1
+    
+    def get_value(self, row: list, field_id: str, default: any = '') -> any:
+        """
+        Get value from a row using field ID.
+        Works with both list rows and pandas Series.
+        """
+        idx = self.get_index(field_id)
+        if idx < 0:
+            return default
+        
+        # Handle pandas Series
+        if hasattr(row, 'iloc'):
+            try:
+                val = row.iloc[idx] if idx < len(row) else default
+                return default if pd.isna(val) else val
+            except Exception:
+                return default
+        
+        # Handle list/tuple
+        if isinstance(row, (list, tuple)):
+            if idx < len(row):
+                val = row[idx]
+                return default if val is None or (isinstance(val, float) and pd.isna(val)) else val
+            return default
+        
+        return default
+    
+    def get_value_by_name(self, row: pd.Series, possible_names: list, default: any = '') -> any:
+        """
+        Fallback: Get value by trying multiple column names.
+        Used when DataFrame has named columns.
+        """
+        for name in possible_names:
+            # Try exact match
+            if name in row.index:
+                val = row[name]
+                if pd.notna(val):
+                    return val
+            # Try normalized match
+            normalized_name = name.strip().replace('\n', ' ')
+            for col in row.index:
+                if normalized_name.lower() in str(col).lower():
+                    val = row[col]
+                    if pd.notna(val):
+                        return val
+        return default
+    
+    def determine_rebate_type(self, row: any) -> tuple:
+        """
+        Determine rebate type from checkbox columns.
+        Returns: (rebate_type: str, error: str or None)
+        
+        Logic:
+          [TRUE, FALSE]  -> 'Wholesale'
+          [FALSE, TRUE]  -> 'Retail'
+          [TRUE, TRUE]   -> Error: Conflict
+          [FALSE, FALSE] -> Error: No Type Defined
+        """
+        wholesale_raw = self.get_value(row, 'rebate_wholesale_active', '')
+        retail_raw = self.get_value(row, 'rebate_retail_active', '')
+        
+        # Parse boolean values (handles TRUE/FALSE strings and actual bools)
+        def parse_bool(val) -> bool:
+            if isinstance(val, bool):
+                return val
+            if pd.isna(val) or val == '':
+                return False
+            return str(val).strip().upper() in ('TRUE', '1', 'YES', 'X', '✓')
+        
+        wholesale = parse_bool(wholesale_raw)
+        retail = parse_bool(retail_raw)
+        
+        if wholesale and not retail:
+            return ('Wholesale', None)
+        elif retail and not wholesale:
+            return ('Retail', None)
+        elif wholesale and retail:
+            return (None, 'CONFLICT: Both Wholesale AND Retail checked')
+        else:
+            return (None, 'ERROR: No Rebate Type defined (both unchecked)')
+    
+    def list_available_maps(self) -> list:
+        """List all available column map files."""
+        maps = []
+        for f in COLUMN_MAPPING_DIR.glob('*.json'):
+            is_active = f.name == self.active_map_name
+            maps.append({'name': f.name, 'active': is_active})
+        return maps
+
+
+# Global mapper instance
+COLUMN_MAPPER = DataMapper(auto_load=True)
+
+
+# ============================================================================
 # GLOBAL DATA STORE
 # ============================================================================
 GLOBAL_DATA = {
@@ -1360,6 +1790,126 @@ GLOBAL_DATA = {
         'inventory_brands': {}
     }
 }
+
+# ============================================================================
+# v12.20: BRAND REBATE AGREEMENTS MAP (Rebate After Wholesale Validation)
+# Loads from Google Sheet "Brand Rebates" tab - NOT a local CSV file
+# ============================================================================
+GLOBAL_REBATE_MAP = {}  # { 'brand_name_lower': {'rebate_after_wholesale': bool, ...} }
+
+
+def load_rebate_agreements_from_sheet(spreadsheet_id: str = None) -> dict:
+    """
+    v12.20: Load Brand Rebate Agreements from Google Sheet tab.
+    
+    Reads from "Brand Rebates" tab (or similar names) in the active spreadsheet.
+    This ensures changes made by coworkers are immediately reflected.
+    
+    Args:
+        spreadsheet_id: Optional spreadsheet ID (defaults to GLOBAL_DATA)
+    
+    Returns: dict mapping brand_name (lowercase) -> rebate config
+    """
+    global GLOBAL_REBATE_MAP
+    
+    # Get spreadsheet ID
+    if not spreadsheet_id:
+        spreadsheet_id = GLOBAL_DATA.get('mis', {}).get('spreadsheet_id') or GLOBAL_DATA.get('config', {}).get('spreadsheet_id')
+    
+    if not spreadsheet_id:
+        print("[REBATE] No spreadsheet ID available yet - will load when sheet is connected")
+        return {}
+    
+    sheets_service = GLOBAL_DATA.get('sheets_service')
+    if not sheets_service:
+        print("[REBATE] Sheets service not initialized yet - will load when available")
+        return {}
+    
+    # Try multiple possible tab names
+    tab_names = ['Brand Rebates', 'Brand Rebate Agreements', 'Rebate Agreements', 'Rebates']
+    
+    for tab_name in tab_names:
+        try:
+            result = sheets_service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{tab_name}'!A:Z"
+            ).execute()
+            
+            values = result.get('values', [])
+            if not values or len(values) < 2:
+                continue
+            
+            # Found the tab - parse it
+            headers = [str(h).strip().lower() for h in values[0]]
+            rebate_map = {}
+            
+            # Find column indices
+            brand_col = next((i for i, h in enumerate(headers) if 'brand' in h and 'linked' not in h), None)
+            rebate_col = next((i for i, h in enumerate(headers) if 'wholesale' in h or 'after' in h), None)
+            value_col = next((i for i, h in enumerate(headers) if 'value' in h or 'rebate' in h and 'after' not in h), None)
+            category_col = next((i for i, h in enumerate(headers) if 'category' in h or 'cat' in h), None)
+            notes_col = next((i for i, h in enumerate(headers) if 'note' in h), None)
+            
+            if brand_col is None:
+                print(f"[REBATE] Tab '{tab_name}' found but no Brand column detected")
+                continue
+            
+            for row in values[1:]:
+                if len(row) <= brand_col:
+                    continue
+                
+                brand = str(row[brand_col]).strip()
+                if not brand:
+                    continue
+                
+                # Parse rebate after wholesale value
+                rebate_after_wholesale = False
+                if rebate_col is not None and len(row) > rebate_col:
+                    raw_val = str(row[rebate_col]).strip().upper()
+                    rebate_after_wholesale = raw_val in ('TRUE', 'YES', '1', 'X', 'Y')
+                
+                rebate_map[brand.lower()] = {
+                    'brand_original': brand,
+                    'rebate_after_wholesale': rebate_after_wholesale,
+                    'rebate_value': str(row[value_col]).strip() if value_col and len(row) > value_col else '',
+                    'category': str(row[category_col]).strip() if category_col and len(row) > category_col else '',
+                    'notes': str(row[notes_col]).strip() if notes_col and len(row) > notes_col else ''
+                }
+            
+            GLOBAL_REBATE_MAP = rebate_map
+            
+            true_count = sum(1 for v in rebate_map.values() if v['rebate_after_wholesale'])
+            print(f"[REBATE] Loaded {len(rebate_map)} brands from '{tab_name}' tab ({true_count} with Rebate After Wholesale = TRUE)")
+            
+            return rebate_map
+            
+        except Exception as e:
+            # Tab not found or error - try next name
+            if 'not found' not in str(e).lower() and '404' not in str(e):
+                print(f"[REBATE] Error reading '{tab_name}': {e}")
+            continue
+    
+    print("[REBATE] No Brand Rebates tab found in spreadsheet")
+    return {}
+
+
+def get_rebate_after_wholesale_expected(brand_name: str) -> bool:
+    """
+    v12.20: Check if a brand expects "Rebate After Wholesale" toggle to be ON.
+    
+    Args:
+        brand_name: Brand name to look up
+    
+    Returns:
+        True if toggle should be ON, False otherwise
+    """
+    if not GLOBAL_REBATE_MAP:
+        # Try to load from Google Sheet
+        load_rebate_agreements_from_sheet()
+    
+    brand_key = brand_name.strip().lower() if brand_name else ''
+    config = GLOBAL_REBATE_MAP.get(brand_key, {})
+    return config.get('rebate_after_wholesale', False)
 
 # Additional tax rates (these were in the original file but after the GLOBAL_DATA definition)
 
@@ -3043,6 +3593,7 @@ def detect_header_row(sheet_data: List[List[str]]) -> int:
 def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
     """
     Fetch Google Sheet data and split into sections: Weekly, Monthly, Sale.
+    Uses DataMapper for resilient column detection.
     Returns: {'weekly': df, 'monthly': df, 'sale': df}
     """
     try:
@@ -3069,6 +3620,10 @@ def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
         headers = [str(cell).strip() for cell in values[header_row_idx]]
         headers.append('_SHEET_ROW_NUM')
         expected_cols = len(headers)
+        
+        # v2: Smart Header Scan - detect column shifts dynamically
+        COLUMN_MAPPER.smart_scan_headers(headers)
+        print(f"[MAPPER] Scanned {len(headers)} columns from header row {header_row_idx}")
         
         # Cleanup column names
         clean_cols = [col if col == '_SHEET_ROW_NUM' else col.strip().replace('\n', ' ') for col in headers]
@@ -3114,14 +3669,28 @@ def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
             
             i += 1
             
-        # Convert lists to DataFrames
+        # Convert lists to DataFrames and add computed columns
         print(f"[SHEET-PARSE] Section summary: weekly={len(sections['weekly'])}, monthly={len(sections['monthly'])}, sale={len(sections['sale'])}")
         final_dfs = {}
         for sec, rows in sections.items():
             if rows:
                 df = pd.DataFrame(rows, columns=clean_cols)
+                
+                # v2: Add computed rebate_type column using DataMapper
+                rebate_types = []
+                rebate_errors = []
+                for idx, row in df.iterrows():
+                    # Use mapper to determine rebate type from checkboxes
+                    rebate_type, error = COLUMN_MAPPER.determine_rebate_type(row)
+                    rebate_types.append(rebate_type if rebate_type else '')
+                    rebate_errors.append(error if error else '')
+                
+                df['_rebate_type'] = rebate_types
+                df['_rebate_error'] = rebate_errors
+                df['_section'] = sec  # Tag each row with its section
+                
             else:
-                df = pd.DataFrame(columns=clean_cols)
+                df = pd.DataFrame(columns=clean_cols + ['_rebate_type', '_rebate_error', '_section'])
             final_dfs[sec] = df
             
         GLOBAL_DATA['mis']['current_sheet'] = tab_name
@@ -3223,6 +3792,176 @@ def format_category_display(categories: str, exceptions: str) -> str:
     cat_str = str(categories).strip()
     exc_str = str(exceptions).strip() if pd.notna(exceptions) else ""
     return f"{cat_str} (Except: {exc_str})" if exc_str else cat_str
+
+# ============================================================================
+# WEEKDAY GROUPING LOGIC (v2 - Universal Validation)
+# ============================================================================
+def group_weekly_deals_by_brand_discount(weekly_df: pd.DataFrame) -> Dict[str, List[str]]:
+    """
+    Group Weekly section rows by Brand + Discount Name.
+    If multiple rows exist (Mon, Wed), validation expects ALL those days active in MIS.
+    
+    Returns: dict of {(brand, discount_name): [weekday1, weekday2, ...]}
+    """
+    groups = {}
+    
+    for idx, row in weekly_df.iterrows():
+        # Use mapper to get values
+        brand = COLUMN_MAPPER.get_value_by_name(row, ['Brand'], '').strip()
+        discount_name = COLUMN_MAPPER.get_value_by_name(row, ['Deal Information', 'Deal Info'], '').strip()
+        weekday = COLUMN_MAPPER.get_value_by_name(row, ['Weekday'], '').strip()
+        
+        if not brand or not weekday:
+            continue
+        
+        key = (brand.lower(), discount_name.lower())
+        if key not in groups:
+            groups[key] = []
+        
+        # Handle multiple weekdays in one cell (comma-separated)
+        weekdays = [w.strip() for w in weekday.split(',') if w.strip()]
+        for wd in weekdays:
+            if wd not in groups[key]:
+                groups[key].append(wd)
+    
+    return groups
+
+
+def get_expected_weekdays_for_weekly_deal(brand: str, discount_name: str, weekly_df: pd.DataFrame) -> List[str]:
+    """
+    Given a brand and discount name, return all expected weekdays from the Weekly section.
+    Used by validation to ensure MIS has all required days selected.
+    """
+    groups = group_weekly_deals_by_brand_discount(weekly_df)
+    key = (brand.lower().strip(), discount_name.lower().strip())
+    return groups.get(key, [])
+
+
+def parse_monthly_weekday_ordinals(day_of_month_str: str) -> List[Dict]:
+    """
+    Parse Monthly section 'Weekday/Day of Month' column.
+    Handles formats like:
+      - "1st" -> [{'ordinal': 1}]
+      - "10th, 20th" -> [{'ordinal': 10}, {'ordinal': 20}]
+      - "First Monday" -> [{'ordinal': 1, 'weekday': 'Monday'}]
+      - Lines may be newline-separated: "1st\n10th"
+    
+    Returns: List of dicts with parsed date info
+    """
+    import re
+    
+    if not day_of_month_str or pd.isna(day_of_month_str):
+        return []
+    
+    results = []
+    day_str = str(day_of_month_str).strip()
+    
+    # Split by newline, comma, or ampersand
+    parts = re.split(r'[\n,&]|\band\b', day_str, flags=re.IGNORECASE)
+    
+    ordinal_names = {
+        'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
+        'last': -1  # -1 indicates last occurrence
+    }
+    
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        
+        # Pattern 1: Numeric ordinal "1st", "2nd", "10th", "21st"
+        ordinal_match = re.search(r'(\d+)(?:st|nd|rd|th)', part, re.IGNORECASE)
+        if ordinal_match:
+            results.append({'ordinal': int(ordinal_match.group(1))})
+            continue
+        
+        # Pattern 2: Named ordinal + weekday "First Monday", "Second Tuesday"
+        named_match = re.search(r'(first|second|third|fourth|fifth|last)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', part, re.IGNORECASE)
+        if named_match:
+            ordinal_name = named_match.group(1).lower()
+            weekday_name = named_match.group(2).capitalize()
+            results.append({
+                'ordinal': ordinal_names.get(ordinal_name, 1),
+                'weekday': weekday_name
+            })
+            continue
+        
+        # Pattern 3: Just a number (assume day of month)
+        num_match = re.search(r'^(\d+)$', part)
+        if num_match:
+            results.append({'ordinal': int(num_match.group(1))})
+    
+    return results
+
+
+def calculate_expected_weekday_from_date(date_obj) -> str:
+    """
+    Given a date object, return the weekday name.
+    """
+    from datetime import date
+    
+    if isinstance(date_obj, date):
+        weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        return weekday_names[date_obj.weekday()]
+    return ''
+
+
+def get_expected_weekdays_for_monthly_deal(day_of_month_str: str, tab_month: int, tab_year: int) -> List[Dict]:
+    """
+    For Monthly deals, calculate expected weekdays based on ordinal dates.
+    
+    Returns: List of dicts with 'date', 'weekday', 'ordinal' for each expected entry
+    """
+    from datetime import date
+    import calendar
+    
+    parsed = parse_monthly_weekday_ordinals(day_of_month_str)
+    results = []
+    
+    num_days = calendar.monthrange(tab_year, tab_month)[1]
+    
+    for entry in parsed:
+        ordinal = entry.get('ordinal', 0)
+        specified_weekday = entry.get('weekday')
+        
+        if specified_weekday:
+            # "First Monday" - find the Nth occurrence of that weekday
+            weekday_map = {
+                'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+                'Friday': 4, 'Saturday': 5, 'Sunday': 6
+            }
+            target_weekday = weekday_map.get(specified_weekday, 0)
+            
+            occurrences = []
+            for day in range(1, num_days + 1):
+                d = date(tab_year, tab_month, day)
+                if d.weekday() == target_weekday:
+                    occurrences.append(d)
+            
+            if ordinal == -1 and occurrences:  # Last
+                results.append({
+                    'date': occurrences[-1],
+                    'weekday': specified_weekday,
+                    'ordinal': ordinal
+                })
+            elif 0 < ordinal <= len(occurrences):
+                results.append({
+                    'date': occurrences[ordinal - 1],
+                    'weekday': specified_weekday,
+                    'ordinal': ordinal
+                })
+        else:
+            # Just an ordinal date "10th" -> day 10 of the month
+            if 1 <= ordinal <= num_days:
+                d = date(tab_year, tab_month, ordinal)
+                results.append({
+                    'date': d,
+                    'weekday': calculate_expected_weekday_from_date(d),
+                    'ordinal': ordinal
+                })
+    
+    return results
+
 
 # ============================================================================
 # DATE-AWARE CONFLICT DETECTION HELPERS
@@ -3913,7 +4652,15 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 'deal_info': str(get_col(g_row, ['Deal Information', 'Deal Info'], '')),
                 'blaze_discount_title': str(get_col(g_row, ['Blaze Discount Title'], '')),  # v12.7: For auto-loading
                 'multi_day_group': group_metadata,
-                'raw_row_data': raw_row_data  # v12.1: All Google Sheet columns for More Info
+                'raw_row_data': raw_row_data,  # v12.1: All Google Sheet columns for More Info
+                # v12.17: Add fields for Rebate Type auto-fill in Create popup
+                'retail': str(get_col(g_row, ['Retail'], '')).strip(),
+                'wholesale': str(get_col(g_row, ['Wholesale'], '')).strip(),
+                'after_wholesale': str(get_col(g_row, ['Rebate After Wholesale', 'After Wholesale', 'After Wholesale Discount', 'Rebate after Wholesale?'], '')).strip(),
+                'min_weight': str(get_col(g_row, ['Min Weight', 'Minimum Weight', 'Min'], '')).strip(),
+                'max_weight': str(get_col(g_row, ['Max Weight', 'Maximum Weight', 'Max'], '')).strip(),
+                # v12.17: Add date_raw for Sale section date auto-fill
+                'date_raw': str(get_col(g_row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '')).strip()
             })
     
     return matches
@@ -4279,6 +5026,117 @@ def load_brand_settings(spreadsheet_id: str) -> Dict[str, str]:
         print(f"[ERROR] Failed to load settings: {e}")
         traceback.print_exc()
         return {}
+
+
+def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
+    """
+    v12.17: Load dropdown options from Settings tab for Enhanced Create Popup.
+    Fetches: Stores (Column A), Categories (Column C), Brand->LinkedBrand map.
+    """
+    result = {
+        'stores': [],
+        'categories': [],
+        'brand_linked_map': {}
+    }
+    
+    # Special values to filter out (not actual stores/categories)
+    STORE_SKIP = ['all locations', 'all locations except:', 'all locations except', 'store name', 'store', '']
+    CATEGORY_SKIP = ['all categories', 'all categories except:', 'all categories except', 'categories', 'category', '']
+    
+    try:
+        service = GLOBAL_DATA.get('sheets_service')
+        if not service:
+            print("[WARN] No sheets_service available for dropdown data")
+            return result
+        
+        # 1. Find the Settings tab
+        metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        settings_tab_name = None
+        
+        for s in metadata.get('sheets', []):
+            title = s['properties']['title']
+            if 'setting' in title.lower():
+                settings_tab_name = title
+                break
+        
+        if not settings_tab_name:
+            print("[WARN] Could not find Settings tab for dropdown data")
+            return result
+        
+        # 2. Fetch entire Settings tab
+        fetch_result = service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{settings_tab_name}'!A1:Z500"
+        ).execute()
+        rows = fetch_result.get('values', [])
+        if not rows:
+            return result
+        
+        print(f"[SETTINGS-DROPDOWN] Fetched {len(rows)} rows from Settings tab")
+        
+        # 3. Find column indices from header (row 1)
+        # Settings tab structure: A=Store Name, C=Categories, G=Brand, H=Linked Brand
+        header = rows[0] if rows else []
+        header_lower = [str(h).lower().strip() for h in header]
+        
+        store_col_idx = -1
+        category_col_idx = -1
+        brand_col_idx = -1
+        linked_brand_col_idx = -1
+        
+        for idx, h in enumerate(header_lower):
+            if 'store name' in h or h == 'store':
+                store_col_idx = idx
+            elif 'categor' in h and category_col_idx == -1:
+                category_col_idx = idx
+            elif 'linked' in h and 'brand' in h:
+                linked_brand_col_idx = idx
+            elif 'brand' in h and 'linked' not in h and 'contribution' not in h and brand_col_idx == -1:
+                brand_col_idx = idx
+        
+        print(f"[SETTINGS-DROPDOWN] Columns - Store:{store_col_idx}, Category:{category_col_idx}, Brand:{brand_col_idx}, LinkedBrand:{linked_brand_col_idx}")
+        
+        # 4. Extract Stores (skip header row, filter special values)
+        if store_col_idx >= 0:
+            for row in rows[1:]:  # Skip header
+                if store_col_idx < len(row):
+                    store_name = str(row[store_col_idx]).strip()
+                    store_lower = store_name.lower()
+                    if store_name and store_lower not in STORE_SKIP and store_lower not in ['nan', 'none', '-']:
+                        if store_name not in result['stores']:
+                            result['stores'].append(store_name)
+        
+        # 5. Extract Categories (skip header row, filter special values)
+        if category_col_idx >= 0:
+            for row in rows[1:]:  # Skip header
+                if category_col_idx < len(row):
+                    category = str(row[category_col_idx]).strip()
+                    cat_lower = category.lower()
+                    if category and cat_lower not in CATEGORY_SKIP and cat_lower not in ['nan', 'none', '-']:
+                        if category not in result['categories']:
+                            result['categories'].append(category)
+        
+        # 6. Extract Brand -> Linked Brand map
+        if brand_col_idx >= 0 and linked_brand_col_idx >= 0:
+            for row in rows[1:]:
+                brand_name = ''
+                linked_name = ''
+                if brand_col_idx < len(row):
+                    brand_name = str(row[brand_col_idx]).strip()
+                if linked_brand_col_idx < len(row):
+                    linked_name = str(row[linked_brand_col_idx]).strip()
+                
+                if brand_name and brand_name.lower() not in ['', 'nan', 'none', '-', 'brand', '* all *', '#hashtag']:
+                    result['brand_linked_map'][brand_name.lower()] = linked_name
+        
+        print(f"[SETTINGS-DROPDOWN] Loaded {len(result['stores'])} stores, {len(result['categories'])} categories, {len(result['brand_linked_map'])} brand mappings")
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to load settings dropdown data: {e}")
+        traceback.print_exc()
+        return result
+
 
 def resolve_location_columns(row: pd.Series) -> Tuple[str, str]:
     """
@@ -7013,6 +7871,51 @@ HTML_TEMPLATE = r"""
         let matchesData = [];
         let misData = { tabName: '', csvFile: null, csvFilename: '', allLoadedTabs: [], localPath: null };
         let blazeData = { rawData: [], filteredData: [], table: null };
+        
+        // v12.17: Settings cache for Enhanced Create Popup
+        let settingsCache = {
+            stores: [],
+            categories: [],
+            brandLinkedMap: {},
+            loaded: false,
+            loading: false
+        };
+        
+        // v12.17: Load settings dropdown data from API
+        async function loadSettingsDropdownData(forceRefresh = false) {
+            if (settingsCache.loaded && !forceRefresh) {
+                console.log('[SETTINGS] Using cached settings data');
+                return settingsCache;
+            }
+            if (settingsCache.loading) {
+                console.log('[SETTINGS] Already loading, waiting...');
+                while (settingsCache.loading) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                return settingsCache;
+            }
+            
+            settingsCache.loading = true;
+            try {
+                console.log('[SETTINGS] Fetching dropdown data from API...');
+                const response = await fetch('/api/get-settings-dropdowns');
+                const data = await response.json();
+                
+                if (data.success) {
+                    settingsCache.stores = data.stores || [];
+                    settingsCache.categories = data.categories || [];
+                    settingsCache.brandLinkedMap = data.brand_linked_map || {};
+                    settingsCache.loaded = true;
+                    console.log('[SETTINGS] Loaded:', settingsCache.stores.length, 'stores,', settingsCache.categories.length, 'categories');
+                } else {
+                    console.error('[SETTINGS] Failed:', data.error);
+                }
+            } catch (err) {
+                console.error('[SETTINGS] Error:', err);
+            }
+            settingsCache.loading = false;
+            return settingsCache;
+        }
 
         const STRICT_OTD_STORES = ["Davis", "Dixon"];   
         const VALID_MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -8612,7 +9515,7 @@ HTML_TEMPLATE = r"""
             }
         }
         
-// // v12.12.16: Automate Create Deal (Sends FULL Data Packet)
+// // v12.18.2: Automate Create Deal with PRE-FLIGHT CONFIRMATION POPUP
         async function automateCreateDeal(splitIdx, stepIdx, dateRange, googleRow, sectionType) {
             console.log('[AUTOMATE CREATE] Starting...', {splitIdx, stepIdx, dateRange, googleRow, sectionType});
             
@@ -8626,46 +9529,20 @@ HTML_TEMPLATE = r"""
             }
 
             // 2. Determine Source Profile (Weekly vs Interrupting)
-            // Default: Use the Weekly deal data
             let sourceData = split; 
+            let dealType = 'CONTINUE';
             
-            // GAP Override: If action is GAP, use the Interrupting Deal's profile
             if (step.action === 'GAP' && split.interrupting_deal) {
                  sourceData = split.interrupting_deal;
+                 dealType = 'GAP';
                  console.log('[AUTOMATE] Using Interrupting Deal profile for GAP');
             } else {
                  console.log('[AUTOMATE] Using Main Deal profile');
             }
 
-            // 3. Construct Full Payload
-            // We map the specific fields needed by the Atomic Python functions
-            // v12.15: Added retail, wholesale, after_wholesale, min_weight, max_weight
-            let sheetPayload = {
-                brand: sourceData.brand || '',
-                linked_brand: sourceData.linked_brand || '', // Important!
-                weekday: sourceData.weekday || '',           // Important!
-                categories: sourceData.categories || '',     // Important!
-                locations: sourceData.locations || '',       // Important!
-                discount: sourceData.discount || '',
-                vendor_contrib: sourceData.vendor_contrib || '',
-                // v12.15: Added for Rebate Type determination
-                retail: sourceData.retail || '',
-                wholesale: sourceData.wholesale || '',
-                after_wholesale: sourceData.after_wholesale || '',
-                min_weight: sourceData.min_weight || '',
-                max_weight: sourceData.max_weight || ''
-            };
+            console.log('[AUTOMATE] Full sourceData:', JSON.stringify(sourceData, null, 2));
 
-            // Handle overrides from the specific step (if any)
-            if (step.discount) sheetPayload.discount = step.discount;
-            if (step.vendor_contrib) sheetPayload.vendor_contrib = step.vendor_contrib;
-
-            if (!googleRow) {
-                alert('Error: No Google Sheet row reference found.');
-                return;
-            }
-            
-            // 4. Parse Dates
+            // 3. Parse Dates
             let startDate = '', endDate = '';
             if (dateRange.includes(' - ')) {
                 const parts = dateRange.split(' - ');
@@ -8676,57 +9553,341 @@ HTML_TEMPLATE = r"""
                 endDate = dateRange.trim();
             }
             
-            // Add year if missing
             const tabName = document.getElementById('mis-tab')?.value || '';
             const yearMatch = tabName.match(/\d{4}/);
             const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
             
             if (startDate.split('/').length === 2) startDate = startDate + '/' + year;
             if (endDate.split('/').length === 2) endDate = endDate + '/' + year;
-            
-            // 5. Show Loading Overlay
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.id = 'automate-loading';
-            loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10003; display:flex; justify-content:center; align-items:center; flex-direction:column;';
-            loadingOverlay.innerHTML = '<div class="spinner-border text-light" style="width:3rem; height:3rem;"></div><div style="color:white; margin-top:15px; font-size:1.2em;">Creating Deal in MIS...</div><div id="automate-status" style="color:#aaa; margin-top:10px; font-size:0.9em;">' + sheetPayload.brand + ' (' + sheetPayload.discount + '%)</div>';
-            document.body.appendChild(loadingOverlay);
-            
-            try {
-                // 6. Send Request
-                const response = await fetch('/api/mis/automate-create-deal', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        google_row: googleRow,
-                        start_date: startDate,
-                        end_date: endDate,
-                        section_type: sectionType,
-                        split_idx: splitIdx,
-                        step_idx: stepIdx,
-                        sheet_data: sheetPayload // Sending the FULL packet now
-                    })
-                });
-                
-                const data = await response.json();
-                document.getElementById('automate-loading')?.remove();
-                
-                if (data.success) {
-                    let message = '[EMOJI] Deal form populated!\n\n';
-                    message += 'Brand: ' + (sheetPayload.brand || '-') + '\n';
-                    message += 'Dates: ' + startDate + ' to ' + endDate + '\n\n';
-                    message += 'Please review and click Save in MIS if everything looks correct.\nValidation is active.';
-                    alert(message);
-                    
-                    // Visual feedback
-                    const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
-                    if (row) row.style.backgroundColor = '#d4edda';
-                } else {
-                    alert('Error creating deal: ' + (data.error || 'Unknown error'));
-                }
-            } catch (error) {
-                document.getElementById('automate-loading')?.remove();
-                alert('Error: ' + error.message);
+
+            // 4. Calculate weekday from dates if not specified
+            let weekdayValue = sourceData.weekday || '';
+            if (!weekdayValue && startDate && endDate) {
+                weekdayValue = calculateWeekdaysFromDateRange(startDate, endDate);
+                console.log('[AUTOMATE] Calculated weekday from dates:', weekdayValue);
             }
+
+            // 5. Determine Rebate Type from checkboxes
+            let rebateType = '';
+            if (sourceData.wholesale === 'TRUE') {
+                rebateType = 'Wholesale';
+            } else if (sourceData.retail === 'TRUE') {
+                rebateType = 'Retail';
+            }
+            console.log('[AUTOMATE] Rebate Type:', rebateType, '(W:', sourceData.wholesale, ', R:', sourceData.retail, ')');
+
+            // 6. Build Pre-Flight Data
+            const preFlightData = {
+                brand: sourceData.brand || '',
+                linked_brand: sourceData.linked_brand || '',
+                weekday: weekdayValue,
+                categories: sourceData.categories || '',
+                locations: sourceData.locations || '',
+                discount: (sourceData.discount || '').replace('%', ''),
+                vendor_contrib: (sourceData.vendor_contrib || '').replace('%', ''),
+                rebate_type: rebateType,
+                after_wholesale: sourceData.after_wholesale === 'TRUE',
+                start_date: startDate,
+                end_date: endDate
+            };
+
+            if (step.discount) preFlightData.discount = step.discount.replace('%', '');
+            if (step.vendor_contrib) preFlightData.vendor_contrib = step.vendor_contrib.replace('%', '');
+
+            console.log('[AUTOMATE] Pre-flight data:', preFlightData);
+
+            showPreFlightPopup(preFlightData, googleRow, sectionType, splitIdx, stepIdx);
+        }
+
+        function calculateWeekdaysFromDateRange(startStr, endStr) {
+            const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const weekdaysFound = new Set();
+            try {
+                const startParts = startStr.split('/');
+                const endParts = endStr.split('/');
+                let startDate = new Date(startParts[2], startParts[0] - 1, startParts[1]);
+                let endDate = new Date(endParts[2], endParts[0] - 1, endParts[1]);
+                let currentDate = new Date(startDate);
+                while (currentDate <= endDate) {
+                    weekdaysFound.add(weekdayNames[currentDate.getDay()]);
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+            } catch (e) {
+                console.error('[AUTOMATE] Error calculating weekdays:', e);
+            }
+            return Array.from(weekdaysFound).join(', ');
+        }
+
+        function showPreFlightPopup(data, googleRow, sectionType, splitIdx, stepIdx) {
+            document.getElementById('preflight-popup')?.remove();
+            
+            const weekdayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            // v12.18.3: Dynamic category options from Settings tab
+            const categoryOptions = splitPlanningData.category_list && splitPlanningData.category_list.length > 0 
+                ? splitPlanningData.category_list 
+                : ['Flower', 'Prerolls', 'Vapes', 'Edibles', 'Concentrates', 'Tinctures', 'Topicals', 'Accessories', 'Capsules', 'CBD', 'Other'];
+            const storeOptions = ['San Jose', 'Santa Cruz', 'Fresno', 'DTSJ', 'Campbell', 'Brentwood', 'Antioch', 'San Francisco'];
+            const rebateTypeOptions = ['', 'Retail', 'Wholesale'];
+            // v12.18.3: Dynamic brand options from Settings tab
+            const brandOptions = splitPlanningData.brand_list && splitPlanningData.brand_list.length > 0 
+                ? splitPlanningData.brand_list 
+                : [];
+            const brandLinkedMap = splitPlanningData.brand_linked_map || {};
+            
+            const currentWeekdays = data.weekday ? data.weekday.split(',').map(s => s.trim()) : [];
+            const currentCategories = data.categories ? data.categories.split(',').map(s => s.trim()) : [];
+            const currentStores = data.locations ? data.locations.split(',').map(s => s.trim()) : [];
+            
+            const popup = document.createElement('div');
+            popup.id = 'preflight-popup';
+            popup.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:100000;display:flex;justify-content:center;align-items:center;font-family:Segoe UI,system-ui,sans-serif;';
+            
+            let weekdayOptionsHtml = weekdayOptions.map(opt => {
+                const sel = currentWeekdays.some(cw => cw.toLowerCase() === opt.toLowerCase()) ? ' selected' : '';
+                return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
+            }).join('');
+            
+            let categoryOptionsHtml = categoryOptions.map(opt => {
+                const sel = currentCategories.some(cc => cc.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(cc.toLowerCase())) ? ' selected' : '';
+                return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
+            }).join('');
+            
+            let storeOptionsHtml = storeOptions.map(opt => {
+                const sel = currentStores.some(cs => cs.toLowerCase().includes(opt.toLowerCase()) || opt.toLowerCase().includes(cs.toLowerCase())) ? ' selected' : '';
+                return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
+            }).join('');
+            
+            let rebateTypeOptionsHtml = rebateTypeOptions.map(opt => {
+                const sel = opt === data.rebate_type ? ' selected' : '';
+                return '<option value="' + opt + '"' + sel + '>' + (opt || '-- Select --') + '</option>';
+            }).join('');
+            
+            // v12.18.3: Brand dropdown options
+            let brandOptionsHtml = '<option value="">-- Select Brand --</option>';
+            if (brandOptions.length > 0) {
+                brandOptionsHtml += brandOptions.map(opt => {
+                    const sel = data.brand && opt.toLowerCase() === data.brand.toLowerCase() ? ' selected' : '';
+                    return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
+                }).join('');
+            } else {
+                // Fallback: show current brand as only option
+                brandOptionsHtml = '<option value="' + (data.brand || '') + '" selected>' + (data.brand || '(No brands loaded)') + '</option>';
+            }
+            
+            // v12.18.3: Linked Brand dropdown options (with empty option for "no linked brand")
+            let linkedBrandOptionsHtml = '<option value="">(No Linked Brand)</option>';
+            if (brandOptions.length > 0) {
+                linkedBrandOptionsHtml += brandOptions.map(opt => {
+                    const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
+                    return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
+                }).join('');
+            }
+            
+            popup.innerHTML = '<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:2px solid #4a90d9;border-radius:12px;padding:25px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;color:#fff;">' +
+                '<h3 style="margin:0 0 20px 0;color:#4a90d9;">[EMOJI] Pre-Flight Confirmation <span style="font-size:12px;color:#888;">(Row ' + googleRow + ')</span></h3>' +
+                '<p style="color:#aaa;font-size:13px;margin-bottom:20px;">Review and modify values. <strong style="color:#ffc107;">Ctrl+Click for multi-select</strong></p>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">' +
+                '<div><label style="font-size:12px;color:#aaa;">Brand</label><select id="pf-brand" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + brandOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Linked Brand</label><select id="pf-linked-brand" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + linkedBrandOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Weekday <span style="color:#dc3545;">*</span></label><select id="pf-weekday" multiple size="4" style="width:100%;padding:4px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + weekdayOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Rebate Type <span style="color:#dc3545;">*</span></label><select id="pf-rebate-type" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + rebateTypeOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Category</label><select id="pf-categories" multiple size="4" style="width:100%;padding:4px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + categoryOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Store/Locations</label><select id="pf-stores" multiple size="4" style="width:100%;padding:4px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + storeOptionsHtml + '</select></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Discount %</label><input type="text" id="pf-discount" value="' + data.discount + '" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Vendor Rebate %</label><input type="text" id="pf-vendor" value="' + data.vendor_contrib + '" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">Start Date</label><div style="display:flex;gap:5px;"><select id="pf-start-month" style="flex:1;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"><option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option><option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option></select><select id="pf-start-day" style="width:60px;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></select><select id="pf-start-year" style="width:75px;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></select></div></div>' +
+                '<div><label style="font-size:12px;color:#aaa;">End Date</label><div style="display:flex;gap:5px;"><select id="pf-end-month" style="flex:1;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"><option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option><option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option><option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option></select><select id="pf-end-day" style="width:60px;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></select><select id="pf-end-year" style="width:75px;padding:6px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;"></select></div></div>' +
+                '<div style="grid-column:span 2;"><label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="pf-after-wholesale"' + (data.after_wholesale ? ' checked' : '') + ' style="width:18px;height:18px;"><span>After Wholesale Discount?</span></label></div>' +
+                '</div>' +
+                '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:25px;padding-top:15px;border-top:1px solid #4a90d9;">' +
+                '<button id="pf-cancel" style="padding:10px 25px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:6px;cursor:pointer;">[EMOJI] Cancel</button>' +
+                '<button id="pf-continue" style="padding:10px 25px;border:none;background:linear-gradient(135deg,#28a745,#20c997);color:white;border-radius:6px;cursor:pointer;font-weight:600;">[EMOJI] Continue to MIS</button>' +
+                '</div></div>';
+            
+            document.body.appendChild(popup);
+            
+            // v12.20: Initialize date dropdowns
+            function updatePfDayDropdown(prefix) {
+                const monthSel = document.getElementById('pf-' + prefix + '-month');
+                const daySel = document.getElementById('pf-' + prefix + '-day');
+                const yearSel = document.getElementById('pf-' + prefix + '-year');
+                if (!monthSel || !daySel || !yearSel) return;
+                
+                const month = parseInt(monthSel.value);
+                const year = parseInt(yearSel.value) || new Date().getFullYear();
+                const daysInMonth = new Date(year, month, 0).getDate();
+                const currentDay = parseInt(daySel.value) || 1;
+                
+                daySel.innerHTML = '';
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const opt = document.createElement('option');
+                    opt.value = String(d).padStart(2, '0');
+                    opt.textContent = d;
+                    daySel.appendChild(opt);
+                }
+                daySel.value = String(Math.min(currentDay, daysInMonth)).padStart(2, '0');
+            }
+            
+            // Populate year dropdowns
+            const currentYear = new Date().getFullYear();
+            ['pf-start-year', 'pf-end-year'].forEach(function(id) {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    sel.innerHTML = '';
+                    for (let y = currentYear; y <= currentYear + 2; y++) {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        sel.appendChild(opt);
+                    }
+                }
+            });
+            
+            // Parse existing dates from data
+            function parseDateToDropdowns(dateStr, prefix) {
+                if (!dateStr) return;
+                const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                if (match) {
+                    const m = document.getElementById('pf-' + prefix + '-month');
+                    const d = document.getElementById('pf-' + prefix + '-day');
+                    const y = document.getElementById('pf-' + prefix + '-year');
+                    if (m) m.value = match[1].padStart(2, '0');
+                    const fullYear = match[3].length === 2 ? '20' + match[3] : match[3];
+                    if (y) y.value = fullYear;
+                    updatePfDayDropdown(prefix);
+                    if (d) d.value = match[2].padStart(2, '0');
+                }
+            }
+            
+            // Initialize with today's date as default
+            const today = new Date();
+            document.getElementById('pf-start-month').value = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('pf-start-year').value = today.getFullYear();
+            updatePfDayDropdown('start');
+            document.getElementById('pf-start-day').value = String(today.getDate()).padStart(2, '0');
+            
+            document.getElementById('pf-end-month').value = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('pf-end-year').value = today.getFullYear();
+            updatePfDayDropdown('end');
+            document.getElementById('pf-end-day').value = String(today.getDate()).padStart(2, '0');
+            
+            // If data has dates, parse and set them
+            if (data.start_date) parseDateToDropdowns(data.start_date, 'start');
+            if (data.end_date) parseDateToDropdowns(data.end_date, 'end');
+            
+            // Add change listeners for month/year
+            document.getElementById('pf-start-month').onchange = function() { updatePfDayDropdown('start'); };
+            document.getElementById('pf-start-year').onchange = function() { updatePfDayDropdown('start'); };
+            document.getElementById('pf-end-month').onchange = function() { updatePfDayDropdown('end'); };
+            document.getElementById('pf-end-year').onchange = function() { updatePfDayDropdown('end'); };
+            
+            // v12.18.3: Auto-update Linked Brand when Brand changes
+            document.getElementById('pf-brand').onchange = function() {
+                const selectedBrand = this.value.toLowerCase();
+                const linkedBrandSelect = document.getElementById('pf-linked-brand');
+                const linkedBrand = brandLinkedMap[selectedBrand] || '';
+                if (linkedBrand) {
+                    // Find and select the matching linked brand option
+                    for (let i = 0; i < linkedBrandSelect.options.length; i++) {
+                        if (linkedBrandSelect.options[i].value.toLowerCase() === linkedBrand.toLowerCase()) {
+                            linkedBrandSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                } else {
+                    linkedBrandSelect.selectedIndex = 0; // Select "(No Linked Brand)"
+                }
+            };
+            
+            document.getElementById('pf-cancel').onclick = function() { popup.remove(); };
+            
+            document.getElementById('pf-continue').onclick = async function() {
+                const selectedWeekdays = Array.from(document.getElementById('pf-weekday').selectedOptions).map(function(o) { return o.value; });
+                const selectedCategories = Array.from(document.getElementById('pf-categories').selectedOptions).map(function(o) { return o.value; });
+                const selectedStores = Array.from(document.getElementById('pf-stores').selectedOptions).map(function(o) { return o.value; });
+                
+                // v12.20: Build dates from dropdown values
+                const startMonth = document.getElementById('pf-start-month').value;
+                const startDay = document.getElementById('pf-start-day').value;
+                const startYear = document.getElementById('pf-start-year').value.slice(-2);
+                const endMonth = document.getElementById('pf-end-month').value;
+                const endDay = document.getElementById('pf-end-day').value;
+                const endYear = document.getElementById('pf-end-year').value.slice(-2);
+                
+                const finalData = {
+                    brand: document.getElementById('pf-brand').value.trim(),
+                    linked_brand: document.getElementById('pf-linked-brand').value.trim(),
+                    weekday: selectedWeekdays.join(', '),
+                    categories: selectedCategories.join(', '),
+                    locations: selectedStores.join(', '),
+                    discount: document.getElementById('pf-discount').value.trim(),
+                    vendor_contrib: document.getElementById('pf-vendor').value.trim(),
+                    rebate_type: document.getElementById('pf-rebate-type').value,
+                    after_wholesale: document.getElementById('pf-after-wholesale').checked,
+                    start_date: startMonth + '/' + startDay + '/' + startYear,
+                    end_date: endMonth + '/' + endDay + '/' + endYear
+                };
+                
+                if (!finalData.weekday) { alert('Weekday is required!'); return; }
+                if (!finalData.rebate_type) { alert('Rebate Type is required!'); return; }
+                
+                console.log('[PREFLIGHT] Final data:', finalData);
+                popup.remove();
+                
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'automate-loading';
+                loadingOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10003;display:flex;justify-content:center;align-items:center;flex-direction:column;';
+                loadingOverlay.innerHTML = '<div class="spinner-border text-light" style="width:3rem;height:3rem;"></div><div style="color:white;margin-top:15px;">Creating Deal in MIS...</div>';
+                document.body.appendChild(loadingOverlay);
+                
+                try {
+                    // v12.20: Use unified sheet_data format for robust ID Matcher endpoint
+                    const sheetPayload = {
+                        brand: finalData.brand,
+                        linked_brand: finalData.linked_brand,
+                        weekday: finalData.weekday,
+                        categories: finalData.categories,
+                        locations: finalData.locations,
+                        discount: finalData.discount,
+                        vendor_contrib: finalData.vendor_contrib,
+                        rebate_type: finalData.rebate_type,
+                        after_wholesale: finalData.after_wholesale,
+                        // Legacy fields for backward compatibility
+                        retail: finalData.rebate_type === 'Retail' ? 'TRUE' : 'FALSE',
+                        wholesale: finalData.rebate_type === 'Wholesale' ? 'TRUE' : 'FALSE'
+                    };
+                    
+                    // v12.20: Use robust ID Matcher endpoint for all Create actions
+                    const response = await fetch('/api/mis/create-deal', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            google_row: googleRow,
+                            start_date: finalData.start_date,
+                            end_date: finalData.end_date,
+                            section_type: sectionType,
+                            sheet_data: sheetPayload
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    document.getElementById('automate-loading')?.remove();
+                    
+                    if (result.success) {
+                        const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
+                        if (row) row.style.backgroundColor = '#d4edda';
+                        // v12.20: Show success with warnings if any
+                        if (result.warnings && result.warnings.length > 0) {
+                            alert('Deal created! Warnings:\\n' + result.warnings.join('\\n'));
+                        }
+                    } else {
+                        alert('Error: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    document.getElementById('automate-loading')?.remove();
+                    alert('Error: ' + error.message);
+                }
+            };
         }
         
         // v88: Approve split ID
@@ -11058,19 +12219,22 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        function showCreateDealPopup(rowIdx) {
-            // Get the Google Sheet data for this row
+        async function showCreateDealPopup(rowIdx, context = 'id-matcher') {
+            // v12.17: Enhanced Create Deal Popup with all fields
             const match = matchesData[rowIdx];
             if (!match) {
                 alert('Error: Could not find row data');
                 return;
             }
             
+            // Load settings dropdown data
+            await loadSettingsDropdownData();
+            
             // Remove any existing popup
             const existingPopup = document.getElementById('create-deal-popup-overlay');
             if (existingPopup) existingPopup.remove();
             
-            // Calculate default dates (last day of month from tab name)
+            // Calculate default dates
             const defaultDate = calculateDefaultEndDate();
             const today = new Date();
             const todayStr = {
@@ -11079,56 +12243,224 @@ HTML_TEMPLATE = r"""
                 year: String(today.getFullYear())
             };
             
+            // v12.17: Parse date_raw for Sale section auto-fill
+            let parsedStartDate = null;
+            let parsedEndDate = null;
+            const dateRaw = match.date_raw || '';
+            if (dateRaw) {
+                const rangeMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-[EMOJI]]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                if (rangeMatch) {
+                    parsedStartDate = {
+                        month: rangeMatch[1].padStart(2, '0'),
+                        day: rangeMatch[2].padStart(2, '0'),
+                        year: rangeMatch[3].length === 2 ? '20' + rangeMatch[3] : rangeMatch[3]
+                    };
+                    parsedEndDate = {
+                        month: rangeMatch[4].padStart(2, '0'),
+                        day: rangeMatch[5].padStart(2, '0'),
+                        year: rangeMatch[6].length === 2 ? '20' + rangeMatch[6] : rangeMatch[6]
+                    };
+                    console.log('[DATE-PARSE] Range:', dateRaw, '->', parsedStartDate, parsedEndDate);
+                } else {
+                    const singleMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                    if (singleMatch) {
+                        parsedStartDate = {
+                            month: singleMatch[1].padStart(2, '0'),
+                            day: singleMatch[2].padStart(2, '0'),
+                            year: singleMatch[3].length === 2 ? '20' + singleMatch[3] : singleMatch[3]
+                        };
+                    }
+                }
+            }
+            
+            // Popup title based on context
+            let popupTitle = 'Create New Deal in MIS';
+            let titleColor = '#28a745';
+            if (context === 'phase1-gap') {
+                popupTitle = 'GAP/Interrupt Deal';
+                titleColor = '#ffc107';
+            } else if (context === 'phase1-continue') {
+                popupTitle = 'Continue Deal';
+                titleColor = '#007bff';
+            }
+            
+            // Extract values
+            const brand = match.brand || '';
+            const linkedBrand = match.linked_brand || settingsCache.brandLinkedMap[brand.toLowerCase()] || '';
+            const weekday = match.weekday || '';
+            const categories = match.categories || '';
+            const locations = match.locations || '';
+            const discount = match.discount || '';
+            const vendorContrib = match.vendor_contrib || '';
+            const dealInfo = match.deal_info || '';
+            const specialNotes = match.special_notes || '';
+            const minWeight = match.min_weight || match.raw_row_data?.['Min Weight'] || '';
+            const maxWeight = match.max_weight || match.raw_row_data?.['Max Weight'] || '';
+            
+            // Determine Rebate Type from checkboxes
+            let rebateType = '';
+            const retailVal = String(match.retail || match.raw_row_data?.['Retail'] || '').toUpperCase();
+            const wholesaleVal = String(match.wholesale || match.raw_row_data?.['Wholesale'] || '').toUpperCase();
+            if (wholesaleVal === 'TRUE') rebateType = 'Wholesale';
+            else if (retailVal === 'TRUE') rebateType = 'Retail';
+            
+            // Determine After Wholesale
+            const afterWholesaleVal = String(match.after_wholesale || match.raw_row_data?.['After Wholesale Discount'] || '').toUpperCase();
+            const afterWholesale = afterWholesaleVal === 'TRUE' ? 'Yes' : 'No';
+            
+            // Build stores dropdown options
+            let storesOptions = '';
+            settingsCache.stores.forEach(store => {
+                storesOptions += `<option value="${store}">${store}</option>`;
+            });
+            
+            // Build categories dropdown options
+            let categoriesOptions = '';
+            settingsCache.categories.forEach(cat => {
+                categoriesOptions += `<option value="${cat}">${cat}</option>`;
+            });
+            
+            // Build linked brand dropdown options
+            let linkedBrandOptions = '<option value="">-- Select --</option>';
+            const uniqueLinkedBrands = [...new Set(Object.values(settingsCache.brandLinkedMap).filter(v => v))];
+            uniqueLinkedBrands.sort().forEach(lb => {
+                const selected = lb.toLowerCase() === linkedBrand.toLowerCase() ? 'selected' : '';
+                linkedBrandOptions += `<option value="${lb}" ${selected}>${lb}</option>`;
+            });
+            
             // Build popup HTML
             const overlay = document.createElement('div');
             overlay.id = 'create-deal-popup-overlay';
             overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:10002; display:flex; justify-content:center; align-items:center;';
             
             const popup = document.createElement('div');
-            popup.style.cssText = 'background:white; border-radius:10px; padding:25px; max-width:500px; width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.3);';
+            popup.style.cssText = 'background:white; border-radius:10px; padding:25px; max-width:700px; width:95%; max-height:90vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.3);';
             
             popup.innerHTML = `
-                <h5 style="margin-bottom:20px; color:#28a745; border-bottom:2px solid #28a745; padding-bottom:10px;">
-                    <i class="bi bi-plus-circle"></i> Create New Deal in MIS
+                <h5 style="margin-bottom:15px; color:${titleColor}; border-bottom:2px solid ${titleColor}; padding-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-plus-circle"></i> ${popupTitle}</span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadSettingsDropdownData(true).then(() => alert('Settings refreshed!'))" title="Refresh Settings">[EMOJI]</button>
                 </h5>
                 
-                <div class="alert alert-info" style="font-size:0.9em;">
-                    <strong>Creating deal for:</strong><br>
-                    <strong>Brand:</strong> ${match.brand || '-'}<br>
-                    <strong>Weekday:</strong> ${match.weekday || '-'}<br>
-                    <strong>Discount:</strong> ${match.discount || '-'}%<br>
-                    <strong>Row:</strong> ${match.google_row}
+                <div class="alert alert-secondary" style="font-size:0.85em; padding:10px;">
+                    <strong>Brand:</strong> ${brand} | <strong>Row:</strong> ${match.google_row} | <strong>Deal:</strong> ${dealInfo || '-'}
+                    ${specialNotes ? '<br><strong>Notes:</strong> ' + specialNotes : ''}
                 </div>
                 
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Start Date:</label>
-                    <div style="display:flex; gap:5px;">
-                        <select id="create-start-month" class="form-select form-select-sm" style="width:80px;">
-                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                        </select>
-                        <select id="create-start-day" class="form-select form-select-sm" style="width:70px;"></select>
-                        <select id="create-start-year" class="form-select form-select-sm" style="width:90px;"></select>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <!-- Left Column -->
+                    <div>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Linked Brand:</label>
+                            <select id="create-linked-brand" class="form-select form-select-sm">${linkedBrandOptions}</select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Rebate Type: <span style="color:red;">*</span></label>
+                            <select id="create-rebate-type" class="form-select form-select-sm" required>
+                                <option value="">-- Select --</option>
+                                <option value="Retail" ${rebateType === 'Retail' ? 'selected' : ''}>Retail</option>
+                                <option value="Wholesale" ${rebateType === 'Wholesale' ? 'selected' : ''}>Wholesale</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Weekday:</label>
+                            <select id="create-weekday" class="form-select form-select-sm" multiple size="3">
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                                <option value="Sunday">Sunday</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Rebate After Wholesale:</label>
+                            <select id="create-after-wholesale" class="form-select form-select-sm">
+                                <option value="No" ${afterWholesale === 'No' ? 'selected' : ''}>No</option>
+                                <option value="Yes" ${afterWholesale === 'Yes' ? 'selected' : ''}>Yes</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Discount %:</label>
+                            <input type="text" id="create-discount" class="form-control form-control-sm" value="${discount}">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Vendor %:</label>
+                            <input type="text" id="create-vendor" class="form-control form-control-sm" value="${vendorContrib}">
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div>
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Min Weight:</label>
+                            <input type="text" id="create-min-weight" class="form-control form-control-sm" value="${minWeight}">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Max Weight:</label>
+                            <input type="text" id="create-max-weight" class="form-control form-control-sm" value="${maxWeight}">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Category:</label>
+                            <select id="create-category" class="form-select form-select-sm" multiple size="3">${categoriesOptions}</select>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Locations Mode:</label>
+                            <select id="create-location-mode" class="form-select form-select-sm" onchange="toggleLocationExceptions()">
+                                <option value="ALL_LOCATIONS">All Locations</option>
+                                <option value="ALL_EXCEPT">All Locations Except...</option>
+                                <option value="SPECIFIC">Specific Locations...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-2" id="location-select-container" style="display:none;">
+                            <label class="form-label fw-bold" style="font-size:0.85em;">Select Stores:</label>
+                            <select id="create-locations" class="form-select form-select-sm" multiple size="4">${storesOptions}</select>
+                            <small id="location-help" class="text-muted"></small>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="mb-4">
-                    <label class="form-label fw-bold">End Date:</label>
-                    <div style="display:flex; gap:5px;">
-                        <select id="create-end-month" class="form-select form-select-sm" style="width:80px;">
-                            <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
-                            <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
-                            <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
-                            <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
-                        </select>
-                        <select id="create-end-day" class="form-select form-select-sm" style="width:70px;"></select>
-                        <select id="create-end-year" class="form-select form-select-sm" style="width:90px;"></select>
+                <!-- Date Row -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px; padding-top:15px; border-top:1px solid #dee2e6;">
+                    <div>
+                        <label class="form-label fw-bold" style="font-size:0.85em;">Start Date:</label>
+                        <div style="display:flex; gap:5px;">
+                            <select id="create-start-month" class="form-select form-select-sm" style="width:70px;">
+                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                            </select>
+                            <select id="create-start-day" class="form-select form-select-sm" style="width:60px;"></select>
+                            <select id="create-start-year" class="form-select form-select-sm" style="width:80px;"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold" style="font-size:0.85em;">End Date:</label>
+                        <div style="display:flex; gap:5px;">
+                            <select id="create-end-month" class="form-select form-select-sm" style="width:70px;">
+                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                            </select>
+                            <select id="create-end-day" class="form-select form-select-sm" style="width:60px;"></select>
+                            <select id="create-end-year" class="form-select form-select-sm" style="width:80px;"></select>
+                        </div>
                     </div>
                 </div>
                 
-                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px; padding-top:15px; border-top:1px solid #dee2e6;">
                     <button class="btn btn-secondary" onclick="closeCreateDealPopup()">Cancel</button>
                     <button class="btn btn-success" onclick="executeCreateDeal(${rowIdx})">
                         <i class="bi bi-check-lg"></i> Confirm & Create
@@ -11138,6 +12470,49 @@ HTML_TEMPLATE = r"""
             
             overlay.appendChild(popup);
             document.body.appendChild(overlay);
+            
+            // Helper: Toggle location exceptions visibility
+            window.toggleLocationExceptions = function() {
+                const mode = document.getElementById('create-location-mode').value;
+                const container = document.getElementById('location-select-container');
+                const help = document.getElementById('location-help');
+                
+                if (mode === 'ALL_LOCATIONS') {
+                    container.style.display = 'none';
+                } else {
+                    container.style.display = 'block';
+                    help.textContent = mode === 'ALL_EXCEPT' ? 'Select stores to EXCLUDE' : 'Select specific stores';
+                }
+            };
+            
+            // Initialize location dropdown based on current value
+            function initializeLocationDropdown(locValue) {
+                const modeSelect = document.getElementById('create-location-mode');
+                const locSelect = document.getElementById('create-locations');
+                const locLower = (locValue || '').toLowerCase().trim();
+                
+                if (locLower === 'all locations' || locLower === '') {
+                    modeSelect.value = 'ALL_LOCATIONS';
+                } else if (locLower.startsWith('all locations except')) {
+                    modeSelect.value = 'ALL_EXCEPT';
+                    const exceptions = locValue.replace(/all locations except:?/i, '').trim();
+                    const excList = exceptions.split(',').map(s => s.trim());
+                    Array.from(locSelect.options).forEach(opt => {
+                        if (excList.some(e => e.toLowerCase() === opt.value.toLowerCase())) {
+                            opt.selected = true;
+                        }
+                    });
+                } else {
+                    modeSelect.value = 'SPECIFIC';
+                    const storeList = locValue.split(',').map(s => s.trim());
+                    Array.from(locSelect.options).forEach(opt => {
+                        if (storeList.some(s => s.toLowerCase() === opt.value.toLowerCase())) {
+                            opt.selected = true;
+                        }
+                    });
+                }
+                toggleLocationExceptions();
+            }
             
             // Populate year dropdowns
             const currentYear = new Date().getFullYear();
@@ -11152,13 +12527,25 @@ HTML_TEMPLATE = r"""
                 }
             });
             
-            // Set default values - Start: today, End: last day of tab month
-            document.getElementById('create-start-month').value = todayStr.month;
-            document.getElementById('create-start-year').value = todayStr.year;
-            updateCreateDayDropdown('start');
-            document.getElementById('create-start-day').value = todayStr.day;
+            // Set date values - use parsed dates if available
+            if (parsedStartDate) {
+                document.getElementById('create-start-month').value = parsedStartDate.month;
+                document.getElementById('create-start-year').value = parsedStartDate.year;
+                updateCreateDayDropdown('start');
+                document.getElementById('create-start-day').value = parsedStartDate.day;
+            } else {
+                document.getElementById('create-start-month').value = todayStr.month;
+                document.getElementById('create-start-year').value = todayStr.year;
+                updateCreateDayDropdown('start');
+                document.getElementById('create-start-day').value = todayStr.day;
+            }
             
-            if (defaultDate) {
+            if (parsedEndDate) {
+                document.getElementById('create-end-month').value = parsedEndDate.month;
+                document.getElementById('create-end-year').value = parsedEndDate.year;
+                updateCreateDayDropdown('end');
+                document.getElementById('create-end-day').value = parsedEndDate.day;
+            } else if (defaultDate) {
                 document.getElementById('create-end-month').value = defaultDate.month;
                 document.getElementById('create-end-year').value = defaultDate.year;
                 updateCreateDayDropdown('end');
@@ -11166,6 +12553,31 @@ HTML_TEMPLATE = r"""
             } else {
                 updateCreateDayDropdown('end');
             }
+            
+            // Pre-select weekdays
+            if (weekday) {
+                const weekdaySelect = document.getElementById('create-weekday');
+                const weekdayParts = weekday.split(',').map(w => w.trim());
+                Array.from(weekdaySelect.options).forEach(opt => {
+                    if (weekdayParts.some(w => opt.value.toLowerCase().includes(w.toLowerCase()))) {
+                        opt.selected = true;
+                    }
+                });
+            }
+            
+            // Pre-select categories
+            if (categories) {
+                const categorySelect = document.getElementById('create-category');
+                const categoryParts = categories.split(',').map(c => c.trim());
+                Array.from(categorySelect.options).forEach(opt => {
+                    if (categoryParts.some(c => opt.value.toLowerCase() === c.toLowerCase())) {
+                        opt.selected = true;
+                    }
+                });
+            }
+            
+            // Initialize locations
+            initializeLocationDropdown(locations);
             
             // Add change listeners
             document.getElementById('create-start-month').onchange = () => updateCreateDayDropdown('start');
@@ -17981,6 +19393,202 @@ def api_get_credentials():
             'error': str(e)
         })
 
+
+# ============================================
+# v12.17: Settings Dropdown Data Endpoint
+# ============================================
+@app.route('/api/get-settings-dropdowns', methods=['GET'])
+def api_get_settings_dropdowns():
+    """
+    v12.17: Fetch dropdown options from Settings tab for Enhanced Create Popup.
+    Returns stores, categories, and brand->linked brand mappings.
+    """
+    try:
+        # Try both possible locations for spreadsheet_id
+        spreadsheet_id = GLOBAL_DATA.get('mis', {}).get('spreadsheet_id') or GLOBAL_DATA.get('current_spreadsheet_id')
+        if not spreadsheet_id:
+            return jsonify({
+                'success': False,
+                'error': 'No spreadsheet loaded. Please select a Google Sheet first.'
+            })
+        
+        data = load_settings_dropdown_data(spreadsheet_id)
+        
+        return jsonify({
+            'success': True,
+            'stores': data.get('stores', []),
+            'categories': data.get('categories', []),
+            'brand_linked_map': data.get('brand_linked_map', {})
+        })
+    except Exception as e:
+        print(f"[ERROR] api_get_settings_dropdowns: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+# ============================================
+# v2: Column Mapper Management API Endpoints
+# ============================================
+@app.route('/api/column-mapper/status', methods=['GET'])
+def api_column_mapper_status():
+    """
+    Get current column mapper status: active map, available maps, scanned headers.
+    """
+    try:
+        return jsonify({
+            'success': True,
+            'active_map': COLUMN_MAPPER.active_map_name,
+            'headers_scanned': COLUMN_MAPPER.headers_scanned,
+            'available_maps': COLUMN_MAPPER.list_available_maps(),
+            'current_indices': COLUMN_MAPPER.header_indices if COLUMN_MAPPER.headers_scanned else {},
+            'is_default': COLUMN_MAPPER.current_map.get('meta', {}).get('is_default', True)
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_status: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/list-maps', methods=['GET'])
+def api_column_mapper_list():
+    """
+    List all available column map files.
+    """
+    try:
+        maps = COLUMN_MAPPER.list_available_maps()
+        return jsonify({
+            'success': True,
+            'maps': maps,
+            'active': COLUMN_MAPPER.active_map_name
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_list: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/switch', methods=['POST'])
+def api_column_mapper_switch():
+    """
+    Switch to a different column map.
+    POST body: { "map_name": "my_custom_map.json" }
+    """
+    try:
+        data = request.get_json()
+        map_name = data.get('map_name', '')
+        
+        if not map_name:
+            return jsonify({'success': False, 'error': 'No map_name provided'})
+        
+        success = COLUMN_MAPPER.load_map(map_name)
+        
+        return jsonify({
+            'success': success,
+            'active_map': COLUMN_MAPPER.active_map_name if success else None,
+            'message': f"Switched to {map_name}" if success else f"Failed to load {map_name}"
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_switch: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/save-as', methods=['POST'])
+def api_column_mapper_save_as():
+    """
+    Save current in-memory mapping to a new custom file.
+    POST body: { "new_name": "my_custom_map.json" }
+    CRITICAL: Cannot overwrite column_map_default.json
+    """
+    try:
+        data = request.get_json()
+        new_name = data.get('new_name', '')
+        
+        if not new_name:
+            return jsonify({'success': False, 'error': 'No new_name provided'})
+        
+        if not new_name.endswith('.json'):
+            new_name += '.json'
+        
+        if new_name == 'column_map_default.json':
+            return jsonify({
+                'success': False,
+                'error': 'Cannot overwrite Factory Default map! Choose a different name.'
+            })
+        
+        success = COLUMN_MAPPER.save_map_as(new_name)
+        
+        return jsonify({
+            'success': success,
+            'saved_as': new_name if success else None,
+            'message': f"Saved and activated: {new_name}" if success else "Failed to save"
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_save_as: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/reset', methods=['POST'])
+def api_column_mapper_reset():
+    """
+    Reset to Factory Default (column_map_default.json).
+    """
+    try:
+        COLUMN_MAPPER.reset_to_default()
+        return jsonify({
+            'success': True,
+            'message': 'Reset to Factory Default column map',
+            'active_map': COLUMN_MAPPER.active_map_name
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_reset: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/get-index', methods=['GET'])
+def api_column_mapper_get_index():
+    """
+    Get the current index for a specific field_id.
+    Query param: ?field_id=brand_name
+    """
+    try:
+        field_id = request.args.get('field_id', '')
+        
+        if not field_id:
+            return jsonify({'success': False, 'error': 'No field_id provided'})
+        
+        idx = COLUMN_MAPPER.get_index(field_id)
+        
+        return jsonify({
+            'success': True,
+            'field_id': field_id,
+            'index': idx,
+            'source': 'scanned' if COLUMN_MAPPER.headers_scanned else 'default'
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_get_index: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/column-mapper/debug', methods=['GET'])
+def api_column_mapper_debug():
+    """
+    Debug endpoint: Show full current mapping state.
+    """
+    try:
+        return jsonify({
+            'success': True,
+            'active_map_name': COLUMN_MAPPER.active_map_name,
+            'headers_scanned': COLUMN_MAPPER.headers_scanned,
+            'header_indices': COLUMN_MAPPER.header_indices,
+            'current_map': COLUMN_MAPPER.current_map,
+            'available_maps': COLUMN_MAPPER.list_available_maps()
+        })
+    except Exception as e:
+        print(f"[ERROR] api_column_mapper_debug: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
 @app.route('/api/init-all', methods=['POST'])
 def api_init_all():
     try:
@@ -19373,9 +20981,15 @@ def api_mis_match():
         brand_settings = load_brand_settings(GLOBAL_DATA['mis']['spreadsheet_id'])
         if brand_settings:
             print(f"[MATCHER] Loaded {len(brand_settings)} brand relationship rules.")
+            # v12.17: Store in GLOBAL_DATA for validation functions to use
+            GLOBAL_DATA['brand_settings'] = brand_settings
         else:
             print("[MATCHER] No brand settings found or Settings tab not available.")
             brand_settings = {}
+            GLOBAL_DATA['brand_settings'] = {}
+        
+        # v12.20: Load Brand Rebate Agreements from Google Sheet
+        load_rebate_agreements_from_sheet(GLOBAL_DATA['mis']['spreadsheet_id'])
         
         # Run matching for each section
         all_matches = {}
@@ -20717,14 +22331,86 @@ def api_mis_validate_lookup():
         return jsonify({'success': False, 'error': str(e)})
 
 
+def get_brand_for_mis_id(mis_id: str, mis_id_column_value: str, brands_column_value: str) -> str:
+    """
+    v12.18: Given an MIS ID, find which brand it corresponds to in a multi-brand row.
+    
+    Multi-brand rows in Google Sheet have format:
+        MIS ID column: "S1: 966, S2: 967, S3: 968, S4: 969, S5: 970"
+        Brands column: "Kiva, Camino, Lost Farm, Terra, Petra"
+    
+    S1 = first brand, S2 = second brand, etc.
+    Also supports W1/W2 (Weekly) and M1/M2 (Monthly) prefixes.
+    
+    Args:
+        mis_id: The MIS ID to look up (e.g., "966")
+        mis_id_column_value: The full MIS ID column value (e.g., "S1: 966, S2: 967, ...")
+        brands_column_value: The brands column value (e.g., "Kiva, Camino, Lost Farm, ...")
+    
+    Returns:
+        The brand name at the matching position, or None if not found
+    """
+    import re
+    
+    if not mis_id or not mis_id_column_value or not brands_column_value:
+        return None
+    
+    # Parse brands list
+    brands = [b.strip() for b in brands_column_value.split(',') if b.strip()]
+    
+    if not brands:
+        return None
+    
+    # If only one brand, return it directly
+    if len(brands) == 1:
+        return brands[0]
+    
+    # Find position of our MIS ID using pattern like "S1: 966", "W2: 815", "M3: 500"
+    # Pattern matches: letter + number + colon + optional space + our MIS ID
+    pattern = r'[SWM](\d+):\s*' + re.escape(str(mis_id).strip())
+    match = re.search(pattern, mis_id_column_value, re.IGNORECASE)
+    
+    if match:
+        position = int(match.group(1)) - 1  # Convert to 0-indexed
+        if 0 <= position < len(brands):
+            print(f"[MULTI-BRAND] MIS ID {mis_id} found at position {position + 1}, brand: {brands[position]}")
+            return brands[position]
+    
+    # Fallback: Try simple position matching by splitting and finding index
+    # Handle formats like "S1: 966, S2: 967" by extracting just the IDs
+    try:
+        # Remove prefixes and get just the IDs
+        ids_raw = re.sub(r'[SWM]\d+:\s*', '', mis_id_column_value)
+        ids = [i.strip() for i in ids_raw.split(',') if i.strip()]
+        
+        for idx, id_val in enumerate(ids):
+            if str(mis_id).strip() == id_val.strip() and idx < len(brands):
+                print(f"[MULTI-BRAND] MIS ID {mis_id} matched at index {idx}, brand: {brands[idx]}")
+                return brands[idx]
+    except Exception as e:
+        print(f"[MULTI-BRAND] Fallback parsing failed: {e}")
+    
+    print(f"[MULTI-BRAND] Could not determine brand for MIS ID {mis_id} in '{mis_id_column_value}'")
+    return None
+
+
 def find_locations_value(row, columns):
     """
-    v12.12.8: Find locations value from row with multiple possible column names.
-    Returns the location string or "All Locations" as default.
+    v12.17: Find locations value from row - uses resolve_location_columns for consistency.
     """
     import pandas as pd
     
-    # Priority order for column names
+    # v12.17: Use the same logic as the main matching system
+    try:
+        loc_raw, exc_raw = resolve_location_columns(row)
+        result = format_location_display(loc_raw, exc_raw)
+        if result and result.lower() not in ['', '-', 'nan', 'none']:
+            print(f"[COMPARE-TO-SHEET] Locations via resolve_location_columns: '{result}'")
+            return result
+    except Exception as e:
+        print(f"[COMPARE-TO-SHEET] resolve_location_columns failed: {e}, falling back")
+    
+    # Fallback: Priority order for column names
     location_col_names = [
         "Locations (Discount Applies at)",
         "Locations",
@@ -20972,11 +22658,285 @@ def calculate_expected_dates(section_type: str, date_value: str, tab_name: str) 
     print(f"[COMPARE-TO-SHEET] Calculated {len(result['all_entries'])} expected entries for {section_type}")
     return result
 
+
+# ============================================================================
+# CENTRALIZED AGGREGATED DEAL DATA HELPER (v12.19.1 - Multi-Day Fix)
+# ============================================================================
+def get_aggregated_deal_data(mis_id: str, google_df: pd.DataFrame = None, brand_filter: str = None) -> dict:
+    """
+    v12.20: THE "ONE RING" - Centralized deal data with MULTI-DAY AGGREGATION.
+    
+    This function MUST be used by ALL validation/compare/create endpoints:
+    - Compare button actions
+    - Create button actions (Phase 1 and ID Matcher)
+    - MIS ID click actions
+    
+    Features:
+    - Multi-day aggregation (Mon + Thu rows → "Monday, Thursday")
+    - Rebate After Wholesale lookup from GLOBAL_REBATE_MAP
+    - Linked Brand lookup from Settings tab (centralized)
+    - Multi-brand MIS ID parsing (W1: 771, W2: 772)
+    
+    Args:
+        mis_id: The MIS ID to search for
+        google_df: Optional DataFrame (defaults to GLOBAL_DATA['google_df'])
+        brand_filter: Optional brand name for searching by brand instead of MIS ID
+    
+    Returns:
+        dict with 'success', 'expected_data', 'matching_rows', 'is_multi_day', etc.
+    """
+    result = {
+        'success': False,
+        'expected_data': None,
+        'matching_rows': [],
+        'is_multi_day': False,
+        'aggregated_weekdays': [],
+        'error': None,
+        'mode': 'manual'
+    }
+    
+    # Use provided DataFrame or global
+    if google_df is None:
+        google_df = GLOBAL_DATA.get('google_df')
+    
+    if google_df is None or google_df.empty:
+        result['error'] = 'No Google Sheet data loaded'
+        return result
+    
+    # Find ID column
+    id_col = None
+    for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+        if col in google_df.columns:
+            id_col = col
+            break
+    
+    if not id_col and not brand_filter:
+        result['error'] = 'Could not find MIS ID column in Google Sheet'
+        return result
+    
+    # ========================================
+    # STEP 1: COLLECT ALL MATCHING ROWS
+    # ========================================
+    matching_rows = []
+    
+    for idx, row in google_df.iterrows():
+        if brand_filter:
+            # Search by brand name
+            row_brand = str(row.get('Brand', '')).strip().lower()
+            if brand_filter.lower() in row_brand or row_brand == brand_filter.lower():
+                matching_rows.append(row)
+        else:
+            # Search by MIS ID
+            sheet_mis_id = str(row.get(id_col, '')).strip()
+            # Handle multi-part IDs like "W1: 123, W2: 456"
+            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                matching_rows.append(row)
+    
+    if not matching_rows:
+        result['error'] = f"{'Brand' if brand_filter else 'MIS ID'} not found in Google Sheet"
+        return result
+    
+    print(f"[AGGREGATED] Found {len(matching_rows)} matching row(s) for {'brand: ' + brand_filter if brand_filter else 'MIS ID: ' + mis_id}")
+    
+    # ========================================
+    # STEP 2: AGGREGATE WEEKDAYS FROM ALL ROWS
+    # ========================================
+    all_weekdays = []
+    for match_row in matching_rows:
+        weekday = str(match_row.get('Weekday', '')).strip()
+        if weekday and weekday.lower() not in ['', 'nan', 'none']:
+            # Handle comma-separated weekdays in a single cell
+            for wd in weekday.split(','):
+                wd_clean = wd.strip().title()
+                if wd_clean and wd_clean not in all_weekdays:
+                    all_weekdays.append(wd_clean)
+    
+    result['aggregated_weekdays'] = all_weekdays
+    result['is_multi_day'] = len(matching_rows) > 1 or len(all_weekdays) > 1
+    result['matching_rows'] = matching_rows
+    
+    if result['is_multi_day']:
+        print(f"[AGGREGATED] MULTI-DAY DEAL DETECTED! Weekdays: {all_weekdays}")
+    
+    # Use first row as base for non-weekday fields
+    base_row = matching_rows[0]
+    
+    # ========================================
+    # STEP 3: SECTION TYPE DETECTION
+    # ========================================
+    section_type = str(base_row.get('_section', 'weekly')).strip().lower()
+    if section_type not in ['weekly', 'monthly', 'sale']:
+        section_type = 'weekly'
+    
+    tab_name = GLOBAL_DATA.get('mis', {}).get('current_sheet', '')
+    
+    # ========================================
+    # STEP 4: WEEKDAY CALCULATION
+    # ========================================
+    # For Weekly: Use aggregated weekdays from multiple rows
+    # For Monthly/Sale: Calculate from date column
+    
+    if section_type == 'weekly':
+        # Weekly deals: combine weekdays from all matching rows
+        combined_weekday = ', '.join(all_weekdays) if all_weekdays else ''
+        all_expected_entries = [{'weekday': wd, 'type': 'weekly'} for wd in all_weekdays]
+    else:
+        # Monthly/Sale: Use date-based calculation
+        date_value, date_col = find_weekday_column_value(base_row, google_df.columns, section_type)
+        date_info = calculate_expected_dates(section_type, date_value, tab_name)
+        combined_weekday = date_info['weekday']
+        all_expected_entries = date_info['all_entries']
+    
+    # ========================================
+    # STEP 5: EXTRACT OTHER FIELD VALUES
+    # ========================================
+    
+    # Discount column detection
+    discount_value = ''
+    for col in google_df.columns:
+        col_lower = col.lower().strip().replace('\n', ' ')
+        if 'wholesale' in col_lower or 'blaze' in col_lower:
+            continue
+        if col_lower == 'discount' or 'deal discount' in col_lower or 'discount value' in col_lower:
+            val = str(base_row.get(col, '')).strip()
+            if val:
+                discount_value = val
+                break
+        elif 'discount' in col_lower and 'type' not in col_lower:
+            val = str(base_row.get(col, '')).strip()
+            if val:
+                discount_value = val
+                break
+    
+    # Vendor contribution column detection
+    vendor_value = ''
+    for col in google_df.columns:
+        if 'contribution' in col.lower() or 'vendor' in col.lower():
+            val = str(base_row.get(col, '')).strip()
+            if val:
+                vendor_value = val
+                break
+    
+    # After Wholesale detection FROM SHEET (for Compare mode display)
+    after_wholesale_sheet_value = False
+    for col in google_df.columns:
+        col_lower = col.lower()
+        if 'wholesale' in col_lower and ('discount' in col_lower or 'after' in col_lower):
+            cell_value = base_row.get(col, '')
+            if isinstance(cell_value, bool):
+                after_wholesale_sheet_value = cell_value
+            else:
+                after_wholesale_sheet_value = str(cell_value).strip().lower() in ['yes', 'true', '1', 'checked', 'x']
+            break
+    
+    # ========================================
+    # STEP 6: MULTI-BRAND HANDLING
+    # ========================================
+    brand_value = str(base_row.get('Brand', '')).strip()
+    
+    if id_col and not brand_filter:
+        sheet_mis_id = str(base_row.get(id_col, '')).strip()
+        if ',' in sheet_mis_id and ':' in sheet_mis_id:
+            # Multi-brand deal: "W1: 771, W2: 772"
+            specific_brand = get_brand_for_mis_id(mis_id, sheet_mis_id, brand_value)
+            if specific_brand:
+                brand_value = specific_brand
+                print(f"[AGGREGATED] Multi-brand: Resolved to brand '{brand_value}' for MIS ID {mis_id}")
+    
+    # ========================================
+    # STEP 7: REBATE TYPE (Using DataMapper v2)
+    # ========================================
+    rebate_type_from_mapper, rebate_error = COLUMN_MAPPER.determine_rebate_type(base_row)
+    rebate_type_final = rebate_type_from_mapper or str(base_row.get('Rebate Type', '')).strip()
+    
+    # ========================================
+    # STEP 7B: v12.20 REBATE AFTER WHOLESALE (from Brand Rebate Agreements)
+    # ========================================
+    # This is the EXPECTED value based on master data, not what's in the sheet
+    rebate_after_wholesale_expected = get_rebate_after_wholesale_expected(brand_value)
+    if rebate_after_wholesale_expected:
+        print(f"[AGGREGATED] v12.20 Brand '{brand_value}' expects Rebate After Wholesale = TRUE")
+    
+    # ========================================
+    # STEP 8: v12.20 LINKED BRAND (Centralized Lookup)
+    # ========================================
+    # Priority: 1) Sheet row value, 2) GLOBAL_DATA cache, 3) Load from Settings tab
+    linked_brand = str(base_row.get('Linked Brand', '')).strip()
+    
+    if not linked_brand:
+        # Try cached brand_settings
+        brand_settings = GLOBAL_DATA.get('brand_settings', {})
+        
+        # If cache empty, try to load from Settings tab
+        if not brand_settings:
+            try:
+                spreadsheet_id = GLOBAL_DATA.get('mis', {}).get('spreadsheet_id')
+                if spreadsheet_id:
+                    brand_settings = load_brand_settings(spreadsheet_id)
+                    GLOBAL_DATA['brand_settings'] = brand_settings
+                    print(f"[AGGREGATED] v12.20 Loaded {len(brand_settings)} brand->linked brand mappings from Settings")
+            except Exception as e:
+                print(f"[AGGREGATED] v12.20 Could not load Settings tab: {e}")
+        
+        linked_brand = brand_settings.get(brand_value.lower(), '')
+        if linked_brand:
+            print(f"[AGGREGATED] v12.20 Found linked brand '{linked_brand}' for '{brand_value}' from Settings")
+    
+    # ========================================
+    # STEP 9: BUILD EXPECTED_DATA
+    # ========================================
+    
+    # Serialize entries for JSON
+    serialized_entries = []
+    for entry in all_expected_entries:
+        ser_entry = entry.copy()
+        if 'date_obj' in ser_entry and ser_entry['date_obj']:
+            ser_entry['date_obj'] = ser_entry['date_obj'].isoformat() if hasattr(ser_entry['date_obj'], 'isoformat') else str(ser_entry['date_obj'])
+        serialized_entries.append(ser_entry)
+    
+    expected_data = {
+        'brand': brand_value,
+        'linked_brand': linked_brand,
+        'weekday': combined_weekday,
+        'categories': str(base_row.get('Categories', '')).strip(),
+        'discount': discount_value,
+        'vendor_contrib': vendor_value,
+        'locations': find_locations_value(base_row, google_df.columns),
+        'rebate_type': rebate_type_final,
+        'rebate_validation_error': rebate_error,
+        # v12.20: Separate sheet value from expected value
+        'after_wholesale': after_wholesale_sheet_value,  # What's in Google Sheet
+        'after_wholesale_expected': rebate_after_wholesale_expected,  # From Brand Rebate Agreements
+        # Section-specific data
+        'section_type': section_type,
+        'all_expected_entries': serialized_entries,
+        'raw_date_value': str(base_row.get('_raw_weekday_value', '')),
+        'tab_name': tab_name,
+        # Multi-day metadata
+        'is_multi_day': result['is_multi_day'],
+        'row_count': len(matching_rows),
+        'aggregated_weekdays': all_weekdays,
+        # v12.20: Sheet row number for reference
+        'sheet_row': int(base_row.get('_SHEET_ROW_NUM', 0)) if '_SHEET_ROW_NUM' in base_row else None
+    }
+    
+    result['success'] = True
+    result['expected_data'] = expected_data
+    result['mode'] = 'automation'
+    
+    print(f"[AGGREGATED] Brand: {brand_value}, Weekday: {combined_weekday} (from {len(matching_rows)} rows)")
+    print(f"[AGGREGATED] Rebate Type: {rebate_type_final}, Linked Brand: '{linked_brand}'")
+    print(f"[AGGREGATED] After Wholesale - Sheet: {after_wholesale_sheet_value}, Expected: {rebate_after_wholesale_expected}")
+    
+    return result
+
+
+
 @app.route('/api/mis/compare-to-sheet', methods=['POST'])
 def api_mis_compare_to_sheet():
     """
-    V2: Manual "Compare to Google Sheet" button handler.
-    User clicks button in validation banner to search Google Sheet for current MIS ID.
+    v12.19.1: REFACTORED to use centralized get_aggregated_deal_data() helper.
+    Fixes multi-day deal validation bug (Mon+Thu deals now properly aggregate).
     """
     try:
         data = request.get_json()
@@ -20990,46 +22950,14 @@ def api_mis_compare_to_sheet():
             return jsonify({'success': False, 'error': 'Browser not initialized'})
         
         print(f"\n{'='*60}")
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Manual comparison requested for MIS ID: {mis_id}")
+        print(f"[COMPARE-TO-SHEET] v12.19.1 AGGREGATED comparison for MIS ID: {mis_id}")
         print(f"{'='*60}")
         
-        # Check if Google Sheet data available
-        google_df = GLOBAL_DATA.get('google_df')
+        # v12.19.1: Use centralized aggregated helper (fixes multi-day bug)
+        result = get_aggregated_deal_data(mis_id)
         
-        if google_df is None or google_df.empty:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] No Google Sheet data loaded")
-            return jsonify({
-                'success': False, 
-                'error': 'No Google Sheet loaded. Please run Audit first.'
-            })
-        
-        print(f"[COMPARE-TO-SHEET] Google Sheet loaded with {len(google_df)} rows")
-        
-        # Search for MIS ID (reuse same logic as lookup)
-        found_data = None
-        
-        # Find ID column
-        id_col = None
-        for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
-            if col in google_df.columns:
-                id_col = col
-                break
-        
-        if not id_col:
-            return jsonify({
-                'success': False,
-                'error': 'Could not find MIS ID column in Google Sheet'
-            })
-        
-        # Search for matching rows (same logic as api_mis_lookup_mis_id)
-        matching_rows = []
-        for idx, row in google_df.iterrows():
-            sheet_mis_id = str(row.get(id_col, '')).strip()
-            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
-                matching_rows.append(row)
-        
-        if not matching_rows:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] MIS ID {mis_id} not found in Google Sheet")
+        if not result['success']:
+            print(f"[COMPARE-TO-SHEET] {result['error']}")
             # Switch to manual mode
             inject_mis_validation(driver, expected_data=None)
             return jsonify({
@@ -21038,182 +22966,27 @@ def api_mis_compare_to_sheet():
                 'message': f'MIS ID {mis_id} not in Google Sheet - staying in manual mode'
             })
         
-        # Found it! Extract data (same logic as lookup)
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Found {len(matching_rows)} matching row(s)")
+        expected_data = result['expected_data']
         
-        base_row = matching_rows[0]
-        
-        # v12.12.12: Detect section type from _section column
-        section_type = str(base_row.get('_section', 'weekly')).strip().lower()
-        if section_type not in ['weekly', 'monthly', 'sale']:
-            section_type = 'weekly'
-        print(f"[COMPARE-TO-SHEET] Section type: {section_type}")
-        
-        # v12.12.12: Get tab name for date calculations
-        tab_name = GLOBAL_DATA.get('mis', {}).get('current_sheet', '')
-        print(f"[COMPARE-TO-SHEET] Current tab: '{tab_name}'")
-        
-        # v12.12.12: Section-aware weekday/date extraction
-        date_value, date_col = find_weekday_column_value(base_row, google_df.columns, section_type)
-        print(f"[COMPARE-TO-SHEET] Date/Weekday value from '{date_col}': '{date_value}'")
-        
-        # Calculate expected dates/weekdays based on section type
-        date_info = calculate_expected_dates(section_type, date_value, tab_name)
-        combined_weekday = date_info['weekday']
-        all_expected_entries = date_info['all_entries']
-        
-        print(f"[COMPARE-TO-SHEET] Calculated weekday(s): '{combined_weekday}'")
-        print(f"[COMPARE-TO-SHEET] All expected entries: {len(all_expected_entries)}")
-        
-        # Find Discount column (v12.12.7 - enhanced detection)
-        # Priority order: exact "Discount", then variations with value/rate/%
-        discount_value = ''
-        discount_col_candidates = []
-        for col in google_df.columns:
-            col_lower = col.lower().strip()
-            col_clean = col_lower.replace('\n', ' ').replace('\r', ' ')
-            
-            # Skip columns that are clearly NOT the discount value
-            if 'wholesale' in col_lower or 'blaze' in col_lower:
-                continue
-            
-            # Exact match for "Discount" column (highest priority)
-            if col_clean == 'discount':
-                discount_col_candidates.insert(0, col)
-            # "Deal Discount Value/Type" or similar with line breaks
-            elif 'deal discount' in col_clean or 'discount value' in col_clean:
-                discount_col_candidates.insert(0, col)
-            # Generic discount columns
-            elif 'discount' in col_lower and 'type' not in col_lower:
-                discount_col_candidates.append(col)
-        
-        # Try candidates in priority order
-        for col in discount_col_candidates:
-            val = str(base_row.get(col, '')).strip()
-            if val:
-                discount_value = val
-                print(f"[COMPARE-TO-SHEET] Found Discount in column '{col}': '{discount_value}'")
-                break
-        
-        if not discount_value:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] No discount value found. Columns searched: {discount_col_candidates}")
-        
-        # Find Vendor % column
-        vendor_value = ''
-        for col in google_df.columns:
-            if 'contribution' in col.lower() or 'vendor' in col.lower():
-                vendor_value = str(base_row.get(col, '')).strip()
-                if vendor_value:
-                    print(f"[COMPARE-TO-SHEET] Found Vendor % in column '{col}': '{vendor_value}'")
-                    break
-        
-        # Find After Wholesale Discount column (v12.12.10 - enhanced detection)
-        after_wholesale_value = False
-        after_wholesale_col = None
-        
-        # Priority order for column names
-        priority_cols = [
-            'After Wholesale Discount',  # Exact match (user's column)
-            'After Wholesale',
-            'Rebate After Wholesale Discount?',
-            'Wholesale Discount'
-        ]
-        
-        # Try priority matches first
-        for priority_name in priority_cols:
-            if priority_name in google_df.columns:
-                after_wholesale_col = priority_name
-                break
-        
-        # Fallback: search for any column with wholesale + discount
-        if not after_wholesale_col:
-            for col in google_df.columns:
-                col_lower = col.lower()
-                if 'wholesale' in col_lower and ('discount' in col_lower or 'after' in col_lower):
-                    after_wholesale_col = col
-                    break
-        
-        if after_wholesale_col:
-            cell_value = base_row.get(after_wholesale_col, '')
-            
-            # Handle Google Sheets checkbox (returns actual boolean)
-            if isinstance(cell_value, bool):
-                after_wholesale_value = cell_value
-                print(f"[COMPARE-TO-SHEET] After Wholesale column '{after_wholesale_col}': {cell_value} (boolean) -> {after_wholesale_value}")
-            else:
-                # Handle string values
-                cell_str = str(cell_value).strip().lower()
-                after_wholesale_value = cell_str in ['yes', 'true', '1', 'checked', 'x']
-                print(f"[COMPARE-TO-SHEET] After Wholesale column '{after_wholesale_col}': '{cell_value}' (string) -> {after_wholesale_value}")
-        else:
-            print(f"[COMPARE-TO-SHEET] WARNING: No After Wholesale column found. Available columns with 'wholesale': {[c for c in google_df.columns if 'wholesale' in c.lower()]}")
-        
-        # Multi-brand handling
-        brand_value = str(base_row.get('Brand', '')).strip()
-        sheet_mis_id = str(base_row.get(id_col, '')).strip()
-        
-        if ',' in sheet_mis_id and ':' in sheet_mis_id:
-            parts = [p.strip() for p in sheet_mis_id.split(',')]
-            mis_position = None
-            for idx, part in enumerate(parts):
-                if ':' in part:
-                    num = part.split(':')[1].strip()
-                else:
-                    num = part.strip()
-                if mis_id == num or mis_id in num:
-                    mis_position = idx
-                    break
-            
-            if mis_position is not None and brand_value:
-                brands = [b.strip() for b in brand_value.split(',')]
-                if mis_position < len(brands):
-                    brand_value = brands[mis_position]
-                    print(f"[COMPARE-TO-SHEET] Multi-brand: Using brand at position {mis_position}: '{brand_value}'")
-        
-        # Build expected data
-        # v12.12.12: Serialize all_expected_entries for JSON (convert date objects)
-        serialized_entries = []
-        for entry in all_expected_entries:
-            ser_entry = entry.copy()
-            if 'date_obj' in ser_entry:
-                ser_entry['date_obj'] = ser_entry['date_obj'].isoformat() if ser_entry['date_obj'] else None
-            serialized_entries.append(ser_entry)
-        
-        expected_data = {
-            'brand': brand_value,
-            'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
-            'weekday': combined_weekday,
-            'categories': str(base_row.get('Categories', '')).strip(),
-            'discount': discount_value,
-            'vendor_contrib': vendor_value,
-            'locations': find_locations_value(base_row, google_df.columns),
-            'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
-            'after_wholesale': after_wholesale_value,
-            # v12.12.12: Section-specific data
-            'section_type': section_type,
-            'all_expected_entries': serialized_entries,
-            'raw_date_value': date_value,
-            'tab_name': tab_name
-        }
+        # Log multi-day detection
+        if result['is_multi_day']:
+            print(f"[COMPARE-TO-SHEET] MULTI-DAY DEAL: {result['aggregated_weekdays']} from {len(result['matching_rows'])} rows")
         
         print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
-        print(f"[COMPARE-TO-SHEET] Discount: '{expected_data['discount']}', Vendor %: '{expected_data['vendor_contrib']}'")
         print(f"[COMPARE-TO-SHEET] Rebate Type: '{expected_data['rebate_type']}'")
-        print(f"[COMPARE-TO-SHEET] Locations: '{expected_data['locations']}'")
-        print(f"[COMPARE-TO-SHEET] Section: {section_type}, Expected entries: {len(serialized_entries)}")
-        # v12.12.6: Return expected_data to JavaScript instead of inject_mis_validation
-        # JavaScript will directly update VALIDATION_MODE and EXPECTED_DATA
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Returning expected_data to JavaScript")
+        print(f"[COMPARE-TO-SHEET] Returning expected_data to JavaScript for Checklist Banner")
         
         return jsonify({
             'success': True,
             'mode': 'automation',
             'message': f'Found MIS ID {mis_id} in Google Sheet - switched to automation mode',
-            'expected_data': expected_data  # NEW: Send data to JavaScript
+            'expected_data': expected_data,
+            'is_multi_day': result['is_multi_day'],
+            'row_count': len(result['matching_rows'])
         })
     
     except Exception as e:
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Error: {e}")
+        print(f"[COMPARE-TO-SHEET] Error: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -23792,9 +25565,15 @@ def api_mis_create_deal():
         categories = sheet_data.get('categories', '')
         raw_row_data = sheet_data.get('raw_row_data', {})
         
+        # v12.20: Direct rebate_type and after_wholesale from Pre-Flight (if provided)
+        direct_rebate_type = sheet_data.get('rebate_type', '')
+        direct_after_wholesale = sheet_data.get('after_wholesale', None)
+        
         print(f"[MIS CREATE DEAL] Starting deal creation for brand: {brand}")
         print(f"[MIS CREATE DEAL] Weekday: {weekday}, Discount: {discount}%, Vendor: {vendor_contrib}%")
         print(f"[MIS CREATE DEAL] Dates: {start_date} to {end_date}")
+        if direct_rebate_type:
+            print(f"[MIS CREATE DEAL] v12.20 Direct Rebate Type: {direct_rebate_type}")
         
         driver = GLOBAL_DATA['browser_instance']
         if not driver:
@@ -24478,7 +26257,11 @@ def api_mis_create_deal():
         rebate_type = None
         rebate_type_error = False
         
-        if wholesale_checked and retail_checked:
+        # v12.20: Use direct rebate_type from Pre-Flight if provided
+        if direct_rebate_type and direct_rebate_type in ['Wholesale', 'Retail']:
+            rebate_type = direct_rebate_type
+            log(f"v12.20: Using direct Rebate Type from Pre-Flight: {rebate_type}", "INFO")
+        elif wholesale_checked and retail_checked:
             warnings.append('[EMOJI] REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
             log("REBATE TYPE ERROR: Both checked!", "WARN")
             rebate_type_error = True
@@ -24521,11 +26304,16 @@ def api_mis_create_deal():
         log(f"Vendor Contrib: {vendor_contrib}", "DATA")
         
         # Parse toggles
-        after_wholesale = False
-        for key, val in raw_row_data.items():
-            if 'after wholesale' in key.lower():
-                after_wholesale = str(val).upper() == 'TRUE'
-                break
+        # v12.20: Use direct after_wholesale from Pre-Flight if provided
+        if direct_after_wholesale is not None:
+            after_wholesale = bool(direct_after_wholesale)
+            log(f"v12.20: Using direct After Wholesale from Pre-Flight: {after_wholesale}", "INFO")
+        else:
+            after_wholesale = False
+            for key, val in raw_row_data.items():
+                if 'after wholesale' in key.lower():
+                    after_wholesale = str(val).upper() == 'TRUE'
+                    break
         log(f"After Wholesale: {after_wholesale}", "DATA")
         
         # Parse weight info
@@ -25142,7 +26930,13 @@ def detect_split_requirements(weekly_deals: List[Dict], tier1_deals: List[Dict],
                     'mis_id': interrupting_deals[0].get('mis_id') if interrupting_deals else '',
                     'deal_info': interrupting_deals[0].get('deal_info') if interrupting_deals else '',
                     'special_notes': interrupting_deals[0].get('special_notes') if interrupting_deals else '',
-                    'categories': interrupting_deals[0].get('categories') if interrupting_deals else ''
+                    'categories': interrupting_deals[0].get('categories') if interrupting_deals else '',
+                    # v12.18: Added missing fields for Create automation
+                    'weekday': interrupting_deals[0].get('weekday') if interrupting_deals else '',
+                    'linked_brand': interrupting_deals[0].get('linked_brand') if interrupting_deals else '',
+                    'retail': interrupting_deals[0].get('retail') if interrupting_deals else '',
+                    'wholesale': interrupting_deals[0].get('wholesale') if interrupting_deals else '',
+                    'after_wholesale': interrupting_deals[0].get('after_wholesale') if interrupting_deals else ''
                 },
                 'overlap_locations': overlap_locations,
                 'plan': plan,
@@ -25294,6 +27088,28 @@ def api_split_audit_planning():
                 special_notes = str(get_col(row, ['Special Notes', 'Notes'], '')).strip()
                 categories = str(get_col(row, ['Category', 'Categories'], '')).strip()
                 
+                # v12.18.2: Get Rebate Type checkboxes (Column R = Wholesale, Column T = Retail)
+                # v12.18.3: Debug logging for checkbox detection
+                if idx == 0:  # Only log column names for first row
+                    print(f"[CHECKBOX DEBUG] Weekly row columns: {list(row.index)}")
+                    for col in row.index:
+                        col_lower = str(col).lower()
+                        if 'wholesale' in col_lower or 'retail' in col_lower or 'after' in col_lower or 'rebate' in col_lower:
+                            print(f"[CHECKBOX DEBUG] Column '{col}' = '{row.get(col, 'N/A')}'")
+                
+                wholesale_val = get_col(row, ['Wholesale', 'Wholesale?'], '')
+                retail_val = get_col(row, ['Retail', 'Retail?'], '')
+                after_wholesale_val = get_col(row, ['Rebate After Wholesale Discount?', 'After Wholesale', 'After Wholesale?'], '')
+                
+                # v12.18.3: Debug logging for actual values found
+                if brand:  # Log for each row with a brand
+                    print(f"[CHECKBOX DEBUG] Row {true_row} ({brand}): wholesale='{wholesale_val}', retail='{retail_val}', after_wholesale='{after_wholesale_val}'")
+                
+                # Convert checkbox values to boolean strings
+                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                
                 weekly_deals.append({
                     'brand': brand,
                     'weekday': weekday_raw,
@@ -25307,7 +27123,11 @@ def api_split_audit_planning():
                     'google_row': true_row,
                     'deal_info': deal_info,
                     'special_notes': special_notes,
-                    'categories': categories
+                    'categories': categories,
+                    # v12.18.2: Rebate Type fields
+                    'retail': 'TRUE' if is_retail else 'FALSE',
+                    'wholesale': 'TRUE' if is_wholesale else 'FALSE',
+                    'after_wholesale': 'TRUE' if is_after_wholesale else 'FALSE'
                 })
         
         # Process Tier 1 deals (Monthly + Sale)
@@ -25360,6 +27180,27 @@ def api_split_audit_planning():
                 special_notes = str(get_col(row, ['Special Notes', 'Notes'], '')).strip()
                 categories = str(get_col(row, ['Category', 'Categories'], '')).strip()
                 
+                # v12.18.2: Get weekday for Sale (Column A) or calculate for Monthly
+                if section_key == 'sale':
+                    # Sale deals: weekday is in Column A (same as Weekly)
+                    weekday_val = str(get_col(row, ['Weekday', 'Day', 'Day of Week'], '')).strip()
+                else:
+                    # Monthly deals: weekday needs to be calculated from dates
+                    # For now store the day-of-month info, frontend will calculate actual weekday
+                    weekday_val = ''  # Will be calculated in frontend based on start/end dates
+                
+                # v12.18.2: Get Rebate Type checkboxes (Column R = Wholesale, Column T = Retail)
+                wholesale_val = get_col(row, ['Wholesale', 'Wholesale?'], '')
+                retail_val = get_col(row, ['Retail', 'Retail?'], '')
+                after_wholesale_val = get_col(row, ['Rebate After Wholesale Discount?', 'After Wholesale', 'After Wholesale?'], '')
+                
+                # Convert checkbox values to boolean strings
+                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                
+                print(f"[DEBUG] {section_key.upper()} - Weekday: '{weekday_val}', Wholesale: {is_wholesale}, Retail: {is_retail}")
+                
                 tier1_deals.append({
                     'brand': brand,
                     'date_raw': date_raw,
@@ -25372,7 +27213,12 @@ def api_split_audit_planning():
                     'google_row': true_row,
                     'deal_info': deal_info,
                     'special_notes': special_notes,
-                    'categories': categories
+                    'categories': categories,
+                    # v12.18.2: Additional fields for Create automation
+                    'weekday': weekday_val,
+                    'retail': 'TRUE' if is_retail else 'FALSE',
+                    'wholesale': 'TRUE' if is_wholesale else 'FALSE',
+                    'after_wholesale': 'TRUE' if is_after_wholesale else 'FALSE'
                 })
         
         print(f"[DEBUG] Total tier1_deals: {len(tier1_deals)}")
@@ -25383,6 +27229,24 @@ def api_split_audit_planning():
             weekly_deals, tier1_deals, target_month, target_year
         )
         
+        # v12.18.3: Load Settings tab for Brand/Category dropdowns in Pre-Flight Popup
+        brand_list = []
+        category_list = []
+        brand_linked_map = {}
+        try:
+            spreadsheet_id = GLOBAL_DATA.get('mis', {}).get('spreadsheet_id')
+            if spreadsheet_id:
+                settings_data = load_settings_dropdown_data(spreadsheet_id)
+                brand_list = list(settings_data.get('brand_linked_map', {}).keys())
+                # Capitalize brand names for display
+                brand_list = [b.title() for b in brand_list]
+                brand_list.sort()
+                category_list = settings_data.get('categories', [])
+                brand_linked_map = settings_data.get('brand_linked_map', {})
+                print(f"[SPLIT AUDIT] Loaded {len(brand_list)} brands, {len(category_list)} categories for Pre-Flight dropdowns")
+        except Exception as e:
+            print(f"[SPLIT AUDIT] Warning: Could not load Settings data: {e}")
+        
         return jsonify({
             'success': True,
             'splits_required': splits_required,
@@ -25392,7 +27256,10 @@ def api_split_audit_planning():
                 'monthly_count': len([d for d in tier1_deals if d['section'] == 'monthly']),
                 'sale_count': len([d for d in tier1_deals if d['section'] == 'sale'])
             },
-            'date_context': f"{datetime(target_year, target_month, 1).strftime('%B %Y')}"
+            'date_context': f"{datetime(target_year, target_month, 1).strftime('%B %Y')}",
+            'brand_list': brand_list,
+            'category_list': category_list,
+            'brand_linked_map': brand_linked_map
         })
     
     except Exception as e:
@@ -28636,12 +30503,599 @@ def api_mis_automate_end_date():
         return jsonify({'success': False, 'error': str(e)})
 
 
+def inject_checklist_banner(driver, expected_data: dict, sheet_data: dict = None, mode: str = 'compare'):
+    """
+    v12.20: Unified Checklist Banner with 3 Validation Modes.
+    
+    Modes:
+    - 'compare': Standard checklist comparing MIS to Google Sheet (expected_data)
+    - 'create': True Value mode - compares MIS to Pre-Flight (expected_data),
+                shows Google Sheet values (sheet_data) as "True Value" if different
+    - 'manual': Minimal validation (just emptiness check)
+    
+    Each field shows: ✅ (green) if correct, ❌ (red) if incorrect, ⚪ (gray) if empty
+    
+    NEW in v12.20:
+    - When mode='create' and sheet_data is provided, displays "True Value: [sheet value]"
+      next to the expected value if they differ. This keeps user aware of deviations
+      from the master Google Sheet while validating against Pre-Flight form data.
+    """
+    import json
+    
+    expected_json = json.dumps(expected_data)
+    sheet_json = json.dumps(sheet_data) if sheet_data else 'null'
+    
+    # Determine banner title and color based on mode
+    banner_title = '[EMOJI] Deal Entry Checklist'
+    banner_color = '#4a90d9'
+    mode_label = ''
+    
+    if mode == 'create':
+        banner_title = '[EMOJI] Create Deal - Validation'
+        banner_color = '#28a745'
+        mode_label = '<span style="background:#28a745;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:8px;">CREATE MODE</span>'
+    elif mode == 'compare':
+        banner_title = '[EMOJI] Compare to Sheet'
+        banner_color = '#4a90d9'
+        mode_label = '<span style="background:#4a90d9;color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:8px;">COMPARE MODE</span>'
+    
+    js_code = f'''
+    (function() {{
+        // Remove any existing checklist banner
+        const existingBanner = document.getElementById('checklist-banner-v18');
+        if (existingBanner) existingBanner.remove();
+        
+        const EXPECTED = {expected_json};
+        const SHEET_DATA = {sheet_json};  // v12.20: Original Google Sheet data for True Value display
+        const MODE = '{mode}';
+        console.log('[CHECKLIST v12.20] Mode:', MODE, 'Expected:', EXPECTED, 'Sheet:', SHEET_DATA);
+        
+        // Field configuration: [display name, field ID, fieldType, isMultiSelect, expectedKey]
+        // fieldType: 'select2' | 'input' | 'checkbox'
+        const FIELDS = [
+            ['Weekday', 'weekday_ids', 'select2', true, 'weekday'],
+            ['Store/Locations', 'store_ids', 'select2', true, 'locations'],
+            ['Brand', 'brand_id', 'select2', false, 'brand'],
+            ['Linked Brand', 'linked_brand_id', 'select2', false, 'linked_brand'],
+            ['Category', 'category_ids', 'select2', true, 'categories'],
+            ['Discount %', 'discount_rate', 'input', false, 'discount'],
+            ['Rebate Type', 'daily_discount_type_id', 'select2', false, 'rebate_type'],
+            ['Vendor Rebate %', 'rebate_percent', 'input', false, 'vendor_contrib'],
+            ['After Wholesale?', 'rebate_wholesale_discount', 'checkbox', false, 'after_wholesale'],
+            ['Start Date', 'date_start', 'input', false, 'start_date'],
+            ['End Date', 'date_end', 'input', false, 'end_date']
+        ];
+        
+        // Create banner container
+        const banner = document.createElement('div');
+        banner.id = 'checklist-banner-v18';
+        banner.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid {banner_color};
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 100000;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            color: #fff;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid {banner_color};">
+                <span style="font-size: 16px; font-weight: 600; color: {banner_color};">{banner_title}{mode_label}</span>
+                <button id="checklist-close-btn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px;">[EMOJI]</button>
+            </div>
+            <div style="font-size: 11px; color: #888; margin-bottom: 10px;">
+                [EMOJI] = Correct | [EMOJI] = Mismatch | [EMOJI] = Empty | [EMOJI] = Partial
+                ${{MODE === 'create' && SHEET_DATA ? '<br><span style="color:#ffc107;">[EMOJI] True Value</span> = Original Google Sheet value' : ''}}
+            </div>
+        `;
+        banner.appendChild(header);
+        
+        // v12.20: Helper to check if Pre-Flight value differs from Sheet value
+        function hasTrueValue(expectedKey) {{
+            if (MODE !== 'create' || !SHEET_DATA) return false;
+            const expected = EXPECTED[expectedKey];
+            const sheet = SHEET_DATA[expectedKey];
+            if (expected === sheet) return false;
+            if (!expected && !sheet) return false;
+            // Normalize for comparison
+            const expStr = String(expected || '').toLowerCase().trim();
+            const sheetStr = String(sheet || '').toLowerCase().trim();
+            return expStr !== sheetStr;
+        }}
+        
+        function getTrueValue(expectedKey) {{
+            if (!SHEET_DATA) return null;
+            const val = SHEET_DATA[expectedKey];
+            if (val === true) return 'Yes';
+            if (val === false) return 'No';
+            if (val === '' || val === null || val === undefined) return '(empty)';
+            return val;
+        }}
+        
+        // Create checklist items
+        const checklist = document.createElement('div');
+        checklist.id = 'checklist-items';
+        
+        FIELDS.forEach(([label, fieldId, fieldType, isMulti, expectedKey]) => {{
+            const expectedVal = EXPECTED[expectedKey];
+            let displayExpected;
+            
+            // Handle display of expected value
+            if (expectedVal === true) {{
+                displayExpected = 'Yes';
+            }} else if (expectedVal === false) {{
+                displayExpected = 'No';
+            }} else if (expectedVal === '' || expectedVal === null || expectedVal === undefined) {{
+                // Empty string means "no value expected" (e.g., no linked brand)
+                if (expectedKey === 'linked_brand') {{
+                    displayExpected = '(none - leave empty)';
+                }} else {{
+                    displayExpected = '(not specified)';
+                }}
+            }} else {{
+                displayExpected = expectedVal;
+            }}
+            
+            // v12.20: Build True Value indicator
+            let trueValueHtml = '';
+            if (hasTrueValue(expectedKey)) {{
+                const trueVal = getTrueValue(expectedKey);
+                trueValueHtml = `<div class="true-value" style="font-size: 10px; color: #ffc107; margin-top: 2px; font-style: italic;">[EMOJI] True Value: ${{trueVal}}</div>`;
+            }}
+            
+            const row = document.createElement('div');
+            row.className = 'checklist-row';
+            row.dataset.fieldId = fieldId;
+            row.dataset.expectedKey = expectedKey;
+            row.dataset.fieldType = fieldType;
+            row.dataset.isMulti = String(isMulti);
+            row.style.cssText = `
+                display: flex;
+                align-items: flex-start;
+                padding: 8px 10px;
+                margin: 4px 0;
+                background: rgba(255,255,255,0.05);
+                border-radius: 6px;
+                border-left: 3px solid #666;
+                transition: all 0.2s;
+            `;
+            
+            row.innerHTML = `
+                <span class="status-icon" style="font-size: 16px; margin-right: 10px; min-width: 20px;">[EMOJI]</span>
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 13px; color: #fff;">${{label}}</div>
+                    <div class="expected-val" style="font-size: 11px; color: #aaa; margin-top: 2px;">
+                        Expected: <span style="color: {banner_color};">${{displayExpected}}</span>
+                    </div>
+                    ${{trueValueHtml}}
+                    <div class="actual-val" style="font-size: 11px; color: #888; margin-top: 2px;">
+                        Current: <span style="color: #fff;">-</span>
+                    </div>
+                    <div class="progress-info" style="font-size: 10px; color: #ffc107; margin-top: 2px; display: none;"></div>
+                </div>
+            `;
+            
+            checklist.appendChild(row);
+        }});
+        
+        banner.appendChild(checklist);
+        
+        // Status summary
+        const summary = document.createElement('div');
+        summary.id = 'checklist-summary';
+        summary.style.cssText = `
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid {banner_color};
+            font-size: 12px;
+            text-align: center;
+        `;
+        summary.innerHTML = '<span style="color: #888;">Validating...</span>';
+        banner.appendChild(summary);
+        
+        // Critical warning area
+        const criticalWarning = document.createElement('div');
+        criticalWarning.id = 'critical-warning';
+        criticalWarning.style.cssText = `
+            margin-top: 10px;
+            padding: 8px;
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #ff6b6b;
+            display: none;
+        `;
+        banner.appendChild(criticalWarning);
+        
+        document.body.appendChild(banner);
+        
+        // Close button handler
+        document.getElementById('checklist-close-btn').onclick = () => {{
+            banner.style.display = banner.style.display === 'none' ? 'block' : 'none';
+        }};
+        
+        // ========================================
+        // HELPER FUNCTIONS
+        // ========================================
+        
+        function getSelect2Value(fieldId) {{
+            const select = document.getElementById(fieldId);
+            if (!select) return [];
+            const selected = [];
+            for (let i = 0; i < select.options.length; i++) {{
+                if (select.options[i].selected) {{
+                    const text = select.options[i].text.trim();
+                    if (text && text !== '- Select -') {{
+                        selected.push(text);
+                    }}
+                }}
+            }}
+            return selected;
+        }}
+        
+        function getInputValue(fieldId) {{
+            const input = document.getElementById(fieldId);
+            return input ? input.value.trim() : '';
+        }}
+        
+        function getCheckboxValue(fieldId) {{
+            const checkbox = document.getElementById(fieldId);
+            return checkbox ? checkbox.checked : false;
+        }}
+        
+        function normalizePercent(val) {{
+            if (val === null || val === undefined) return '';
+            let s = String(val).trim().toLowerCase();
+            s = s.replace(/%/g, '').replace(/\\s/g, '');
+            // Handle "0.00" vs "0" comparison
+            const num = parseFloat(s);
+            if (!isNaN(num)) {{
+                return num.toString();
+            }}
+            return s;
+        }}
+        
+        function normalizeString(val) {{
+            if (val === null || val === undefined) return '';
+            return String(val).trim().toLowerCase();
+        }}
+        
+        // ========================================
+        // VALIDATION FUNCTIONS
+        // ========================================
+        
+        function compareMultiSelect(actual, expected, expectedKey) {{
+            // actual = array of selected values
+            // expected = comma-separated string of expected values
+            
+            const actualArr = Array.isArray(actual) ? actual : [];
+            
+            if (!expected || expected === '') {{
+                // No expected value - handle "All" cases
+                if (expectedKey === 'locations' || expectedKey === 'categories') {{
+                    // "All" locations/categories means empty selection is correct
+                    return {{ status: 'correct', matched: [], missing: [], extra: [] }};
+                }}
+                return {{ status: 'empty', matched: [], missing: [], extra: [] }};
+            }}
+            
+            const expectedArr = String(expected).split(',').map(s => s.trim()).filter(s => s);
+            
+            if (actualArr.length === 0) {{
+                return {{ status: 'empty', matched: [], missing: expectedArr, extra: [] }};
+            }}
+            
+            // Normalize for comparison
+            const actualLower = actualArr.map(s => s.toLowerCase());
+            const expectedLower = expectedArr.map(s => s.toLowerCase());
+            
+            // Find matched and missing
+            const matched = [];
+            const missing = [];
+            
+            expectedArr.forEach((exp, idx) => {{
+                const expLower = expectedLower[idx];
+                const found = actualLower.some(act => 
+                    act === expLower || act.includes(expLower) || expLower.includes(act)
+                );
+                if (found) {{
+                    matched.push(exp);
+                }} else {{
+                    missing.push(exp);
+                }}
+            }});
+            
+            // Find extra (selected but not expected)
+            const extra = actualArr.filter(act => {{
+                const actLower = act.toLowerCase();
+                return !expectedLower.some(exp => 
+                    exp === actLower || exp.includes(actLower) || actLower.includes(exp)
+                );
+            }});
+            
+            if (missing.length === 0 && extra.length === 0) {{
+                return {{ status: 'correct', matched, missing, extra }};
+            }} else if (matched.length > 0) {{
+                return {{ status: 'partial', matched, missing, extra }};
+            }} else {{
+                return {{ status: 'mismatch', matched, missing, extra }};
+            }}
+        }}
+        
+        function compareSingleValue(actual, expected, expectedKey) {{
+            // Handle linked_brand special case: empty expected means empty should be selected
+            if (expectedKey === 'linked_brand') {{
+                if (!expected || expected === '') {{
+                    // No linked brand expected
+                    if (!actual || actual === '' || actual === '- Select -' || (Array.isArray(actual) && actual.length === 0)) {{
+                        return 'correct';  // Empty is correct
+                    }}
+                    return 'mismatch';  // Has value but shouldn't
+                }}
+            }}
+            
+            // Handle after_wholesale boolean
+            if (expectedKey === 'after_wholesale') {{
+                if (typeof expected === 'boolean') {{
+                    return (actual === expected) ? 'correct' : 'mismatch';
+                }}
+            }}
+            
+            // Handle percentage fields
+            if (expectedKey === 'discount' || expectedKey === 'vendor_contrib') {{
+                const actualNorm = normalizePercent(actual);
+                const expectedNorm = normalizePercent(expected);
+                
+                if (!expectedNorm) return 'empty';  // No expected value
+                if (!actualNorm) return 'empty';   // No actual value
+                
+                return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
+            }}
+            
+            // Standard comparison
+            if (!expected || expected === '') {{
+                return 'empty';  // No expected value
+            }}
+            
+            const actualVal = Array.isArray(actual) ? (actual[0] || '') : actual;
+            const actualNorm = normalizeString(actualVal);
+            const expectedNorm = normalizeString(expected);
+            
+            if (!actualNorm || actualNorm === '- select -') return 'empty';
+            
+            return (actualNorm === expectedNorm || actualNorm.includes(expectedNorm) || expectedNorm.includes(actualNorm)) ? 'correct' : 'mismatch';
+        }}
+        
+        function validateAllFields() {{
+            const rows = document.querySelectorAll('.checklist-row');
+            let correctCount = 0;
+            let mismatchCount = 0;
+            let emptyCount = 0;
+            let partialCount = 0;
+            let criticalMissing = [];
+            
+            rows.forEach(row => {{
+                const fieldId = row.dataset.fieldId;
+                const expectedKey = row.dataset.expectedKey;
+                const fieldType = row.dataset.fieldType;
+                const isMulti = row.dataset.isMulti === 'true';
+                
+                const expected = EXPECTED[expectedKey];
+                let actual;
+                
+                // Get actual value based on field type
+                if (fieldType === 'select2') {{
+                    actual = getSelect2Value(fieldId);
+                }} else if (fieldType === 'checkbox') {{
+                    actual = getCheckboxValue(fieldId);
+                }} else {{
+                    actual = getInputValue(fieldId);
+                }}
+                
+                const icon = row.querySelector('.status-icon');
+                const actualSpan = row.querySelector('.actual-val span');
+                const progressInfo = row.querySelector('.progress-info');
+                
+                let status;
+                
+                if (isMulti) {{
+                    // Multi-select validation with progress tracking
+                    const result = compareMultiSelect(actual, expected, expectedKey);
+                    status = result.status;
+                    
+                    // Update actual value display
+                    if (Array.isArray(actual) && actual.length > 0) {{
+                        actualSpan.textContent = actual.join(', ');
+                    }} else {{
+                        actualSpan.textContent = '(empty)';
+                    }}
+                    
+                    // Show progress for multi-select fields
+                    if (result.matched.length > 0 || result.missing.length > 0) {{
+                        const total = result.matched.length + result.missing.length;
+                        const matchedCount = result.matched.length;
+                        
+                        if (status === 'partial') {{
+                            progressInfo.style.display = 'block';
+                            progressInfo.innerHTML = `
+                                <span style="color: #28a745;">[EMOJI] ${{result.matched.join(', ')}}</span><br>
+                                <span style="color: #ffc107;">[EMOJI] Need: ${{result.missing.join(', ')}}</span>
+                                <span style="color: #aaa;"> (${{matchedCount}}/${{total}})</span>
+                            `;
+                        }} else if (status === 'correct') {{
+                            progressInfo.style.display = 'none';
+                        }} else {{
+                            progressInfo.style.display = 'block';
+                            progressInfo.innerHTML = `<span style="color: #dc3545;">Need: ${{result.missing.join(', ')}}</span>`;
+                        }}
+                        
+                        if (result.extra.length > 0) {{
+                            progressInfo.style.display = 'block';
+                            progressInfo.innerHTML += `<br><span style="color: #dc3545;">[EMOJI] Extra: ${{result.extra.join(', ')}}</span>`;
+                        }}
+                    }} else {{
+                        progressInfo.style.display = 'none';
+                    }}
+                }} else {{
+                    // Single value validation
+                    status = compareSingleValue(actual, expected, expectedKey);
+                    
+                    // Update actual value display
+                    if (typeof actual === 'boolean') {{
+                        actualSpan.textContent = actual ? 'Yes' : 'No';
+                    }} else if (Array.isArray(actual)) {{
+                        actualSpan.textContent = actual.length > 0 ? actual[0] : '(empty)';
+                    }} else {{
+                        actualSpan.textContent = actual || '(empty)';
+                    }}
+                    
+                    progressInfo.style.display = 'none';
+                }}
+                
+                // Update status icon and styling
+                if (status === 'correct') {{
+                    icon.textContent = '[EMOJI]';
+                    icon.style.color = '#28a745';
+                    row.style.borderLeftColor = '#28a745';
+                    row.style.background = 'rgba(40, 167, 69, 0.1)';
+                    correctCount++;
+                }} else if (status === 'partial') {{
+                    icon.textContent = '[EMOJI]';
+                    icon.style.color = '#ffc107';
+                    row.style.borderLeftColor = '#ffc107';
+                    row.style.background = 'rgba(255, 193, 7, 0.1)';
+                    partialCount++;
+                }} else if (status === 'mismatch') {{
+                    icon.textContent = '[EMOJI]';
+                    icon.style.color = '#dc3545';
+                    row.style.borderLeftColor = '#dc3545';
+                    row.style.background = 'rgba(220, 53, 69, 0.1)';
+                    mismatchCount++;
+                }} else {{
+                    icon.textContent = '[EMOJI]';
+                    icon.style.color = '#888';
+                    row.style.borderLeftColor = '#666';
+                    row.style.background = 'rgba(255,255,255,0.05)';
+                    emptyCount++;
+                }}
+                
+                // Track critical fields (Weekday and Rebate Type must be filled)
+                if (expectedKey === 'weekday' && (status === 'empty' || (Array.isArray(actual) && actual.length === 0))) {{
+                    criticalMissing.push('Weekday');
+                }}
+                if (expectedKey === 'rebate_type' && (status === 'empty' || !actual || (Array.isArray(actual) && actual.length === 0))) {{
+                    criticalMissing.push('Rebate Type');
+                }}
+            }});
+            
+            // Update summary
+            const summary = document.getElementById('checklist-summary');
+            if (mismatchCount > 0) {{
+                summary.innerHTML = `<span style="color: #dc3545;">[EMOJI] ${{mismatchCount}} field(s) don't match</span>`;
+            }} else if (partialCount > 0) {{
+                summary.innerHTML = `<span style="color: #ffc107;">[EMOJI] ${{partialCount}} field(s) partially filled</span>`;
+            }} else if (emptyCount > 0) {{
+                summary.innerHTML = `<span style="color: #888;">[EMOJI] ${{emptyCount}} field(s) need to be filled</span>`;
+            }} else {{
+                summary.innerHTML = `<span style="color: #28a745;">[EMOJI] All fields validated!</span>`;
+            }}
+            
+            // Critical warning for Weekday and Rebate Type
+            const criticalWarning = document.getElementById('critical-warning');
+            if (criticalMissing.length > 0) {{
+                criticalWarning.style.display = 'block';
+                criticalWarning.innerHTML = `[EMOJI] <strong>CANNOT SAVE:</strong> ${{criticalMissing.join(' and ')}} must be selected!`;
+            }} else {{
+                criticalWarning.style.display = 'none';
+            }}
+            
+            return {{ correctCount, mismatchCount, emptyCount, partialCount, criticalMissing }};
+        }}
+        
+        // ========================================
+        // SAVE BUTTON INTERCEPTION
+        // ========================================
+        function interceptSaveButton() {{
+            const saveBtn = document.querySelector('.btn-submit, button[type="submit"]');
+            if (saveBtn && !saveBtn.dataset.checklistIntercepted) {{
+                saveBtn.dataset.checklistIntercepted = 'true';
+                const originalOnClick = saveBtn.onclick;
+                
+                saveBtn.onclick = function(e) {{
+                    const result = validateAllFields();
+                    if (result.criticalMissing.length > 0) {{
+                        e.preventDefault();
+                        e.stopPropagation();
+                        alert('[EMOJI] Cannot save: ' + result.criticalMissing.join(' and ') + ' must be selected!');
+                        return false;
+                    }}
+                    if (originalOnClick) return originalOnClick.call(this, e);
+                }};
+            }}
+        }}
+        
+        // ========================================
+        // START MONITORING
+        // ========================================
+        validateAllFields();
+        interceptSaveButton();
+        
+        // Continuous validation every 500ms
+        const validationInterval = setInterval(() => {{
+            if (!document.getElementById('checklist-banner-v18')) {{
+                clearInterval(validationInterval);
+                return;
+            }}
+            if (!document.querySelector('.modal.show, .modal[style*="display: block"]')) {{
+                // Modal closed, remove banner
+                document.getElementById('checklist-banner-v18')?.remove();
+                clearInterval(validationInterval);
+                return;
+            }}
+            validateAllFields();
+            interceptSaveButton();
+        }}, 500);
+        
+        console.log('[CHECKLIST v12.20] Banner injected - Mode:', MODE, 'Expected:', EXPECTED);
+    }})();
+    '''
+    
+    try:
+        driver.execute_script(js_code)
+        print(f"[CHECKLIST] v12.20 Checklist Banner injected (mode={mode})")
+    except Exception as e:
+        print(f"[CHECKLIST] Failed to inject banner: {e}")
+
+
 @app.route('/api/mis/automate-create-deal', methods=['POST'])
 def api_mis_automate_create_deal():
     """
-    v12.15: Automates creating a NEW deal with ROBUST ATOMIC FUNCTIONS.
-    Now uses the same proven atomic helpers from ID Matcher.
-    Includes weekday intersection calculation to prevent data corruption.
+    v12.18.1: Automates creating a NEW deal with CHECKLIST BANNER approach.
+    
+    Auto-fills these fields:
+    - Brand, Linked Brand, Rebate Type, Discount, Vendor Rebate, Start Date, End Date
+    
+    Shows Checklist Banner for user to manually fill:
+    - Weekday, Store/Locations, Category, After Wholesale
+    
+    The checklist validates all fields in real-time with:
+    - Green checkmark ([EMOJI]) for correct values
+    - Yellow half-circle ([EMOJI]) for partial multi-select progress
+    - Red X ([EMOJI]) for mismatches
+    - Gray circle ([EMOJI]) for empty
+    
+    Blocks save if Weekday or Rebate Type is empty.
     """
     try:
         print("\n" + "="*60)
@@ -29097,6 +31551,33 @@ def api_mis_automate_create_deal():
                 # Weekday name normalization
                 day_map = {'mon':'Monday','tue':'Tuesday','wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday'}
                 
+                # FIX v12.18: Open dropdown ONCE before iterating values
+                # This prevents accidentally clicking an option when reopening dropdown each iteration
+                log(f"  [{field_name}] Opening dropdown once for all {len(values)} values...", "DEBUG")
+                
+                # Click the selection area specifically (not options) to open dropdown
+                try:
+                    selection_area = container.find_element(By.CSS_SELECTOR, ".select2-selection")
+                    selection_area.click()
+                except:
+                    # Fallback to container click
+                    actions = ActionChains(driver)
+                    actions.move_to_element(container)
+                    actions.click()
+                    actions.perform()
+                
+                time.sleep(0.3)
+                
+                # Wait for dropdown to open and search field to be ready
+                search_input = None
+                try:
+                    search_input = WebDriverWait(driver, 2).until(
+                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
+                    )
+                    log(f"  [{field_name}] Dropdown open, search field ready", "DEBUG")
+                except:
+                    log(f"  [{field_name}] Warning: Could not find search field", "WARN")
+                
                 for val in values:
                     val_clean = str(val).strip()
                     if not val_clean:
@@ -29110,25 +31591,21 @@ def api_mis_automate_create_deal():
                     
                     log(f"  [{field_name}] Adding '{val_clean}'...", "DEBUG")
                     
-                    click_backdrop()
-                    time.sleep(0.1)
-                    
-                    actions = ActionChains(driver)
-                    actions.move_to_element(container)
-                    actions.click()
-                    actions.perform()
-                    time.sleep(0.3)
-                    
-                    # Type to filter
-                    try:
-                        search_input = WebDriverWait(driver, 2).until(
-                            EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
-                        )
-                        search_input.clear()
-                        search_input.send_keys(val_clean)
-                        time.sleep(0.5)
-                    except:
-                        pass
+                    # Type to filter (dropdown already open, search field should be focused)
+                    if search_input:
+                        try:
+                            search_input.clear()
+                            search_input.send_keys(val_clean)
+                            time.sleep(0.4)
+                        except:
+                            # Re-acquire search field if stale
+                            try:
+                                search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
+                                search_input.clear()
+                                search_input.send_keys(val_clean)
+                                time.sleep(0.4)
+                            except:
+                                pass
                     
                     # Click option
                     try:
@@ -29142,11 +31619,21 @@ def api_mis_automate_create_deal():
                         actions.perform()
                         log(f"    -> Added '{val_clean}'", "SUCCESS")
                     except:
+                        # Fallback: press Enter to select highlighted option
                         ActionChains(driver).send_keys(Keys.ENTER).perform()
                         log(f"    -> Added '{val_clean}' via ENTER", "SUCCESS")
                     
-                    time.sleep(0.15)
+                    time.sleep(0.2)
+                    
+                    # Clear search for next value (dropdown stays open for multi-select)
+                    if search_input:
+                        try:
+                            search_input.clear()
+                            time.sleep(0.1)
+                        except:
+                            pass
                 
+                # Close dropdown after all values selected
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 click_backdrop()
                 
@@ -29159,9 +31646,12 @@ def api_mis_automate_create_deal():
                 return False
 
         # =========================================================
-        # EXECUTION FLOW
+        # EXECUTION FLOW - v12.18 CHECKLIST BANNER APPROACH
+        # Only automate: Brand, Linked Brand, Rebate Type, Start Date, End Date
+        # Show checklist for all other fields
         # =========================================================
         warnings = []
+        automated_fields = []
 
         # 1. Open Modal
         print("\n[ACTION] Clicking 'Add New' button...")
@@ -29175,91 +31665,111 @@ def api_mis_automate_create_deal():
         print("[WAIT] Waiting for modal animation...")
         time.sleep(2.0)
 
-        # 2. WEEKDAYS (multi-select)
-        if target_weekday:
-            weekdays_list = [w.strip() for w in target_weekday.split(',') if w.strip()]
-            if not atomic_multi_select("Weekday", weekdays_list, "Weekday"):
-                warnings.append('Could not fill Weekday')
-        else:
-            print("[SKIP] Weekday - no intersecting days or empty")
+        # v12.18: ONLY AUTOMATE THESE 5 FIELDS
+        # =====================================
+        
+        # 2. BRAND (single-select) - AUTOMATE
+        if target_brand:
+            if atomic_single_select("Brand", target_brand, "Brand"):
+                automated_fields.append('Brand')
+            else:
+                warnings.append('Could not fill Brand')
 
-        # 3. STORES (multi-select)
-        if target_locations and 'all' not in target_locations.lower():
-            stores_list = [s.strip() for s in target_locations.split(',') if s.strip()]
-            if not atomic_multi_select("Store", stores_list, "Store"):
-                warnings.append('Could not fill Store')
-
-        # 4. BRAND (single-select)
-        if not atomic_single_select("Brand", target_brand, "Brand"):
-            warnings.append('Could not fill Brand')
-
-        # 5. LINKED BRAND (single-select)
+        # 3. LINKED BRAND (single-select) - AUTOMATE
         if target_linked:
-            if not atomic_single_select("Linked Brand", target_linked, "Linked Brand"):
+            if atomic_single_select("Linked Brand", target_linked, "Linked Brand"):
+                automated_fields.append('Linked Brand')
+            else:
                 warnings.append('Could not fill Linked Brand')
 
-        # 6. CATEGORY (multi-select)
-        if target_category:
-            categories_list = [c.strip() for c in target_category.split(',') if c.strip()]
-            if not atomic_multi_select("Category", categories_list, "Category"):
-                warnings.append('Could not fill Category')
-
-        # 7. DISCOUNT RATE (text input)
-        if not atomic_text_input("discount_rate", target_discount, "Discount Rate"):
-            warnings.append('Could not fill Discount Rate')
-
-        # 8. REBATE TYPE (single-select) - CRITICAL
+        # 4. REBATE TYPE (single-select) - AUTOMATE
         if rebate_type:
-            if not atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
+            if atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
+                automated_fields.append('Rebate Type')
+            else:
                 warnings.append('Could not fill Rebate Type')
         else:
             print("[WARNING] Rebate Type not determined - field will require manual selection!")
             warnings.append('Rebate Type not determined from source data')
 
-        # 9. VENDOR REBATE % (text input)
-        if not atomic_text_input("rebate_percent", target_vendor, "Vendor Rebate"):
-            warnings.append('Could not fill Vendor Rebate')
+        # 5. DISCOUNT RATE (text input) - AUTOMATE
+        if target_discount:
+            if atomic_text_input("discount_rate", target_discount, "Discount Rate"):
+                automated_fields.append('Discount')
+            else:
+                warnings.append('Could not fill Discount Rate')
 
-        # 10. AFTER WHOLESALE TOGGLE
-        if after_wholesale:
-            if not atomic_toggle("rebate_wholesale_discount", True, "After Wholesale"):
-                warnings.append('Could not toggle After Wholesale')
+        # 6. VENDOR REBATE % (text input) - AUTOMATE
+        if target_vendor:
+            if atomic_text_input("rebate_percent", target_vendor, "Vendor Rebate"):
+                automated_fields.append('Vendor Rebate')
+            else:
+                warnings.append('Could not fill Vendor Rebate')
 
-        # 11. START DATE (text input)
-        if not atomic_text_input("date_start", req_start, "Start Date"):
-            warnings.append('Could not fill Start Date')
+        # 7. START DATE (text input) - AUTOMATE
+        if req_start:
+            if atomic_text_input("date_start", req_start, "Start Date"):
+                automated_fields.append('Start Date')
+            else:
+                warnings.append('Could not fill Start Date')
 
-        # 12. END DATE (text input)
-        if not atomic_text_input("date_end", req_end, "End Date"):
-            warnings.append('Could not fill End Date')
+        # 8. END DATE (text input) - AUTOMATE
+        if req_end:
+            if atomic_text_input("date_end", req_end, "End Date"):
+                automated_fields.append('End Date')
+            else:
+                warnings.append('Could not fill End Date')
 
-        # 13. MIN WEIGHT (text input)
-        if target_min_weight:
-            if not atomic_text_input("min_weight", target_min_weight, "Min Weight"):
-                warnings.append('Could not fill Min Weight')
-
-        # 14. MAX WEIGHT (text input)
-        if target_max_weight:
-            if not atomic_text_input("max_weight", target_max_weight, "Max Weight"):
-                warnings.append('Could not fill Max Weight')
+        # v12.18: DO NOT automate these fields - show in checklist instead:
+        # - Weekday, Store/Locations, Category, After Wholesale
+        
+        # v12.18: Lookup linked brand from Settings tab if not provided
+        if not target_linked and target_brand:
+            brand_settings = GLOBAL_DATA.get('brand_settings', {})
+            target_linked = brand_settings.get(target_brand.lower(), '')
+            if target_linked:
+                print(f"[LINKED BRAND] Found from Settings tab: '{target_linked}'")
+            else:
+                print(f"[LINKED BRAND] Brand '{target_brand}' has no linked brand in Settings")
 
         print("\n" + "="*60)
-        print("[AUTOMATION] CREATE DEAL SEQUENCE COMPLETE")
+        print("[AUTOMATION] v12.18 PARTIAL AUTOMATION COMPLETE")
         print("="*60)
-        print(f"[SUMMARY] Brand: {target_brand}")
-        print(f"[SUMMARY] Dates: {req_start} to {req_end}")
-        print(f"[SUMMARY] Weekdays: {target_weekday if target_weekday else '(none)'}")
-        print(f"[SUMMARY] Rebate Type: {rebate_type if rebate_type else '(not set)'}")
+        print(f"[AUTOMATED] {len(automated_fields)} fields: {', '.join(automated_fields)}")
+        print(f"[MANUAL] User must fill: Weekday, Store, Category, After Wholesale")
         if warnings:
             print(f"[WARNINGS] {len(warnings)} issue(s): {', '.join(warnings)}")
         print("="*60 + "\n")
+
+        # v12.18: INJECT CHECKLIST BANNER with expected values
+        expected_data = {
+            'weekday': target_weekday,
+            'locations': target_locations,
+            'brand': target_brand,
+            'linked_brand': target_linked,  # May be empty string if no linked brand
+            'categories': target_category,
+            'discount': target_discount,
+            'rebate_type': rebate_type or '',
+            'vendor_contrib': target_vendor,
+            'after_wholesale': after_wholesale,
+            'start_date': req_start,
+            'end_date': req_end
+        }
         
-        result_msg = f'Form filled for {target_brand}.'
+        # Inject the checklist validation banner
+        inject_checklist_banner(driver, expected_data)
+        
+        result_msg = f'Form partially filled for {target_brand}. Review checklist and fill remaining fields.'
         if warnings:
             result_msg += f' ({len(warnings)} warning(s) - check console)'
-        result_msg += ' Please review and Save.'
         
-        return jsonify({'success': True, 'message': result_msg, 'warnings': warnings})
+        return jsonify({
+            'success': True, 
+            'message': result_msg, 
+            'warnings': warnings,
+            'automated_fields': automated_fields,
+            'expected_data': expected_data
+        })
 
     except Exception as e:
         print(f"[CRITICAL FAILURE] {e}")
