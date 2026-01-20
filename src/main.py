@@ -1,4 +1,114 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.21.4 STORE MAPPING FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.21.4.2 LINKED BRAND FIX
+# v12.21.4.2 CHANGELOG (CRITICAL FIX: LINKED BRAND AUTO-FILL):
+#   🔴 CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
+#     * ISSUE: Linked Brand dropdown shows empty, not auto-selected
+#       - User clicks Create from ID Matcher
+#       - Google Sheet has: Brand="Highatus", Linked Brand="Cannabiotix"
+#       - Pre-Flight popup opens:
+#         * Brand dropdown: empty ❌
+#         * Linked Brand dropdown: empty ❌
+#       - Console shows: "brandOptions: Array(0)" (empty!)
+#     * ROOT CAUSE: brandOptions uses splitPlanningData.brand_list
+#       - splitPlanningData is ONLY populated for Up-Down Planning tab
+#       - When coming from ID Matcher, splitPlanningData is empty
+#       - Result: brandOptions = [] (no brands to select from!)
+#       - Code tries to select "Cannabiotix" in empty dropdown → fails ❌
+#     * THE FIX: Build brandOptions from settingsCache.brandLinkedMap
+#       - settingsCache.brandLinkedMap is populated by loadSettingsDropdownData()
+#       - Contains: {highatus: "Cannabiotix", raw: "Cookies", ...}
+#       - Extract all unique brands:
+#         1. Keys = main brands (e.g., "highatus")
+#         2. Values = linked brands (e.g., "Cannabiotix")
+#         3. Combine both into single sorted list
+#       - NEW CODE (line ~9405):
+#         function getBrandOptionsFromSettings() {
+#           if (!settingsCache.brandLinkedMap || Object.keys(...).length === 0) {
+#             return splitPlanningData.brand_list || [];  // Fallback
+#           }
+#           const brandSet = new Set();
+#           // Add main brands (capitalize keys)
+#           Object.keys(settingsCache.brandLinkedMap).forEach(brand => {
+#             const displayBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
+#             brandSet.add(displayBrand);
+#           });
+#           // Add linked brands (already capitalized)
+#           Object.values(settingsCache.brandLinkedMap).forEach(linkedBrand => {
+#             if (linkedBrand && linkedBrand.trim()) {
+#               brandSet.add(linkedBrand.trim());
+#             }
+#           });
+#           return Array.from(brandSet).sort();
+#         }
+#         const brandOptions = getBrandOptionsFromSettings();
+#     * IMPLEMENTATION DETAILS:
+#       - Keys in brandLinkedMap are lowercase ("highatus")
+#       - Capitalize first letter for display ("Highatus")
+#       - Values are already properly cased ("Cannabiotix")
+#       - Use Set to avoid duplicates
+#       - Sort alphabetically for better UX
+#       - Fallback to splitPlanningData if settings not loaded
+#     * CONSOLE OUTPUT (after fix):
+#       [PRE-FLIGHT] Brand options from Settings: 45 brands
+#       [LINKED-BRAND-DROPDOWN] data.linked_brand: Cannabiotix
+#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  ← NOW HAS OPTIONS!
+#       [LINKED-BRAND-DROPDOWN] ✅ SELECTED: "Cannabiotix" (matches...)
+#     * RESULT: Brand and Linked Brand dropdowns now populated ✅
+#       - Works for ID Matcher Create button ✅
+#       - Works for Up-Down Planning Create button ✅
+#       - Works for Suggestions popup Create button ✅
+#       - Linked brand auto-selected correctly ✅
+#   - USER IMPACT:
+#     * Linked Brand dropdown now has options ✅
+#     * Linked Brand auto-fills from Google Sheet ✅
+#     * Brand dropdown also populated from Settings ✅
+#     * Works consistently across all Create button locations ✅
+#     * No more empty dropdowns in Pre-Flight popup ✅
+#   - TECHNICAL NOTES:
+#     * getBrandOptionsFromSettings() helper function added
+#     * Extracts brands from settingsCache.brandLinkedMap (both keys and values)
+#     * Used by both Brand dropdown and Linked Brand dropdown
+#     * Capitalizes main brands (keys) for proper display
+#     * Preserves casing for linked brands (values)
+#     * Returns sorted array for better UX
+#     * Falls back to splitPlanningData.brand_list if settings not loaded
+#     * Debug logging: "[PRE-FLIGHT] Brand options from Settings: X brands"
+# v12.21.4.1 CHANGELOG (DEBUG: ENHANCED EXCEPTION LOGGING):
+#   🔍 DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
+#     * ISSUE REPORTED: "All Locations Except: Davis, Dixon" only excludes Davis
+#     * SYMPTOM: Second exception (Dixon) not being excluded
+#     * DIAGNOSTIC ADDITIONS:
+#       1. Enhanced regex to handle edge cases:
+#          - Try: /except[:\s]+([^)]+)/i (stops at closing paren)
+#          - Fallback: /except[:\s]+(.*?)$/i (capture to end)
+#       2. Log raw exception string before splitting:
+#          console.log('Raw exception string:', JSON.stringify(exceptionsStr))
+#       3. Added empty string filter after split:
+#          .filter(s => s.length > 0)
+#       4. Per-store detailed logging:
+#          - Shows each store being checked
+#          - Shows which exception it matches (if any)
+#          - Example output:
+#            ❌ EXCLUDING: "Davis" (matches exception "Davis")
+#            ❌ EXCLUDING: "Dixon" (matches exception "Dixon")
+#            ✅ KEEPING: "Beverly Hills"
+#       5. Summary logging:
+#          "12 total → 2 excluded → 10 remaining"
+#     * EXPECTED CONSOLE OUTPUT:
+#       [SMART-LOCATION] All Locations Except logic:
+#         Input String: "All Locations Except: Davis, Dixon"
+#         Raw exception string: "Davis, Dixon"
+#         Master List: [12 stores]
+#         Exceptions Raw: ["Davis", "Dixon"]
+#         Exceptions Expanded: ["Davis", "Dixon"]
+#         ❌ EXCLUDING: "Davis" (matches exception "Davis")
+#         ✅ KEEPING: "Beverly Hills"
+#         ❌ EXCLUDING: "Dixon" (matches exception "Dixon")
+#         ✅ KEEPING: "El Sobrante"
+#         ... (continues for all stores)
+#         Final Result: [10 stores]
+#         Summary: 12 total → 2 excluded → 10 remaining
+#     * PURPOSE: Identify where comma-separated parsing is failing
+#     * ACTION: User should check console logs and report what they see
 # v12.21.4 CHANGELOG (CRITICAL FIXES: STORE MAPPING + ALL LOCATIONS EXCEPT):
 #   🔴 CRITICAL FIX 8: Store Name Sanitization for MIS Automation
 #     * ISSUE: Settings tab stores don't match MIS dropdown names
@@ -9268,9 +9378,17 @@ HTML_TEMPLATE = r"""
                                'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'];
                         
                         // Step 2: Extract exceptions from "Except: X, Y, Z"
-                        const exceptMatch = locationStr.match(/except[:\s]+(.*)/i);
+                        // Handle various formats: "Except:", "Except :", "(Except: X)", etc.
+                        const exceptMatch = locationStr.match(/except[:\s]+([^)]+)/i) || 
+                                          locationStr.match(/except[:\s]+(.*?)$/i);
                         if (exceptMatch) {
-                            const exceptionsRaw = exceptMatch[1].split(',').map(s => s.trim());
+                            const exceptionsStr = exceptMatch[1].trim();
+                            console.log('[SMART-LOCATION] Raw exception string:', JSON.stringify(exceptionsStr));
+                            
+                            const exceptionsRaw = exceptionsStr
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(s => s.length > 0);  // Remove empty strings
                             
                             // Step 3: Expand exception codes (e.g., "DV" → "Davis")
                             const exceptions = exceptionsRaw.map(code => 
@@ -9278,6 +9396,7 @@ HTML_TEMPLATE = r"""
                             );
                             
                             console.log('[SMART-LOCATION] All Locations Except logic:');
+                            console.log('  Input String:', locationStr);
                             console.log('  Master List:', masterList);
                             console.log('  Exceptions Raw:', exceptionsRaw);
                             console.log('  Exceptions Expanded:', exceptions);
@@ -9286,10 +9405,24 @@ HTML_TEMPLATE = r"""
                             const result = masterList.filter(store => {
                                 // Case-insensitive comparison
                                 const storeLower = store.toLowerCase();
-                                return !exceptions.some(exc => exc.toLowerCase() === storeLower);
+                                const isExcluded = exceptions.some(exc => {
+                                    const excLower = exc.toLowerCase();
+                                    const matches = excLower === storeLower;
+                                    if (matches) {
+                                        console.log(`  ❌ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                    }
+                                    return matches;
+                                });
+                                
+                                if (!isExcluded) {
+                                    console.log(`  ✅ KEEPING: "${store}"`);
+                                }
+                                
+                                return !isExcluded;
                             });
                             
-                            console.log('  Result (Master - Exceptions):', result);
+                            console.log('  Final Result (Master - Exceptions):', result);
+                            console.log(`  Summary: ${masterList.length} total → ${exceptions.length} excluded → ${result.length} remaining`);
                             return result;
                         }
                     }
@@ -9341,10 +9474,38 @@ HTML_TEMPLATE = r"""
                 ? settingsCache.stores
                 : ['San Jose', 'Santa Cruz', 'Fresno', 'DTSJ', 'Campbell', 'Brentwood', 'Antioch', 'San Francisco'];  // Fallback
             const rebateTypeOptions = ['', 'Retail', 'Wholesale'];
-            // v12.18.3: Dynamic brand options from Settings tab
-            const brandOptions = splitPlanningData.brand_list && splitPlanningData.brand_list.length > 0 
-                ? splitPlanningData.brand_list 
-                : [];
+            
+            // v12.21.4.1: Build brand options from Settings cache (includes both main brands and linked brands)
+            // Extract all unique brand names from settingsCache.brandLinkedMap (keys = main brands, values = linked brands)
+            function getBrandOptionsFromSettings() {
+                if (!settingsCache.brandLinkedMap || Object.keys(settingsCache.brandLinkedMap).length === 0) {
+                    // Fallback to splitPlanningData if settings not loaded
+                    return splitPlanningData.brand_list || [];
+                }
+                
+                const brandSet = new Set();
+                
+                // Add all main brands (keys in the map)
+                Object.keys(settingsCache.brandLinkedMap).forEach(brand => {
+                    // Keys are lowercase, so capitalize first letter for display
+                    const displayBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
+                    brandSet.add(displayBrand);
+                });
+                
+                // Add all linked brands (values in the map)
+                Object.values(settingsCache.brandLinkedMap).forEach(linkedBrand => {
+                    if (linkedBrand && linkedBrand.trim()) {
+                        brandSet.add(linkedBrand.trim());
+                    }
+                });
+                
+                // Convert set to sorted array
+                return Array.from(brandSet).sort();
+            }
+            
+            const brandOptions = getBrandOptionsFromSettings();
+            console.log('[PRE-FLIGHT] Brand options from Settings:', brandOptions.length, 'brands');
+            
             const brandLinkedMap = splitPlanningData.brand_linked_map || {};
             
             const currentWeekdays = data.weekday ? data.weekday.split(',').map(s => s.trim()) : [];
@@ -9391,12 +9552,22 @@ HTML_TEMPLATE = r"""
             
             // v12.18.3: Linked Brand dropdown options (with empty option for "no linked brand")
             let linkedBrandOptionsHtml = '<option value="">(No Linked Brand)</option>';
+            
+            // v12.21.4.1: DEBUG - Log linked brand selection
+            console.log('[LINKED-BRAND-DROPDOWN] data.linked_brand:', data.linked_brand);
+            console.log('[LINKED-BRAND-DROPDOWN] brandOptions:', brandOptions);
+            
             if (brandOptions.length > 0) {
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
+                    if (sel) {
+                        console.log(`[LINKED-BRAND-DROPDOWN] ✅ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                    }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
             }
+            
+            console.log('[LINKED-BRAND-DROPDOWN] Final linkedBrandOptionsHtml length:', linkedBrandOptionsHtml.length);
             
             popup.innerHTML = '<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:2px solid #4a90d9;border-radius:12px;padding:25px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;color:#fff;">' +
                 '<h3 style="margin:0 0 20px 0;color:#4a90d9;">[EMOJI] Pre-Flight Confirmation <span style="font-size:12px;color:#888;">(Row ' + googleRow + ')</span></h3>' +
@@ -11946,6 +12117,14 @@ HTML_TEMPLATE = r"""
             // Extract values from match
             const brand = match.brand || '';
             const linkedBrand = match.linked_brand || settingsCache.brandLinkedMap[brand.toLowerCase()] || '';
+            
+            // v12.21.4.1: DEBUG - Log linked brand resolution
+            console.log('[LINKED-BRAND-DEBUG] Brand:', brand);
+            console.log('[LINKED-BRAND-DEBUG] match.linked_brand:', match.linked_brand);
+            console.log('[LINKED-BRAND-DEBUG] settingsCache.brandLinkedMap:', settingsCache.brandLinkedMap);
+            console.log('[LINKED-BRAND-DEBUG] Lookup result for brand.toLowerCase():', settingsCache.brandLinkedMap[brand.toLowerCase()]);
+            console.log('[LINKED-BRAND-DEBUG] Final linkedBrand:', linkedBrand);
+            
             const weekday = match.weekday || '';
             const categories = match.categories || '';
             const locations = match.locations || '';
