@@ -1,4 +1,32 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.1 WEEKLY DATE AUTO-FILL
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.2 CONTINUE ROW REBATE TYPE FIX
+# v12.22.2 CHANGELOG (FIX: CONTINUE ROW REBATE TYPE):
+#   🔴 FIX: Rebate Type Not Populating for Continue Row Create Button
+#     * ISSUE: Continue row in Up-Down Planning Phase 1 → Create → Pre-Flight
+#       - All fields populate correctly EXCEPT Rebate Type (empty)
+#       - GAP row works fine (has Rebate Type)
+#     * ROOT CAUSE (Backend): splits_required structure missing rebate fields
+#       - Lines ~26817-26855: splits_required object built for each split
+#       - Only `interrupting_deal` nested object had retail/wholesale/after_wholesale
+#       - Main split (weekly deal) was MISSING these fields
+#       - Continue rows use main split data → no rebate type available
+#     * ROOT CAUSE (Frontend): Strict equality check
+#       - Code: `if (sourceData.wholesale === 'TRUE')` 
+#       - Failed if value was 'true', true (boolean), or other formats
+#     * THE FIX (Backend - line ~26831):
+#       Added missing fields to splits_required:
+#       - 'linked_brand': weekly.get('linked_brand', ''),
+#       - 'retail': weekly.get('retail', ''),
+#       - 'wholesale': weekly.get('wholesale', ''),
+#       - 'after_wholesale': weekly.get('after_wholesale', ''),
+#     * THE FIX (Frontend - line ~9360):
+#       Made rebate type detection more robust:
+#       - const wholesaleVal = String(sourceData.wholesale || '').toUpperCase();
+#       - const retailVal = String(sourceData.retail || '').toUpperCase();
+#       - if (wholesaleVal === 'TRUE') rebateType = 'Wholesale';
+#     * CONSOLE OUTPUT (after fix):
+#       [AUTOMATE] Rebate Type: Wholesale (W: TRUE -> TRUE, R: FALSE -> FALSE)
+#     * RESULT: Continue row Create button now populates Rebate Type ✅
+#
 # v12.22.1 CHANGELOG (ENHANCEMENT: WEEKLY DEAL DATE AUTO-FILL):
 #   🟢 ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
 #     * FEATURE: Automatically set Start/End dates for Weekly deals
@@ -9358,13 +9386,16 @@ HTML_TEMPLATE = r"""
             }
 
             // 5. Determine Rebate Type from checkboxes
+            // v12.22.2: More robust detection - handle 'TRUE', 'true', true, etc.
             let rebateType = '';
-            if (sourceData.wholesale === 'TRUE') {
+            const wholesaleVal = String(sourceData.wholesale || '').toUpperCase();
+            const retailVal = String(sourceData.retail || '').toUpperCase();
+            if (wholesaleVal === 'TRUE') {
                 rebateType = 'Wholesale';
-            } else if (sourceData.retail === 'TRUE') {
+            } else if (retailVal === 'TRUE') {
                 rebateType = 'Retail';
             }
-            console.log('[AUTOMATE] Rebate Type:', rebateType, '(W:', sourceData.wholesale, ', R:', sourceData.retail, ')');
+            console.log('[AUTOMATE] Rebate Type:', rebateType, '(W:', sourceData.wholesale, '->', wholesaleVal, ', R:', sourceData.retail, '->', retailVal, ')');
 
             // 6. Build Pre-Flight Data
             const preFlightData = {
@@ -26829,6 +26860,11 @@ def detect_split_requirements(weekly_deals: List[Dict], tier1_deals: List[Dict],
                 'deal_info': weekly.get('deal_info', ''),
                 'special_notes': weekly.get('special_notes', ''),
                 'categories': weekly.get('categories', ''),
+                # v12.22.2: Add rebate type fields for Continue row Create automation
+                'linked_brand': weekly.get('linked_brand', ''),
+                'retail': weekly.get('retail', ''),
+                'wholesale': weekly.get('wholesale', ''),
+                'after_wholesale': weekly.get('after_wholesale', ''),
                 'conflict_type': conflict_type,
                 'conflict_dates': [d.strftime('%m/%d') for d in conflict_dates_sorted],
                 'interrupting_deal_type': interrupting_deals[0].get('section', 'monthly').lower() if interrupting_deals else 'monthly',
