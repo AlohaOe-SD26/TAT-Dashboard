@@ -1,18 +1,98 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.21.4.2 LINKED BRAND FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.1 WEEKLY DATE AUTO-FILL
+# v12.22.1 CHANGELOG (ENHANCEMENT: WEEKLY DEAL DATE AUTO-FILL):
+#   🟢 ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
+#     * FEATURE: Automatically set Start/End dates for Weekly deals
+#       - Start Date: 1st day of the month
+#       - End Date: Last day of the month (handles 28/29/30/31 correctly)
+#     * DATE SOURCE PRIORITY:
+#       1. Primary: Parse from Google Sheet tab name (e.g., "January 2026", "Feb 2026")
+#       2. Fallback: Use current date's month/year if tab parsing fails
+#     * TAB NAME PARSING:
+#       - Supports full month names: "January 2026", "December 2025"
+#       - Supports abbreviations: "Jan 2026", "Dec 2025"
+#       - Regex: /([a-zA-Z]+)\s*(\d{4})/
+#       - Uses first 3 letters to match month (case-insensitive)
+#     * IMPLEMENTATION (lines ~12223-12289):
+#       if (sectionType === 'weekly') {
+#           const tabName = document.getElementById('mis-tab')?.value || '';
+#           // Parse "January 2026" -> month=0, year=2026
+#           const tabMatch = tabName.match(/([a-zA-Z]+)\s*(\d{4})/);
+#           // Calculate first and last day of month
+#           const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+#           startDate = `${monthNum}/01/${targetYear}`;
+#           endDate = `${monthNum}/${lastDay}/${targetYear}`;
+#       }
+#     * CONSOLE OUTPUT:
+#       [WEEKLY-DATE-FIX] Parsed tab name: January 2026 -> Month: 0, Year: 2026
+#       [WEEKLY-DATE-FIX] Auto-filled dates for Weekly deal:
+#         Start Date: 01/01/2026 (1st of month)
+#         End Date: 01/31/2026 (last day of month)
+#     * NON-WEEKLY DEALS: Unchanged behavior (parses from date_raw field)
+#     * RESULT: Weekly deals auto-fill with full month date range ✅
+#
+# v12.22.0 CHANGELOG (CRITICAL FIX: MULTI-DAY DEAL WEEKDAY COLLECTION):
+#   🔴 CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
+#     * ISSUE: Pre-Flight popup only shows ONE weekday for multi-day deals
+#       - Google Sheet has a multi-day group (3 rows, same deal):
+#         Row 45: Monday    - Highatus, 40% off (GROUP HEADER)
+#         Row 46: Wednesday - Highatus, 40% off (GROUP MEMBER)
+#         Row 47: Friday    - Highatus, 40% off (GROUP MEMBER)
+#       - User clicks Create on any row in group
+#       - Pre-Flight popup opens with Weekday field
+#       - Expected: "Monday, Wednesday, Friday" (ALL weekdays selected)
+#       - Actual: Only shows weekday of clicked row (e.g., "Monday") ❌
+#     * ROOT CAUSE: useUnifiedPreFlightForIDMatcher() at line ~12128
+#       - Code: `const weekday = match.weekday || '';`
+#       - Only reads single row's weekday, ignores group membership
+#       - Doesn't check match.multi_day_group.weekdays array
+#       - Result: Pre-Flight only knows about ONE weekday
+#     * THE FIX: Check for multi-day group and collect ALL weekdays
+#       - Detect if row is part of multi-day group via match.multi_day_group
+#       - If group exists, extract weekdays array: match.multi_day_group.weekdays
+#       - Filter out missing/invalid weekdays
+#       - Join with comma: "Monday, Wednesday, Friday"
+#       - NEW CODE (line ~12128):
+#         let weekday = match.weekday || '';
+#         if (match.multi_day_group && match.multi_day_group.weekdays) {
+#             const weekdaysList = match.multi_day_group.weekdays.filter(
+#                 w => w && !w.toLowerCase().includes('missing')
+#             );
+#             if (weekdaysList.length > 0) {
+#                 weekday = weekdaysList.join(', ');
+#                 console.log('[MULTI-DAY-FIX] Combined weekday string:', weekday);
+#             }
+#         }
+#     * CONSOLE OUTPUT (after fix):
+#       [MULTI-DAY-FIX] Group detected! group_id: 9a3d328682f4
+#       [MULTI-DAY-FIX] All weekdays in group: ["Monday", "Wednesday", "Friday"]
+#       [MULTI-DAY-FIX] Combined weekday string: Monday, Wednesday, Friday
+#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals ✅
+#       - Click Create on header row → Shows all weekdays ✅
+#       - Click Create on member row → Shows all weekdays ✅
+#       - Single-day deals → Shows single weekday (unchanged) ✅
+#       - openUnifiedPreFlight() already handles comma-separated weekdays ✅
+#   - TECHNICAL NOTES:
+#     * match.multi_day_group structure:
+#       { group_id: "9a3d328682f4", weekdays: ["Monday", "Wednesday", "Friday"], is_first: true }
+#     * The weekdays array is populated by backend detect_multi_day_groups()
+#     * Frontend already used this pattern in display code (line ~11656)
+#     * openUnifiedPreFlight() line ~9511 already splits weekday by comma
+#     * No changes needed to openUnifiedPreFlight() - it's already ready!
+#
 # v12.21.4.2 CHANGELOG (CRITICAL FIX: LINKED BRAND AUTO-FILL):
-#   🔴 CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
+#   ðŸ”´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
 #     * ISSUE: Linked Brand dropdown shows empty, not auto-selected
 #       - User clicks Create from ID Matcher
 #       - Google Sheet has: Brand="Highatus", Linked Brand="Cannabiotix"
 #       - Pre-Flight popup opens:
-#         * Brand dropdown: empty ❌
-#         * Linked Brand dropdown: empty ❌
+#         * Brand dropdown: empty âŒ
+#         * Linked Brand dropdown: empty âŒ
 #       - Console shows: "brandOptions: Array(0)" (empty!)
 #     * ROOT CAUSE: brandOptions uses splitPlanningData.brand_list
 #       - splitPlanningData is ONLY populated for Up-Down Planning tab
 #       - When coming from ID Matcher, splitPlanningData is empty
 #       - Result: brandOptions = [] (no brands to select from!)
-#       - Code tries to select "Cannabiotix" in empty dropdown → fails ❌
+#       - Code tries to select "Cannabiotix" in empty dropdown â†’ fails âŒ
 #     * THE FIX: Build brandOptions from settingsCache.brandLinkedMap
 #       - settingsCache.brandLinkedMap is populated by loadSettingsDropdownData()
 #       - Contains: {highatus: "Cannabiotix", raw: "Cookies", ...}
@@ -50,19 +130,19 @@
 #     * CONSOLE OUTPUT (after fix):
 #       [PRE-FLIGHT] Brand options from Settings: 45 brands
 #       [LINKED-BRAND-DROPDOWN] data.linked_brand: Cannabiotix
-#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  ← NOW HAS OPTIONS!
-#       [LINKED-BRAND-DROPDOWN] ✅ SELECTED: "Cannabiotix" (matches...)
-#     * RESULT: Brand and Linked Brand dropdowns now populated ✅
-#       - Works for ID Matcher Create button ✅
-#       - Works for Up-Down Planning Create button ✅
-#       - Works for Suggestions popup Create button ✅
-#       - Linked brand auto-selected correctly ✅
+#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  â† NOW HAS OPTIONS!
+#       [LINKED-BRAND-DROPDOWN] âœ… SELECTED: "Cannabiotix" (matches...)
+#     * RESULT: Brand and Linked Brand dropdowns now populated âœ…
+#       - Works for ID Matcher Create button âœ…
+#       - Works for Up-Down Planning Create button âœ…
+#       - Works for Suggestions popup Create button âœ…
+#       - Linked brand auto-selected correctly âœ…
 #   - USER IMPACT:
-#     * Linked Brand dropdown now has options ✅
-#     * Linked Brand auto-fills from Google Sheet ✅
-#     * Brand dropdown also populated from Settings ✅
-#     * Works consistently across all Create button locations ✅
-#     * No more empty dropdowns in Pre-Flight popup ✅
+#     * Linked Brand dropdown now has options âœ…
+#     * Linked Brand auto-fills from Google Sheet âœ…
+#     * Brand dropdown also populated from Settings âœ…
+#     * Works consistently across all Create button locations âœ…
+#     * No more empty dropdowns in Pre-Flight popup âœ…
 #   - TECHNICAL NOTES:
 #     * getBrandOptionsFromSettings() helper function added
 #     * Extracts brands from settingsCache.brandLinkedMap (both keys and values)
@@ -73,7 +153,7 @@
 #     * Falls back to splitPlanningData.brand_list if settings not loaded
 #     * Debug logging: "[PRE-FLIGHT] Brand options from Settings: X brands"
 # v12.21.4.1 CHANGELOG (DEBUG: ENHANCED EXCEPTION LOGGING):
-#   🔍 DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
+#   ðŸ” DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
 #     * ISSUE REPORTED: "All Locations Except: Davis, Dixon" only excludes Davis
 #     * SYMPTOM: Second exception (Dixon) not being excluded
 #     * DIAGNOSTIC ADDITIONS:
@@ -88,11 +168,11 @@
 #          - Shows each store being checked
 #          - Shows which exception it matches (if any)
 #          - Example output:
-#            ❌ EXCLUDING: "Davis" (matches exception "Davis")
-#            ❌ EXCLUDING: "Dixon" (matches exception "Dixon")
-#            ✅ KEEPING: "Beverly Hills"
+#            âŒ EXCLUDING: "Davis" (matches exception "Davis")
+#            âŒ EXCLUDING: "Dixon" (matches exception "Dixon")
+#            âœ… KEEPING: "Beverly Hills"
 #       5. Summary logging:
-#          "12 total → 2 excluded → 10 remaining"
+#          "12 total â†’ 2 excluded â†’ 10 remaining"
 #     * EXPECTED CONSOLE OUTPUT:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Input String: "All Locations Except: Davis, Dixon"
@@ -100,30 +180,30 @@
 #         Master List: [12 stores]
 #         Exceptions Raw: ["Davis", "Dixon"]
 #         Exceptions Expanded: ["Davis", "Dixon"]
-#         ❌ EXCLUDING: "Davis" (matches exception "Davis")
-#         ✅ KEEPING: "Beverly Hills"
-#         ❌ EXCLUDING: "Dixon" (matches exception "Dixon")
-#         ✅ KEEPING: "El Sobrante"
+#         âŒ EXCLUDING: "Davis" (matches exception "Davis")
+#         âœ… KEEPING: "Beverly Hills"
+#         âŒ EXCLUDING: "Dixon" (matches exception "Dixon")
+#         âœ… KEEPING: "El Sobrante"
 #         ... (continues for all stores)
 #         Final Result: [10 stores]
-#         Summary: 12 total → 2 excluded → 10 remaining
+#         Summary: 12 total â†’ 2 excluded â†’ 10 remaining
 #     * PURPOSE: Identify where comma-separated parsing is failing
 #     * ACTION: User should check console logs and report what they see
 # v12.21.4 CHANGELOG (CRITICAL FIXES: STORE MAPPING + ALL LOCATIONS EXCEPT):
-#   🔴 CRITICAL FIX 8: Store Name Sanitization for MIS Automation
+#   ðŸ”´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
 #     * ISSUE: Settings tab stores don't match MIS dropdown names
-#       - Settings tab: "Fresno (Palm)" ❌
-#       - MIS dropdown: "Fresno" ✅
+#       - Settings tab: "Fresno (Palm)" âŒ
+#       - MIS dropdown: "Fresno" âœ…
 #       - Result: Automation fails to select stores
 #     * ROOT CAUSE: resolve_store_selection() returned names directly without mapping
 #       - User selects "Fresno (Palm)" in Pre-Flight popup
 #       - Function returns ["Fresno (Palm)"] 
 #       - atomic_multi_select tries to find "Fresno (Palm)" in MIS
-#       - MIS only has "Fresno" → selection fails ❌
+#       - MIS only has "Fresno" â†’ selection fails âŒ
 #     * THE FIX: Apply STORE_MAPPING before automation
 #       - resolve_store_selection() now applies STORE_MAPPING
-#       - "Fresno (Palm)" → "Fresno" ✅
-#       - "Beverly" → "Beverly Hills" ✅
+#       - "Fresno (Palm)" â†’ "Fresno" âœ…
+#       - "Beverly" â†’ "Beverly Hills" âœ…
 #       - Specific stores AND exceptions both mapped
 #     * STORE_MAPPING Dictionary (lines 1627-1642, 1668-1683):
 #       {
@@ -145,28 +225,28 @@
 #     * IMPLEMENTATION:
 #       - Case 3 (Specific Stores): Apply mapping to each store
 #         mapped = STORE_MAPPING.get(store, store)
-#         Logs: "Store mapping: 'Fresno (Palm)' → 'Fresno'"
+#         Logs: "Store mapping: 'Fresno (Palm)' â†’ 'Fresno'"
 #       - Case 2 (All Except): Apply mapping to exceptions list
 #         mapped_exceptions = [STORE_MAPPING.get(exc, exc) for exc in exceptions]
-#     * RESULT: Automation now works with Settings tab store names ✅
+#     * RESULT: Automation now works with Settings tab store names âœ…
 #       - User sees: "Fresno (Palm)" in Pre-Flight dropdown
 #       - Backend sends: "Fresno" to MIS automation
-#       - MIS finds: "Fresno" in dropdown ✅
-#   🔴 CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
+#       - MIS finds: "Fresno" in dropdown âœ…
+#   ðŸ”´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
 #     * ISSUE: Pre-Flight popup doesn't handle "All Locations Except:" correctly
 #       - Google Sheet: "All Locations Except: Davis, Hawthorne"
 #       - Expected: Auto-select 10 stores (all except Davis, Hawthorne)
-#       - Actual: Only selected Davis and Hawthorne (backwards!) ❌
+#       - Actual: Only selected Davis and Hawthorne (backwards!) âŒ
 #     * ROOT CAUSE: expandLocationCodes() had broken logic
-#       - Line 9229: return exceptions.map(...) ❌
+#       - Line 9229: return exceptions.map(...) âŒ
 #       - This returned ONLY the exceptions, not the remaining stores
 #       - Should return: Master List MINUS exceptions
 #     * THE FIX: Implement proper subtraction logic
 #       Step 1: Start with Master List (all 12 stores from Settings tab)
 #       Step 2: Extract exceptions ("Davis, Hawthorne")
-#       Step 3: Expand exception codes ("DV" → "Davis")
+#       Step 3: Expand exception codes ("DV" â†’ "Davis")
 #       Step 4: Subtract exceptions from master list
-#       Result: Return 10 stores (all except Davis, Hawthorne) ✅
+#       Result: Return 10 stores (all except Davis, Hawthorne) âœ…
 #     * IMPLEMENTATION (line ~9219):
 #       const masterList = settingsCache.stores || [12 default stores];
 #       const exceptions = exceptionsRaw.map(code => 
@@ -175,22 +255,22 @@
 #       const result = masterList.filter(store => 
 #           !exceptions.some(exc => exc.toLowerCase() === store.toLowerCase())
 #       );
-#       return result;  // ✅ All stores EXCEPT exceptions
+#       return result;  // âœ… All stores EXCEPT exceptions
 #     * CONSOLE LOGGING:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Master List: [Dixon, Davis, Beverly Hills, ...]
 #         Exceptions Raw: ["Davis", "Hawthorne"]
 #         Exceptions Expanded: ["Davis", "Hawthorne"]
 #         Result (Master - Exceptions): [Dixon, Beverly Hills, El Sobrante, ...]
-#     * RESULT: Pre-Flight popup now auto-selects correct stores ✅
+#     * RESULT: Pre-Flight popup now auto-selects correct stores âœ…
 #       - Input: "All Locations Except: Davis, Hawthorne"
-#       - Auto-selected: 10 stores (all except Davis, Hawthorne) ✅
+#       - Auto-selected: 10 stores (all except Davis, Hawthorne) âœ…
 #   - USER IMPACT:
-#     * Store automation now works correctly ✅
-#     * No more "Could not fill Store" warnings ✅
-#     * "All Locations Except:" logic works in Pre-Flight popup ✅
-#     * Settings tab controls store names (single source of truth) ✅
-#     * Mapping handles special characters, parentheses, etc. ✅
+#     * Store automation now works correctly âœ…
+#     * No more "Could not fill Store" warnings âœ…
+#     * "All Locations Except:" logic works in Pre-Flight popup âœ…
+#     * Settings tab controls store names (single source of truth) âœ…
+#     * Mapping handles special characters, parentheses, etc. âœ…
 #   - TECHNICAL NOTES:
 #     * STORE_MAPPING defined twice (lines 1627 and 1668) - duplicate, safe
 #     * Mapping applied in resolve_store_selection() (backend automation)
@@ -199,7 +279,7 @@
 #     * Fallback: If store not in mapping, uses original name
 #     * Debug logging shows mapping transformations and subtraction results
 # v12.21.3 CHANGELOG (FINAL FIXES FOR PHASE 3):
-#   🔴 CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
+#   ðŸ”´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
 #     * ISSUE: Rebate Type dropdown in Pre-Flight popup not auto-filling
 #     * ROOT CAUSE: Google Sheet columns named "Wholesale?" and "Retail?" (with ?)
 #       - Code was checking for 'Wholesale' and 'Retail' (without ?)
@@ -208,13 +288,13 @@
 #       - raw_row_data?.['Retail?'] (primary check)
 #       - raw_row_data?.['Retail'] (fallback)
 #       - Added console logging: [REBATE-TYPE-DEBUG] for debugging
-#     * RESULT: Rebate Type now auto-fills correctly ✅
-#   🔴 CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
+#     * RESULT: Rebate Type now auto-fills correctly âœ…
+#   ðŸ”´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
 #     * ISSUE: Hardcoded store list showing wrong locations
 #       - Showed: San Jose, Santa Cruz, Fresno, DTSJ, Campbell, etc.
 #       - Should show: Dixon, Davis, Beverly Hills, El Sobrante, etc.
 #     * ROOT CAUSE: Pre-Flight popup used hardcoded array instead of Settings tab
-#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] ❌
+#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] âŒ
 #       - Should use: settingsCache.stores (loaded from Settings tab)
 #     * FIX: Use Settings tab stores like brands/categories
 #       - const storeOptions = settingsCache.stores || fallback
@@ -223,8 +303,8 @@
 #     * FIX: Ensure settings loaded before popup opens
 #       - Added await loadSettingsDropdownData() in automateCreateDeal
 #       - Adapter function already had this (useUnifiedPreFlightForIDMatcher)
-#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab ✅
-#   🔴 ENHANCEMENT: Compare Checklist Visibility Improvements
+#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab âœ…
+#   ðŸ”´ ENHANCEMENT: Compare Checklist Visibility Improvements
 #     * ISSUE: Checklist sometimes not visible after Compare
 #     * IMPROVEMENTS:
 #       - Increased setTimeout from 500ms to 800ms (more reliable)
@@ -232,19 +312,19 @@
 #       - Enhanced console logging with DEBUG details
 #       - Added search for all checklist elements if main banner not found
 #       - Logs banner display/opacity status for debugging
-#     * RESULT: More reliable checklist visibility + better debugging ✅
+#     * RESULT: More reliable checklist visibility + better debugging âœ…
 #   - TECHNICAL DETAILS:
 #     * Column name checks now resilient to ? punctuation
 #     * Settings loading ensures fresh data from Google Sheet
 #     * Store list dynamically updates when Settings tab changes
 #     * Checklist injection verified with comprehensive logging
 #   - USER IMPACT:
-#     * Rebate Type auto-fills correctly from Google Sheet ✅
-#     * Store locations match Settings tab exactly ✅
-#     * Compare checklist more reliably visible ✅
-#     * Better console debugging for troubleshooting ✅
+#     * Rebate Type auto-fills correctly from Google Sheet âœ…
+#     * Store locations match Settings tab exactly âœ…
+#     * Compare checklist more reliably visible âœ…
+#     * Better console debugging for troubleshooting âœ…
 # v12.21.2 CHANGELOG (ADDITIONAL CRITICAL FIXES):
-#   🔴 CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
+#   ðŸ”´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
 #     * ISSUE: Clicking Create in Suggestions Popup caused error:
 #       "TypeError: (match.discount || "").replace is not a function"
 #     * ROOT CAUSE: match.discount was a number, not a string
@@ -253,8 +333,8 @@
 #     * FIX: Convert to string before .replace() operation
 #       - const discount = String(match.discount || '').replace('%', '');
 #       - const vendorContrib = String(match.vendor_contrib || '').replace('%', '');
-#     * RESULT: Create button in Suggestions Popup now works ✅
-#   🔴 CRITICAL FIX 4: Compare Button Checklist Visibility
+#     * RESULT: Create button in Suggestions Popup now works âœ…
+#   ðŸ”´ CRITICAL FIX 4: Compare Button Checklist Visibility
 #     * ISSUE: Compare button validates correctly but checklist popup not visible
 #     * SYMPTOM: Console shows "Found MIS ID" but no visual checklist sidebar
 #     * ROOT CAUSE: Timing issue between backend injection and frontend display
@@ -267,34 +347,34 @@
 #       - Forces visibility: display='block', opacity='1'
 #       - Scrolls into view if off-screen
 #       - Triggers runValidation() to update field states
-#     * RESULT: Compare button now shows checklist popup ✅
+#     * RESULT: Compare button now shows checklist popup âœ…
 #   - TECHNICAL DETAILS:
 #     * String() wrapper safely handles null, undefined, numbers, strings
 #     * setTimeout(500ms) allows backend Selenium injection time to complete
 #     * scrollIntoView with smooth behavior for better UX
 #     * runValidation() refresh ensures field icons update correctly
 #   - USER IMPACT:
-#     * Create in Suggestions Popup → Now works (no more TypeError) ✅
-#     * Compare to Google Sheet → Checklist popup now visible ✅
-#     * Consistent validation experience across all workflows ✅
+#     * Create in Suggestions Popup â†’ Now works (no more TypeError) âœ…
+#     * Compare to Google Sheet â†’ Checklist popup now visible âœ…
+#     * Consistent validation experience across all workflows âœ…
 # v12.21.1 CHANGELOG (CRITICAL BUGFIXES):
-#   🔴 CRITICAL FIX 1: ID Matcher Create Button Unification
+#   ðŸ”´ CRITICAL FIX 1: ID Matcher Create Button Unification
 #     * ISSUE: ID Matcher was using old white "Create New Deal in MIS" popup
 #     * Up-Down Planning was using new dark "Pre-Flight Confirmation" popup
 #     * INCONSISTENT USER EXPERIENCE - Two different UIs for same action
 #     * FIX: Created `useUnifiedPreFlightForIDMatcher()` adapter function
 #       - Converts ID Matcher data format to Pre-Flight data format
 #       - Calls `openUnifiedPreFlight()` (same as Up-Down Planning)
-#       - BOTH tabs now use identical dark blue Pre-Flight popup ✅
+#       - BOTH tabs now use identical dark blue Pre-Flight popup âœ…
 #     * RESULT: Consistent UX across all Create workflows
-#   🔴 CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
+#   ðŸ”´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
 #     * ISSUE: Backend returns mode='comparison', frontend checks mode='automation'
 #     * ISSUE: Backend doesn't return expected_data in JSON
-#     * RESULT: Frontend never activates automation mode, stays in manual ❌
+#     * RESULT: Frontend never activates automation mode, stays in manual âŒ
 #     * Console showed: "Found MIS ID 973" then "MIS ID not found" (contradictory!)
 #     * FIX: Backend now returns:
-#       - mode: 'automation' (matches frontend check) ✅
-#       - expected_data: {...} (frontend needs this) ✅
+#       - mode: 'automation' (matches frontend check) âœ…
+#       - expected_data: {...} (frontend needs this) âœ…
 #     * RESULT: Compare button correctly activates checklist validation
 #   - TECHNICAL DETAILS:
 #     * ID Matcher adapter extracts: brand, linked_brand, weekday, categories, 
@@ -304,21 +384,21 @@
 #     * Compare endpoint injection still works (v12.19 feature preserved)
 #     * Compare endpoint now returns data for frontend validation activation
 #   - USER IMPACT:
-#     * ID Matcher Create → Now shows dark Pre-Flight popup (consistent) ✅
-#     * Compare button → Now correctly finds matches and activates checklist ✅
-#     * No more "MIS ID not found" false warnings ✅
+#     * ID Matcher Create â†’ Now shows dark Pre-Flight popup (consistent) âœ…
+#     * Compare button â†’ Now correctly finds matches and activates checklist âœ…
+#     * No more "MIS ID not found" false warnings âœ…
 # v12.21 CHANGELOG (PHASE 3: SMART PRE-FLIGHT & DATA INTEGRITY):
-#   ✅ SMART LOCATION EXPANSION:
+#   âœ… SMART LOCATION EXPANSION:
 #     * JavaScript now auto-expands location codes to full store names
-#     * Mapping: "DV"→"Davis", "MOD"→"Modesto", "SJ"→"San Jose", etc.
+#     * Mapping: "DV"â†’"Davis", "MOD"â†’"Modesto", "SJ"â†’"San Jose", etc.
 #     * Pre-Flight popup automatically checks correct Store checkboxes
 #     * No more manual checkbox selection for known codes
 #     * Handles "All Locations" and "All Locations Except" patterns
-#   ✅ SMART REBATE TYPE DETECTION:
+#   âœ… SMART REBATE TYPE DETECTION:
 #     * Detects "Rebate After Wholesale" vs plain "Retail"/"Wholesale"
-#     * Logic: If rebate_type="Retail" AND after_wholesale=True → "Rebate After Wholesale"
+#     * Logic: If rebate_type="Retail" AND after_wholesale=True â†’ "Rebate After Wholesale"
 #     * Provides clearer semantic meaning to users
-#   ✅ ORIGINAL VALUE TRACKING:
+#   âœ… ORIGINAL VALUE TRACKING:
 #     * Added 9 hidden input fields to track original Google Sheet values:
 #       - pf-original-discount
 #       - pf-original-vendor
@@ -331,8 +411,8 @@
 #       - pf-original-after-wholesale
 #     * Enables "Modified" status detection in future validation
 #     * Checklist can show Yellow Warning when user edits values
-#   ✅ FUNCTION RENAME:
-#     * showPreFlightPopup() → openUnifiedPreFlight()
+#   âœ… FUNCTION RENAME:
+#     * showPreFlightPopup() â†’ openUnifiedPreFlight()
 #     * Signifies architectural shift to unified, intelligent popup
 #     * Maintains all v12.20 date dropdown functionality
 #   - ARCHITECTURE IMPROVEMENTS:
@@ -346,16 +426,16 @@
 #     * Data integrity preserved (original values tracked)
 #     * Future checklist can warn: "You changed Discount from 20% to 25%"
 #   - TESTING PRIORITY:
-#     * Location codes expand correctly (DV → Davis checkbox selected)
+#     * Location codes expand correctly (DV â†’ Davis checkbox selected)
 #     * Rebate After Wholesale detected and displayed
 #     * Hidden fields populated with original values
 #     * Store checkboxes auto-selected based on smart expansion
 # v12.20 CHANGELOG (PHASE 2: FRONTEND UNIFICATION):
-#   ✅ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
+#   âœ… TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
 #     * Compare endpoint now calls inject_checklist_banner with mode='compare'
 #     * Checklist banner supports dual modes (create/compare)
 #     * Alert banner simplified to show only status + metadata
-#   ✅ TASK 4 COMPLETED (Frontend Refactor):
+#   âœ… TASK 4 COMPLETED (Frontend Refactor):
 #     * UNIFIED CREATE WORKFLOW:
 #       - Both Up-Down Planning AND ID Matcher now use /api/mis/automate-create-deal
 #       - Pre-Flight Popup date inputs converted to dropdowns (Month/Day/Year)
@@ -365,7 +445,7 @@
 #       - Start/End Date now use dropdown selectors instead of text inputs
 #       - Month: Jan-Dec dropdown
 #       - Day: 1-31 dropdown (auto-populated)
-#       - Year: Current year ±2 years
+#       - Year: Current year Â±2 years
 #       - Auto-initialization from data.start_date/end_date (MM/DD/YY format)
 #     * ID MATCHER CREATE BUTTON:
 #       - Now reads all form values (Weekday, Category, Locations, etc.)
@@ -380,8 +460,8 @@
 #   - REMOVED ENDPOINTS:
 #     * /api/mis/create-deal (legacy ID Matcher endpoint) - no longer called
 #   - TESTING PRIORITY:
-#     * Up-Down Planning Create button → Pre-Flight popup → Checklist appears
-#     * ID Matcher Create button → Pre-Flight popup → Checklist appears
+#     * Up-Down Planning Create button â†’ Pre-Flight popup â†’ Checklist appears
+#     * ID Matcher Create button â†’ Pre-Flight popup â†’ Checklist appears
 #     * Date dropdowns populate correctly from Google Sheet dates
 #     * All field validations work consistently
 # v12.19 CHANGELOG (PHASE 1: BACKEND API WIRING):
@@ -9366,7 +9446,7 @@ HTML_TEMPLATE = r"""
                 if (!locationStr) return [];
                 
                 // Handle "All Locations Except:" logic
-                // Example: "All Locations Except: Davis, Hawthorne" → Returns 10 stores (all except Davis, Hawthorne)
+                // Example: "All Locations Except: Davis, Hawthorne" â†’ Returns 10 stores (all except Davis, Hawthorne)
                 if (locationStr.toLowerCase().includes('all locations')) {
                     if (locationStr.toLowerCase().includes('except')) {
                         // v12.21.4: FIXED - Return all stores EXCEPT the listed ones
@@ -9390,7 +9470,7 @@ HTML_TEMPLATE = r"""
                                 .map(s => s.trim())
                                 .filter(s => s.length > 0);  // Remove empty strings
                             
-                            // Step 3: Expand exception codes (e.g., "DV" → "Davis")
+                            // Step 3: Expand exception codes (e.g., "DV" â†’ "Davis")
                             const exceptions = exceptionsRaw.map(code => 
                                 locationCodeMap[code.toLowerCase()] || code
                             );
@@ -9409,24 +9489,24 @@ HTML_TEMPLATE = r"""
                                     const excLower = exc.toLowerCase();
                                     const matches = excLower === storeLower;
                                     if (matches) {
-                                        console.log(`  ❌ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                        console.log(`  âŒ EXCLUDING: "${store}" (matches exception "${exc}")`);
                                     }
                                     return matches;
                                 });
                                 
                                 if (!isExcluded) {
-                                    console.log(`  ✅ KEEPING: "${store}"`);
+                                    console.log(`  âœ… KEEPING: "${store}"`);
                                 }
                                 
                                 return !isExcluded;
                             });
                             
                             console.log('  Final Result (Master - Exceptions):', result);
-                            console.log(`  Summary: ${masterList.length} total → ${exceptions.length} excluded → ${result.length} remaining`);
+                            console.log(`  Summary: ${masterList.length} total â†’ ${exceptions.length} excluded â†’ ${result.length} remaining`);
                             return result;
                         }
                     }
-                    // Just "All Locations" with no exceptions → return empty array (auto-selects all)
+                    // Just "All Locations" with no exceptions â†’ return empty array (auto-selects all)
                     console.log('[SMART-LOCATION] All Locations (no exceptions) - returning empty array');
                     return [];
                 }
@@ -9438,7 +9518,7 @@ HTML_TEMPLATE = r"""
                     return locationCodeMap[codeLower] || code; // Use mapping or original if not found
                 });
                 
-                console.log('[SMART-LOCATION] Expanded:', locationStr, '→', expanded);
+                console.log('[SMART-LOCATION] Expanded:', locationStr, 'â†’', expanded);
                 return expanded;
             }
             
@@ -9561,7 +9641,7 @@ HTML_TEMPLATE = r"""
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
                     if (sel) {
-                        console.log(`[LINKED-BRAND-DROPDOWN] ✅ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                        console.log(`[LINKED-BRAND-DROPDOWN] âœ… SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
                     }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
@@ -9622,7 +9702,7 @@ HTML_TEMPLATE = r"""
             
             document.body.appendChild(popup);
             
-            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ±2 years)
+            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current Â±2 years)
             const currentYear = new Date().getFullYear();
             const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
             
@@ -12103,7 +12183,7 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        // v12.21: Adapter function for ID Matcher → Unified Pre-Flight
+        // v12.21: Adapter function for ID Matcher â†’ Unified Pre-Flight
         async function useUnifiedPreFlightForIDMatcher(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) {
@@ -12125,7 +12205,22 @@ HTML_TEMPLATE = r"""
             console.log('[LINKED-BRAND-DEBUG] Lookup result for brand.toLowerCase():', settingsCache.brandLinkedMap[brand.toLowerCase()]);
             console.log('[LINKED-BRAND-DEBUG] Final linkedBrand:', linkedBrand);
             
-            const weekday = match.weekday || '';
+            // v12.22: Handle multi-day groups - collect ALL weekdays from group
+            // If this row is part of a multi-day group, the Pre-Flight popup should show
+            // all weekdays (e.g., "Monday, Wednesday, Friday") instead of just this row's weekday
+            let weekday = match.weekday || '';
+            if (match.multi_day_group && match.multi_day_group.weekdays) {
+                const weekdaysList = match.multi_day_group.weekdays.filter(w => w && !w.toLowerCase().includes('missing'));
+                if (weekdaysList.length > 0) {
+                    weekday = weekdaysList.join(', ');
+                    console.log('[MULTI-DAY-FIX] Group detected! group_id:', match.multi_day_group.group_id);
+                    console.log('[MULTI-DAY-FIX] All weekdays in group:', weekdaysList);
+                    console.log('[MULTI-DAY-FIX] Combined weekday string:', weekday);
+                }
+            } else {
+                console.log('[MULTI-DAY-FIX] Single-day deal, weekday:', weekday);
+            }
+            
             const categories = match.categories || '';
             const locations = match.locations || '';
             // v12.21.1: Handle numeric values - convert to string before .replace()
@@ -12156,22 +12251,72 @@ HTML_TEMPLATE = r"""
             const afterWholesaleVal = String(match.after_wholesale || match.raw_row_data?.['After Wholesale Discount'] || '').toUpperCase();
             const afterWholesale = afterWholesaleVal === 'TRUE';
             
-            // Parse dates from date_raw
+            // v12.22.1: Smart Date Auto-Fill for Weekly Deals
+            // For Weekly deals: Start = 1st of month, End = last day of month
+            // Month/Year derived from tab name (e.g., "January 2026") or fallback to current month
             let startDate = '';
             let endDate = '';
-            const dateRaw = match.date_raw || '';
-            if (dateRaw) {
-                const rangeMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-–]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-                if (rangeMatch) {
-                    startDate = rangeMatch[1] + '/' + rangeMatch[2] + '/' + (rangeMatch[3].length === 2 ? '20' + rangeMatch[3] : rangeMatch[3]);
-                    endDate = rangeMatch[4] + '/' + rangeMatch[5] + '/' + (rangeMatch[6].length === 2 ? '20' + rangeMatch[6] : rangeMatch[6]);
-                } else {
-                    const singleMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-                    if (singleMatch) {
-                        startDate = singleMatch[1] + '/' + singleMatch[2] + '/' + (singleMatch[3].length === 2 ? '20' + singleMatch[3] : singleMatch[3]);
-                        endDate = startDate;
+            const sectionType = match.section_type || 'weekly';
+            
+            if (sectionType === 'weekly') {
+                // Try to parse month/year from tab name
+                const tabName = document.getElementById('mis-tab')?.value || '';
+                const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                                   'july', 'august', 'september', 'october', 'november', 'december'];
+                
+                let targetMonth = -1;
+                let targetYear = -1;
+                
+                // Parse tab name like "January 2026" or "Feb 2026"
+                const tabMatch = tabName.match(/([a-zA-Z]+)\s*(\d{4})/);
+                if (tabMatch) {
+                    const monthStr = tabMatch[1].toLowerCase();
+                    const yearStr = tabMatch[2];
+                    
+                    // Find month index (supports full names and 3-letter abbreviations)
+                    targetMonth = monthNames.findIndex(m => m.startsWith(monthStr.substring(0, 3)));
+                    targetYear = parseInt(yearStr);
+                    
+                    console.log('[WEEKLY-DATE-FIX] Parsed tab name:', tabName, '-> Month:', targetMonth, ', Year:', targetYear);
+                }
+                
+                // Fallback to current date if parsing failed
+                if (targetMonth < 0 || targetYear < 0 || isNaN(targetYear)) {
+                    const now = new Date();
+                    targetMonth = now.getMonth();
+                    targetYear = now.getFullYear();
+                    console.log('[WEEKLY-DATE-FIX] Fallback to current month:', targetMonth, ', Year:', targetYear);
+                }
+                
+                // Calculate first and last day of month
+                const firstDay = 1;
+                const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate(); // Day 0 of next month = last day of current month
+                
+                // Format as MM/DD/YYYY
+                const monthNum = String(targetMonth + 1).padStart(2, '0');
+                startDate = `${monthNum}/01/${targetYear}`;
+                endDate = `${monthNum}/${String(lastDay).padStart(2, '0')}/${targetYear}`;
+                
+                console.log('[WEEKLY-DATE-FIX] Auto-filled dates for Weekly deal:');
+                console.log('  Start Date:', startDate, '(1st of month)');
+                console.log('  End Date:', endDate, '(last day of month)');
+            } else {
+                // Non-weekly deals: Parse dates from date_raw as before
+                const dateRaw = match.date_raw || '';
+                if (dateRaw) {
+                    const rangeMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-\u2013\u2014]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                    if (rangeMatch) {
+                        startDate = rangeMatch[1] + '/' + rangeMatch[2] + '/' + (rangeMatch[3].length === 2 ? '20' + rangeMatch[3] : rangeMatch[3]);
+                        endDate = rangeMatch[4] + '/' + rangeMatch[5] + '/' + (rangeMatch[6].length === 2 ? '20' + rangeMatch[6] : rangeMatch[6]);
+                    } else {
+                        const singleMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                        if (singleMatch) {
+                            startDate = singleMatch[1] + '/' + singleMatch[2] + '/' + (singleMatch[3].length === 2 ? '20' + singleMatch[3] : singleMatch[3]);
+                            endDate = startDate;
+                        }
                     }
                 }
+                console.log('[DATE-PARSE] Non-weekly deal, parsed from date_raw:', startDate, '-', endDate);
             }
             
             // Build preFlightData object
@@ -12189,7 +12334,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
             
-            console.log('[ID-MATCHER → PRE-FLIGHT] Converted data:', preFlightData);
+            console.log('[ID-MATCHER â†’ PRE-FLIGHT] Converted data:', preFlightData);
             
             // Call unified Pre-Flight popup
             openUnifiedPreFlight(preFlightData, match.google_row, match.section_type || 'weekly', null, null);
@@ -25925,14 +26070,14 @@ def api_mis_create_deal():
             stores = [s.strip() for s in text.split(',') if s.strip()]
             
             # v12.21.3: Apply STORE_MAPPING to convert Settings tab names to MIS names
-            # Example: "Fresno (Palm)" → "Fresno"
+            # Example: "Fresno (Palm)" â†’ "Fresno"
             mapped_stores = []
             for store in stores:
                 mapped = STORE_MAPPING.get(store, store)  # Try mapping, else use original
                 if mapped:
                     mapped_stores.append(mapped)
                     if mapped != store:
-                        log(f"  Store mapping: '{store}' → '{mapped}'", "DEBUG")
+                        log(f"  Store mapping: '{store}' â†’ '{mapped}'", "DEBUG")
             
             log(f"Store logic: Specific stores = {mapped_stores}", "DEBUG")
             return mapped_stores
