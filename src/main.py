@@ -1,4 +1,191 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.2 CONTINUE ROW REBATE TYPE FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.8 SELECT2 VALIDATION FIX
+# v12.22.8 CHANGELOG (FIX: SINGLE-SELECT SELECT2 DROPDOWNS IN CHECKLIST):
+#   🔴 FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
+#     * ISSUE: These fields always showed "(empty)" and never turned green
+#       - Checklist showed Brand as "(empty)" even when filled
+#       - Linked Brand never validated correctly
+#       - Rebate Type never turned green even when correct
+#     * ROOT CAUSE: getSelect2Value() used wrong approach for single-select
+#       - Used: select.options[i].selected (works for multi-select ONLY)
+#       - Select2 single-select stores value in container's title attribute
+#       - inject_mis_validation() does it correctly, inject_checklist_banner() didn't
+#     * THE FIX: Updated getSelect2Value() to handle both types
+#       - Added isMulti parameter to function signature
+#       - Single-select (isMulti=false): Read from 'select2-{fieldId}-container' title
+#       - Multi-select (isMulti=true): Use existing options iteration
+#     * IMPLEMENTATION (line ~30852):
+#       function getSelect2Value(fieldId, isMulti) {
+#           if (!isMulti) {
+#               const containerId = 'select2-' + fieldId + '-container';
+#               const container = document.getElementById(containerId);
+#               return container ? [container.getAttribute('title')] : [];
+#           }
+#           // ... existing multi-select logic
+#       }
+#     * CALL SITE UPDATE (line ~31066):
+#       actual = getSelect2Value(fieldId, isMulti);  // Now passes isMulti flag
+#     * AFFECTED FIELDS (now working):
+#       - Brand (brand_id) → select2-brand_id-container ✅
+#       - Linked Brand (linked_brand_id) → select2-linked_brand_id-container ✅
+#       - Rebate Type (daily_discount_type_id) → select2-daily_discount_type_id-container ✅
+#     * RESULT:
+#       - All 11 checklist fields now properly monitored ✅
+#       - Brand/Linked Brand/Rebate Type turn green when correct ✅
+#       - Real-time validation works for all field types ✅
+#
+# v12.22.7 CHANGELOG (FIX: PHASE 1 MIS ID BUTTONS + CHECKLIST VALIDATION):
+#   🔴 FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
+#     * ISSUE: MIS ID buttons in Phase 1 didn't pass row data to validation
+#       - CREATE_PART1, CREATE_PART2, PATCH buttons had no data-row attribute
+#       - Clicking them triggered backend Google Sheet search (inefficient)
+#       - Validation didn't use the split's actual data
+#     * THE FIX: Pass `split` data to renderClickableMisId() for all action types
+#       - Line 9144: CREATE_PART1 → renderClickableMisId(..., split)
+#       - Line 9156: CREATE_PART2 → renderClickableMisId(..., split)
+#       - Line 9174: PATCH → renderClickableMisId(..., split)
+#       - GAP already passed split.interrupting_deal (unchanged)
+#     * RESULT: Phase 1 MIS ID buttons now have validation data attached ✅
+#
+#   🔴 FIX 2: Checklist "All Locations" and "All Categories" Validation
+#     * ISSUE: Checklist showed false mismatch errors
+#       - Expected: "All Locations" (from Google Sheet)
+#       - Actual: Empty in MIS (which MEANS "All Locations")
+#       - Result: "1 field(s) don't match" error (FALSE POSITIVE)
+#     * ROOT CAUSE: compareMultiSelect() only checked for empty string
+#       - `if (!expected || expected === '')` didn't catch "All Locations"
+#       - "All Locations" was split into ["All", "Locations"] and failed match
+#     * THE FIX: Explicit checks for "All" strings (lines ~30864-30905)
+#       - locations: "all locations", "all", starts with "all locations"
+#       - categories: "all categories", "all", starts with "all categories"
+#       - Empty MIS selection = correct when "All" is expected
+#     * RESULT:
+#       - "All Locations" expected + empty MIS = ✅ Correct
+#       - "All Categories" expected + empty MIS = ✅ Correct
+#       - No more false "1 field(s) don't match" errors ✅
+#
+#   🔴 FIX 3: Rebate Type False Positive (was actually Issue 2)
+#     * ISSUE: "1 field(s) don't match" appeared even with correct Rebate Type
+#     * ROOT CAUSE: The mismatch was from Stores/Categories, not Rebate Type
+#       - Checklist summary just showed count, didn't specify which field
+#       - User assumed Rebate Type was the problem
+#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this ✅
+#
+# v12.22.6 CHANGELOG (FIX: MIS ID BUTTON VALIDATOR MODE SWITCHING):
+#   🔴 FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
+#     * ISSUE: Checklist appeared but validation ran in "manual mode"
+#       - inject_checklist_banner() was called ✓ (checklist showed)
+#       - BUT persistent validator (inject_mis_validation) was ALSO running
+#       - That validator was in "manual mode" from previous injection
+#       - Result: "Manual mode - skipping Phase 2 validation" in console
+#     * ROOT CAUSE: V2 Persistent Validator Architecture
+#       - inject_mis_validation() injects a validator that runs continuously
+#       - Once injected, it monitors for modal open/close
+#       - New checklist injection didn't notify the existing validator
+#     * THE FIX: Call BOTH functions
+#       - inject_checklist_banner() → visual checklist panel
+#       - inject_mis_validation(expected_data) → sends message to switch mode
+#       - V2 architecture: If validator already active, just sends message
+#       - Message tells validator to switch from 'manual' to 'automation'
+#     * IMPLEMENTATION (line ~22380):
+#       inject_checklist_banner(driver, expected_data, mode='compare')  # Visual
+#       inject_mis_validation(driver, expected_data=expected_data)      # Mode switch
+#     * CONSOLE OUTPUT (expected after fix):
+#       [V2] ✅ Validator already active, sending message instead of re-injecting
+#       [V2] ✅ Switched to AUTOMATION mode
+#       [MIS-VALIDATION] Validation mode: automation  (NOT manual!)
+#     * RESULT:
+#       - Checklist panel appears ✅
+#       - Validator runs in automation mode ✅
+#       - Phase 2 validation (all fields including After Wholesale) ✅
+#
+# v12.22.5 CHANGELOG (FIX: MIS ID BUTTON VALIDATION + CHECKLIST):
+#   🔴 FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
+#     * ISSUE: MIS ID button click had broken validation
+#       - After Wholesale toggle not being validated
+#       - Checklist popup not appearing
+#       - Banner said "Check Deal Entry Checklist" but checklist didn't exist
+#     * ROOT CAUSE: Two separate validation systems
+#       - MIS ID button used: inject_mis_validation() → summary banner only
+#       - Compare to Google Sheet used: inject_checklist_banner() → full checklist
+#       - inject_mis_validation() NEVER called inject_checklist_banner()
+#     * THE FIX: Unified validation system (Option B)
+#       - MIS ID button now calls inject_checklist_banner() directly
+#       - Same validation logic as Compare to Google Sheet button
+#       - No more duplicate validation code paths
+#     * IMPLEMENTATION (line ~22328):
+#       - OLD: inject_mis_validation(driver, expected_data=expected_data)
+#       - NEW: inject_checklist_banner(driver, expected_data, mode='compare')
+#       - Fallback: If checklist fails, uses inject_mis_validation() for basic validation
+#       - No row data: Still uses inject_mis_validation() for Rebate Type + Weekday only
+#     * CONSOLE OUTPUT:
+#       [MIS LOOKUP] Injecting checklist banner with row data
+#       [MIS LOOKUP] Expected: Brand=Stiiizy, Weekday=Monday
+#       [MIS LOOKUP] After Wholesale: True
+#       [MIS LOOKUP] ✅ Checklist banner injected for MIS ID 12345
+#     * RESULT:
+#       - MIS ID button shows same checklist popup as Compare to Google Sheet ✅
+#       - After Wholesale toggle now validated properly ✅
+#       - All field mismatches visible in checklist panel ✅
+#       - Single unified validation system (no duplication) ✅
+#
+# v12.22.4 CHANGELOG (FIX: WEEKLY DEALS USE COLUMN A FOR WEEKDAY):
+#   🔴 FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
+#     * ISSUE: Weekly deals incorrectly used Column K ('Weekday/ Day of Month')
+#       - Column A header: "Weekday" (correct for Weekly)
+#       - Column K header: "Weekday/ Day of Month" (correct for Monthly/Sale)
+#       - get_col() checked Column K FIRST, so Weekly used wrong column
+#     * ROOT CAUSE: Column priority in get_col() calls
+#       - Old: get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')
+#       - Column K checked first → always used if data exists
+#       - All sections used same priority → Weekly got wrong column
+#     * THE FIX: Section-aware column selection
+#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') → Column A first
+#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) → Column K first
+#     * LOCATIONS FIXED (10 total):
+#       - Line ~4048: detect_multi_day_groups()
+#       - Line ~4167: enhanced_match_mis_ids()
+#       - Line ~4527: audit_google_vs_mis()
+#       - Line ~5088: generate_mis_csv_with_multiday()
+#       - Line ~5141: generate_mis_csv_with_multiday() inner loop
+#       - Line ~21793: Zombie detection section loop
+#       - Line ~26591: Section processing loop
+#       - Line ~27079: Weekly processing (api_phase1_analysis)
+#       - Line ~27381: Weekly processing (wk_str)
+#       - Line ~28466: Weekly processing (api_split_audit)
+#     * PATTERN USED:
+#       if section_type == 'weekly':
+#           weekday = get_col(row, ['Weekday', 'Day of Week'], '')
+#       else:
+#           weekday = get_col(row, ['Weekday/ Day of Month', ...], '')
+#     * RESULT: Weekly deals now correctly read from Column A ✅
+#       - Monthly deals still use Column K (ordinals like "1st, 10th") ✅
+#       - Sale deals still use Column K or Column C as appropriate ✅
+#
+# v12.22.3 CHANGELOG (FIX: SUGGESTIONS POPUP END DATE AUTOMATION):
+#   🔴 FIX: End Date Update Button in MIS ID Suggestions Popup
+#     * ISSUE: End Date "Update" button in Suggestions popup fails
+#       - User clicks date → adjusts with dropdowns → clicks Update
+#       - Automation fails to find MIS ID in datatable
+#       - Phase 1 End Date button works fine (different code path)
+#     * ROOT CAUSE: Wrong API endpoint
+#       - Broken: `/api/mis/update-end-date` (has MIS ID lookup issues)
+#       - Working: `/api/mis/automate-end-date` (used by Phase 1)
+#     * THE FIX: Replace updateMisEndDate() to use working endpoint
+#       - Changed from: `/api/mis/update-end-date`
+#       - Changed to: `/api/mis/automate-end-date`
+#       - Added proper loading overlay (matches Phase 1 style)
+#       - Fixed date format: MM/DD/YY → MM/DD/YYYY (full year)
+#       - Added googleRow from matchesData for better context
+#     * IMPLEMENTATION (line ~12156):
+#       - Gets date values from dropdown selectors (unchanged)
+#       - Formats as MM/DD/YYYY (full year, not 2-digit)
+#       - Calls working /api/mis/automate-end-date endpoint
+#       - Shows full-screen loading overlay
+#       - Updates display on success
+#     * CONSOLE OUTPUT:
+#       [UPDATE-END-DATE] Starting with date: 01/31/2026 MIS ID: 12345
+#     * RESULT: Suggestions popup End Date button now works ✅
+#
 # v12.22.2 CHANGELOG (FIX: CONTINUE ROW REBATE TYPE):
 #   🔴 FIX: Rebate Type Not Populating for Continue Row Create Button
 #     * ISSUE: Continue row in Up-Down Planning Phase 1 → Create → Pre-Flight
@@ -4020,7 +4207,11 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
     for g_idx, g_row in google_df.iterrows():
         # Standard Logic for all sections (Removed Sale Swap)
         brand_raw = str(g_row.get('Brand', '')).strip()
-        weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        if section_type == 'weekly':
+            weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
+        else:
+            weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
@@ -4139,7 +4330,11 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
         brand_raw = str(g_row.get('Brand', '')).strip()
-        weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        if section_type == 'weekly':
+            weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
+        else:
+            weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand_raw:
             continue
@@ -4499,7 +4694,11 @@ def audit_google_vs_mis(google_df: pd.DataFrame, mis_df: pd.DataFrame, section_t
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
         brand = str(g_row.get('Brand', '')).strip()
-        weekday = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        if section_type == 'weekly':
+            weekday = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
+        else:
+            weekday = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand:
             continue
@@ -5060,7 +5259,11 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
         
         # Standard Logic for all sections (Removed Sale Swap)
         brand_raw = str(g_row.get('Brand', '')).strip()
-        weekday_val_input = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        if section_type == 'weekly':
+            weekday_val_input = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
+        else:
+            weekday_val_input = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
@@ -5112,6 +5315,9 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
                 # Handle swap for notes
                 if section_type == 'sale':
                     day_val = str(sub_row.get('Brand', '')).strip()
+                elif section_type == 'weekly':
+                    # v12.22.4: Weekly uses Column A ('Weekday')
+                    day_val = str(get_col(sub_row, ['Weekday', 'Day of Week'], '')).strip()
                 else:
                     day_val = str(get_col(sub_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
                 
@@ -9006,7 +9212,8 @@ HTML_TEMPLATE = r"""
                         if (step.action === 'CREATE_PART1') {
                             // Show Original ID from parsed parts (first in list)
                             if (sectionIds.parts && sectionIds.parts.length > 0) {
-                                html += renderClickableMisId(sectionPrefix + '1: ' + sectionIds.parts[0]);
+                                // v12.22.7: Pass split data for validation
+                                html += renderClickableMisId(sectionPrefix + '1: ' + sectionIds.parts[0], split);
                             } else if (split.original_mis_id && !split.original_mis_id.includes(':')) {
                                 // Legacy: no tags, use as-is
                                 html += renderClickableMisId(split.original_mis_id, split);
@@ -9018,7 +9225,8 @@ HTML_TEMPLATE = r"""
                             // v10.8: Check if Continuation already exists in parsed IDs
                             if (sectionIds.parts && sectionIds.parts.length > 1) {
                                 // Continuation already entered - show clickable ID
-                                html += renderClickableMisId(sectionPrefix + '2: ' + sectionIds.parts[1]);
+                                // v12.22.7: Pass split data for validation
+                                html += renderClickableMisId(sectionPrefix + '2: ' + sectionIds.parts[1], split);
                             } else {
                                 // No Continuation yet - show input field
                                 html += '<input type="text" class="form-control form-control-sm" placeholder="New MIS ID" id="split-id-' + idx + '-' + stepIdx + '" style="width:100px;" data-split-idx="' + idx + '" data-step-idx="' + stepIdx + '" data-google-row="' + (split.google_row || '') + '" data-section="' + sectionKey + '">';
@@ -9036,7 +9244,8 @@ HTML_TEMPLATE = r"""
                         if (step.action === 'PATCH') {
                             // v10.8: Check for Patch ID using section prefix (WP, MP, SP)
                             if (sectionIds.patch) {
-                                html += renderClickableMisId(sectionPrefix + 'P: ' + sectionIds.patch);
+                                // v12.22.7: Pass split data for validation
+                                html += renderClickableMisId(sectionPrefix + 'P: ' + sectionIds.patch, split);
                             } else {
                                 html += '<input type="text" class="form-control form-control-sm" placeholder="New MIS ID" id="split-patch-id-' + idx + '-' + stepIdx + '" style="width:100px;" data-split-idx="' + idx + '" data-step-idx="' + stepIdx + '" data-google-row="' + (split.google_row || '') + '" data-section="' + sectionKey + '">';
                             }
@@ -12153,6 +12362,7 @@ HTML_TEMPLATE = r"""
             return null;
         }
         
+        // v12.22.3: Fixed updateMisEndDate to use working automateEndDate endpoint
         async function updateMisEndDate(rowIdx, sIdx, misId) {
             const monthSelect = document.getElementById(`end-month-${rowIdx}-${sIdx}`);
             const daySelect = document.getElementById(`end-day-${rowIdx}-${sIdx}`);
@@ -12165,47 +12375,60 @@ HTML_TEMPLATE = r"""
             
             const month = monthSelect.value;
             const day = daySelect.value;
-            const year = yearSelect.value.slice(-2); // Get last 2 digits of year
+            const year = yearSelect.value; // Full year for working endpoint
             
-            // Format as MM/DD/YY for MIS
-            const newDate = `${month}/${day}/${year}`;
+            // Format as MM/DD/YYYY for the working endpoint
+            const newEndDate = `${month}/${day}/${year}`;
             
-            // Show loading state
-            const editorEl = document.getElementById(`end-date-editor-${rowIdx}-${sIdx}`);
-            const originalHtml = editorEl.innerHTML;
-            editorEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Updating MIS...';
+            console.log('[UPDATE-END-DATE] Starting with date:', newEndDate, 'MIS ID:', misId);
+            
+            // Get googleRow from matchesData if available
+            const match = matchesData[rowIdx];
+            const googleRow = match ? match.google_row : null;
+            
+            // Show loading overlay (same style as working automateEndDate)
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'automate-loading';
+            loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10003; display:flex; justify-content:center; align-items:center; flex-direction:column;';
+            loadingOverlay.innerHTML = '<div class="spinner-border text-light" style="width:3rem; height:3rem;"></div><div style="color:white; margin-top:15px; font-size:1.2em;">Updating End Date in MIS...</div><div id="automate-status" style="color:#aaa; margin-top:10px; font-size:0.9em;">Opening MIS entry ' + misId + '...</div>';
+            document.body.appendChild(loadingOverlay);
             
             try {
-                const response = await fetch('/api/mis/update-end-date', {
+                // Use the WORKING endpoint from automateEndDate
+                const response = await fetch('/api/mis/automate-end-date', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ mis_id: misId, new_date: newDate })
+                    body: JSON.stringify({
+                        mis_id: misId,
+                        new_end_date: newEndDate,
+                        google_row: googleRow,
+                        split_idx: null,  // Not from splits, from suggestions
+                        step_idx: null
+                    })
                 });
+                
                 const data = await response.json();
+                document.getElementById('automate-loading')?.remove();
                 
                 if (data.success) {
-                    // Update the display
+                    // Update the display in the Suggestions popup
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        const savedIcon = data.saved ? '[EMOJI]' : '[EMOJI]';
-                        const savedColor = data.saved ? '#155724' : '#856404';
-                        displayEl.innerHTML = `<span style="color:${savedColor}; font-weight:bold;">${savedIcon} ${newDate}</span>`;
-                        displayEl.style.display = 'block';
+                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">✅ ${newEndDate}</span>`;
                     }
-                    editorEl.style.display = 'none';
-                    editorEl.innerHTML = originalHtml;
                     
-                    if (data.saved) {
-                        alert('[EMOJI] End date updated to ' + newDate + ' and SAVED successfully!');
-                    } else {
-                        alert('[EMOJI] End date updated to ' + newDate + '\\n\\n' + (data.message || 'Please verify in MIS.'));
+                    // Hide the editor
+                    const editorEl = document.getElementById(`end-date-editor-${rowIdx}-${sIdx}`);
+                    if (editorEl) {
+                        editorEl.style.display = 'none';
                     }
+                    
+                    alert('✅ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                 } else {
-                    editorEl.innerHTML = originalHtml;
-                    alert('Error: ' + (data.error || 'Unknown error'));
+                    alert('Error updating end date: ' + (data.error || 'Unknown error'));
                 }
             } catch (error) {
-                editorEl.innerHTML = originalHtml;
+                document.getElementById('automate-loading')?.remove();
                 alert('Error: ' + error.message);
             }
         }
@@ -21751,7 +21974,11 @@ def api_mis_cleanup_audit():
                 
                 # Collect entry data for full field matching
                 brand = str(row.get('Brand', '')).strip()
-                weekday = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+                if section_name == 'weekly':
+                    weekday = str(get_col(row, ['Weekday', 'Day of Week'], '')).strip()
+                else:
+                    weekday = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
                 discount = parse_percentage(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
                 vendor_pct = parse_percentage(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
                 loc_raw, exc_raw = resolve_location_columns(row)
@@ -22229,7 +22456,7 @@ def api_mis_lookup_mis_id():
         # Open the entry modal
         if filter_and_open_mis_id(driver, mis_id):
             time.sleep(1)  # V2: Wait for modal to open before injecting
-            # NEW: If row data provided, inject validation
+            # v12.22.5: If row data provided, inject checklist banner (same as Compare to Google Sheet)
             if row_data:
                 try:
                     # Format row data for validation (similar to create_deal)
@@ -22245,15 +22472,26 @@ def api_mis_lookup_mis_id():
                         'after_wholesale': row_data.get('after_wholesale', False)
                     }
                     
-                    print(f"[MIS LOOKUP] Injecting validation with row data")
+                    print(f"[MIS LOOKUP] Injecting checklist banner with row data")
                     print(f"[MIS LOOKUP] Expected: Brand={expected_data['brand']}, Weekday={expected_data['weekday']}")
+                    print(f"[MIS LOOKUP] After Wholesale: {expected_data['after_wholesale']}")
                     
+                    # v12.22.5: Inject checklist banner for visual checklist panel
+                    inject_checklist_banner(driver, expected_data, mode='compare')
+                    print(f"[MIS LOOKUP] ✅ Checklist banner injected for MIS ID {mis_id}")
+                    
+                    # v12.22.6: ALSO send message to existing validator to switch to automation mode
+                    # The V2 validator may already be running (persistent from previous entry)
+                    # This will send it the expected_data so it validates properly
                     inject_mis_validation(driver, expected_data=expected_data)
-                    print(f"[MIS LOOKUP] [EMOJI] Validation injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] ✅ Validator switched to automation mode")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] [EMOJI] Could not inject validation: {e}")
+                    print(f"[MIS LOOKUP] ❌ Could not inject checklist: {e}")
+                    # Fallback to basic validation
+                    inject_mis_validation(driver, expected_data=None)
             else:
+                # No row data - basic validation only (Rebate Type + Weekday must be filled)
                 inject_mis_validation(driver, expected_data=None)
                 print(f"[MIS LOOKUP] No row data - manual mode validation")
             
@@ -26549,7 +26787,11 @@ def api_gsheet_conflict_audit():
                 group_id = row_to_group.get(true_row)
                 
                 # --- EXTRACT DATA ---
-                weekday_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+                if section_key == 'weekly':
+                    weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
+                else:
+                    weekday_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
                 discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
                 vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
@@ -27010,7 +27252,8 @@ def api_split_audit_planning():
                 true_row = int(row.get('_SHEET_ROW_NUM', idx + 2))
                 group_id = row_to_group.get(true_row)
                 
-                weekday_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                # v12.22.4: Weekly uses Column A ('Weekday')
+                weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
                 discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
                 vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
@@ -27311,7 +27554,8 @@ def api_split_audit_gap_check():
                     dates = get_all_weekdays_for_multiday_group(multi_day_groups[group_id], weekly_df, 'weekly', target_month, target_year)
                     wk_str = ', '.join(multi_day_groups[group_id].get('weekdays', []))
                 else:
-                    wk_str = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                    # v12.22.4: Weekly uses Column A ('Weekday')
+                    wk_str = str(get_col(row, ['Weekday', 'Day of Week'], '')).strip()
                     dates = expand_weekday_to_dates(wk_str, target_month, target_year)
                 
                 if dates:
@@ -28396,7 +28640,8 @@ def api_split_audit_final_check():
                 true_row = int(row.get('_SHEET_ROW_NUM', idx + 2))
                 group_id = row_to_group.get(true_row)
                 
-                weekday_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                # v12.22.4: Weekly uses Column A ('Weekday')
+                weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
                 discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
                 vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id_raw = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
@@ -30638,7 +30883,23 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
         // HELPER FUNCTIONS
         // ========================================
         
-        function getSelect2Value(fieldId) {{
+        // v12.22.8: Fixed to handle both single-select and multi-select Select2 dropdowns
+        function getSelect2Value(fieldId, isMulti) {{
+            // Single-select Select2: Read from container's title attribute
+            // This is how inject_mis_validation() correctly reads these values
+            if (!isMulti) {{
+                const containerId = 'select2-' + fieldId + '-container';
+                const container = document.getElementById(containerId);
+                if (container) {{
+                    const title = container.getAttribute('title');
+                    if (title && title !== '- Select -') {{
+                        return [title];  // Return as array for consistent handling
+                    }}
+                }}
+                return [];
+            }}
+            
+            // Multi-select: Read from native select options (existing logic)
             const select = document.getElementById(fieldId);
             if (!select) return [];
             const selected = [];
@@ -30689,13 +30950,44 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             // expected = comma-separated string of expected values
             
             const actualArr = Array.isArray(actual) ? actual : [];
+            const expectedStr = (expected || '').toLowerCase().trim();
             
-            if (!expected || expected === '') {{
-                // No expected value - handle "All" cases
-                if (expectedKey === 'locations' || expectedKey === 'categories') {{
-                    // "All" locations/categories means empty selection is correct
-                    return {{ status: 'correct', matched: [], missing: [], extra: [] }};
+            // v12.22.7: Handle "All Locations" explicitly
+            // In MIS, empty Store/Locations selection means "All Locations"
+            if (expectedKey === 'locations') {{
+                if (!expected || expected === '' || 
+                    expectedStr === 'all locations' || 
+                    expectedStr === 'all' ||
+                    expectedStr.startsWith('all locations')) {{
+                    // "All Locations" = empty selection in MIS is correct
+                    if (actualArr.length === 0) {{
+                        return {{ status: 'correct', matched: [], missing: [], extra: [] }};
+                    }}
+                    // If user selected specific stores but expected "All", that's also acceptable
+                    // (selecting all 12 stores = same as "All")
+                    // Return correct if they have any selection when "All" is expected
+                    return {{ status: 'correct', matched: actualArr, missing: [], extra: [] }};
                 }}
+            }}
+            
+            // v12.22.7: Handle "All Categories" explicitly
+            // In MIS, empty Category selection means "All Categories"
+            if (expectedKey === 'categories') {{
+                if (!expected || expected === '' || 
+                    expectedStr === 'all categories' || 
+                    expectedStr === 'all' ||
+                    expectedStr.startsWith('all categories')) {{
+                    // "All Categories" = empty selection in MIS is correct
+                    if (actualArr.length === 0) {{
+                        return {{ status: 'correct', matched: [], missing: [], extra: [] }};
+                    }}
+                    // If user selected specific categories but expected "All", that's also acceptable
+                    return {{ status: 'correct', matched: actualArr, missing: [], extra: [] }};
+                }}
+            }}
+            
+            // Original logic for non-"All" cases
+            if (!expected || expected === '') {{
                 return {{ status: 'empty', matched: [], missing: [], extra: [] }};
             }}
             
@@ -30805,7 +31097,8 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 
                 // Get actual value based on field type
                 if (fieldType === 'select2') {{
-                    actual = getSelect2Value(fieldId);
+                    // v12.22.8: Pass isMulti to handle single-select vs multi-select differently
+                    actual = getSelect2Value(fieldId, isMulti);
                 }} else if (fieldType === 'checkbox') {{
                     actual = getCheckboxValue(fieldId);
                 }} else {{
