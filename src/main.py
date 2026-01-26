@@ -1,6 +1,122 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.22.8 SELECT2 VALIDATION FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.23.2 FULL AUTOMATION & SEARCH FIXES
+# v12.23.2 CHANGELOG (COMPREHENSIVE AUTOMATION & SEARCH FIXES):
+#   🔴 FIX 1: Search Logic Fixed in 3 Endpoints
+#     * ISSUE: MIS ID search was broken in multiple endpoints, causing:
+#       - "Compare to Google Sheet" failed to find IDs
+#       - Datatable click validation failed to find IDs
+#       - Both fell back to manual mode incorrectly
+#     * ENDPOINTS FIXED:
+#       - /api/mis/compare-to-sheet (line ~23142) ✅
+#       - /api/mis/validate-lookup (line ~22704) ✅
+#       - /api/mis/lookup-mis-id (fixed in v12.23.1) ✅
+#     * THE FIX: Applied same normalization logic to all 3 endpoints
+#       - Handles newlines: "W1: 123\nW2: 456"
+#       - Handles commas: "W1: 123, W2: 456"
+#       - Handles tags: "Part 1: 123", "S1: 456"
+#       - Strips "(Estimated)" suffix
+#
+#   🟢 FIX 2: Full Automation Mode Added
+#     * FEATURE: Pre-Flight confirmation now fills ALL fields, not just 7
+#     * NEW PARAMETER: full_automation=True (default)
+#     * PREVIOUSLY AUTOMATED (7 fields):
+#       - Brand, Linked Brand, Rebate Type, Discount, Vendor %, Start Date, End Date
+#     * NOW ALSO AUTOMATED (4 more fields):
+#       - Weekday (multi-select) ✅
+#       - Store/Locations (multi-select) ✅
+#       - Category (multi-select) ✅
+#       - After Wholesale (checkbox) ✅
+#     * TOTAL: 11 fields automated
+#     * Checklist banner still appears for verification
+#
+#   🟡 FIX 3: Improved Timing & Verification
+#     * TIMING IMPROVEMENTS in atomic_single_select():
+#       - Dropdown open wait: 0.25s → 0.4s
+#       - Search input focus: 0.1s → 0.15s
+#       - Search results load: 0.5s → 0.6s
+#       - Post-selection escape: 0.08s → 0.1s
+#     * TIMING IMPROVEMENTS in atomic_multi_select():
+#       - Initial dropdown wait: 0.3s → 0.4s
+#       - WebDriverWait timeout: 2s → 3s
+#       - Search filter wait: 0.4s → 0.5s
+#       - Option click timeout: 1.5s → 2s
+#     * VERIFICATION ADDED:
+#       - After setting single-select, reads back container title
+#       - Logs warning if actual value doesn't match expected
+#       - Helps diagnose silent failures
+#
+#   🟢 FIX 4: Multi-Select Automation Enabled
+#     * atomic_multi_select() already existed but was never called
+#     * Now called for Weekday, Store/Locations, Category
+#     * atomic_toggle() now called for After Wholesale checkbox
+#     * Field ID mapping verified:
+#       - Weekday → weekday_ids
+#       - Store/Locations → store_ids
+#       - Category → category_ids
+#       - After Wholesale → rebate_wholesale_discount
+#
+# v12.23.1 CHANGELOG (FIX: MIS ID SEARCH IN GOOGLE SHEET):
+#   🔴 CRITICAL FIX: "Compare to Google Sheet" Not Finding MIS IDs
+#     * ISSUE: MIS ID lookup failed to find IDs that existed in Google Sheet
+#       - User clicked MIS ID in suggestions popup
+#       - Backend searched Google Sheet but reported "not found"
+#       - Incorrectly fell back to Manual validation mode
+#     * ROOT CAUSE 1: Search logic didn't handle multi-line IDs
+#       - Google Sheet MIS ID column can have newlines: "W1: 123\nW2: 456"
+#       - Simple `in` check failed for newline-separated formats
+#     * ROOT CAUSE 2: No debug output when ID not found
+#       - Silent failure made diagnosis impossible
+#       - No "else" clause for matching_rows check
+#     * THE FIX: Enhanced MIS ID search in api_mis_lookup_mis_id()
+#       - Normalizes cell: replaces literal '\n' and actual newlines with commas
+#       - Splits into parts and extracts numeric IDs from tagged format
+#       - Handles "W1: 123", "Part 1: 456", plain "789" formats
+#       - Strips "(Estimated)" suffix before comparison
+#       - Added else clause with debug output when not found
+#       - Logs sample IDs from sheet to help diagnose mismatches
+#     * LOCATION: api_mis_lookup_mis_id() endpoint (~line 22416-22450)
+#
+# v12.23.0 CHANGELOG (CHECKLIST DATE FIX + SUGGESTIONS ENHANCEMENTS):
+#   🔴 FIX 1: Date Comparison Format Mismatch (Issue 1)
+#     * ISSUE: Start Date/End Date always showed red even when dates matched
+#       - MIS might store "1/1/2026" while Google Sheet has "01/01/2026"
+#       - String comparison failed due to leading zeros difference
+#     * THE FIX: Added date normalization in compareSingleValue()
+#       - Extracts month/day/year parts from date strings
+#       - Normalizes both to "M/D/YYYY" format (no leading zeros)
+#       - "01/01/2026" and "1/1/2026" now match correctly
+#     * LOCATION: compareSingleValue() in inject_checklist_banner()
+#
+#   🟡 ENHANCEMENT 2: Yellow Highlight for Assigned MIS ID (Issue 4)
+#     * FEATURE: In suggestions popup, currently assigned MIS ID now highlighted
+#       - Yellow background (#ffc107) with star icon (⭐)
+#       - Title shows "Currently Assigned - Click to lookup in MIS"
+#       - Makes it easy to identify which suggestion is already in the Google Sheet
+#     * IMPLEMENTATION:
+#       - Added isAssignedMisId check in showSuggestionTooltip()
+#       - Compares s.mis_id against match.mis_id (current assignment)
+#       - Conditional styling applied to MIS ID button
+#
+#   🟢 ENHANCEMENT 3: More Aggressive Matching Logic (Issue 5)
+#     * NEW SCORING FACTORS: Locations and Weekdays now contribute to confidence
+#       - Location match: up to 10 points
+#         * "All Locations" on both = 10 pts
+#         * One is "All" = 5 pts (partial)
+#         * Store name fuzzy match = proportional (handles "Beverly Hills" vs "Beverly")
+#       - Weekday match: up to 10 points
+#         * Exact match = 10 pts
+#         * Partial overlap = proportional
+#         * Handles singular/plural ("Monday" vs "Mondays")
+#     * SCORING BREAKDOWN (total still capped at 100):
+#       - Brand: 50 pts (+ 5 linked brand bonus)
+#       - Discount: 30 pts
+#       - Vendor %: 15 pts
+#       - Category: 5 pts
+#       - Locations: 10 pts (NEW)
+#       - Weekdays: 10 pts (NEW)
+#     * RESULT: Better suggestions ranked higher, more reliable matching
+#
 # v12.22.8 CHANGELOG (FIX: SINGLE-SELECT SELECT2 DROPDOWNS IN CHECKLIST):
-#   🔴 FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
+#   ðŸ”´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
 #     * ISSUE: These fields always showed "(empty)" and never turned green
 #       - Checklist showed Brand as "(empty)" even when filled
 #       - Linked Brand never validated correctly
@@ -25,28 +141,28 @@
 #     * CALL SITE UPDATE (line ~31066):
 #       actual = getSelect2Value(fieldId, isMulti);  // Now passes isMulti flag
 #     * AFFECTED FIELDS (now working):
-#       - Brand (brand_id) → select2-brand_id-container ✅
-#       - Linked Brand (linked_brand_id) → select2-linked_brand_id-container ✅
-#       - Rebate Type (daily_discount_type_id) → select2-daily_discount_type_id-container ✅
+#       - Brand (brand_id) â†’ select2-brand_id-container âœ…
+#       - Linked Brand (linked_brand_id) â†’ select2-linked_brand_id-container âœ…
+#       - Rebate Type (daily_discount_type_id) â†’ select2-daily_discount_type_id-container âœ…
 #     * RESULT:
-#       - All 11 checklist fields now properly monitored ✅
-#       - Brand/Linked Brand/Rebate Type turn green when correct ✅
-#       - Real-time validation works for all field types ✅
+#       - All 11 checklist fields now properly monitored âœ…
+#       - Brand/Linked Brand/Rebate Type turn green when correct âœ…
+#       - Real-time validation works for all field types âœ…
 #
 # v12.22.7 CHANGELOG (FIX: PHASE 1 MIS ID BUTTONS + CHECKLIST VALIDATION):
-#   🔴 FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
+#   ðŸ”´ FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
 #     * ISSUE: MIS ID buttons in Phase 1 didn't pass row data to validation
 #       - CREATE_PART1, CREATE_PART2, PATCH buttons had no data-row attribute
 #       - Clicking them triggered backend Google Sheet search (inefficient)
 #       - Validation didn't use the split's actual data
 #     * THE FIX: Pass `split` data to renderClickableMisId() for all action types
-#       - Line 9144: CREATE_PART1 → renderClickableMisId(..., split)
-#       - Line 9156: CREATE_PART2 → renderClickableMisId(..., split)
-#       - Line 9174: PATCH → renderClickableMisId(..., split)
+#       - Line 9144: CREATE_PART1 â†’ renderClickableMisId(..., split)
+#       - Line 9156: CREATE_PART2 â†’ renderClickableMisId(..., split)
+#       - Line 9174: PATCH â†’ renderClickableMisId(..., split)
 #       - GAP already passed split.interrupting_deal (unchanged)
-#     * RESULT: Phase 1 MIS ID buttons now have validation data attached ✅
+#     * RESULT: Phase 1 MIS ID buttons now have validation data attached âœ…
 #
-#   🔴 FIX 2: Checklist "All Locations" and "All Categories" Validation
+#   ðŸ”´ FIX 2: Checklist "All Locations" and "All Categories" Validation
 #     * ISSUE: Checklist showed false mismatch errors
 #       - Expected: "All Locations" (from Google Sheet)
 #       - Actual: Empty in MIS (which MEANS "All Locations")
@@ -59,21 +175,21 @@
 #       - categories: "all categories", "all", starts with "all categories"
 #       - Empty MIS selection = correct when "All" is expected
 #     * RESULT:
-#       - "All Locations" expected + empty MIS = ✅ Correct
-#       - "All Categories" expected + empty MIS = ✅ Correct
-#       - No more false "1 field(s) don't match" errors ✅
+#       - "All Locations" expected + empty MIS = âœ… Correct
+#       - "All Categories" expected + empty MIS = âœ… Correct
+#       - No more false "1 field(s) don't match" errors âœ…
 #
-#   🔴 FIX 3: Rebate Type False Positive (was actually Issue 2)
+#   ðŸ”´ FIX 3: Rebate Type False Positive (was actually Issue 2)
 #     * ISSUE: "1 field(s) don't match" appeared even with correct Rebate Type
 #     * ROOT CAUSE: The mismatch was from Stores/Categories, not Rebate Type
 #       - Checklist summary just showed count, didn't specify which field
 #       - User assumed Rebate Type was the problem
-#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this ✅
+#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this âœ…
 #
 # v12.22.6 CHANGELOG (FIX: MIS ID BUTTON VALIDATOR MODE SWITCHING):
-#   🔴 FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
+#   ðŸ”´ FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
 #     * ISSUE: Checklist appeared but validation ran in "manual mode"
-#       - inject_checklist_banner() was called ✓ (checklist showed)
+#       - inject_checklist_banner() was called âœ“ (checklist showed)
 #       - BUT persistent validator (inject_mis_validation) was ALSO running
 #       - That validator was in "manual mode" from previous injection
 #       - Result: "Manual mode - skipping Phase 2 validation" in console
@@ -82,31 +198,31 @@
 #       - Once injected, it monitors for modal open/close
 #       - New checklist injection didn't notify the existing validator
 #     * THE FIX: Call BOTH functions
-#       - inject_checklist_banner() → visual checklist panel
-#       - inject_mis_validation(expected_data) → sends message to switch mode
+#       - inject_checklist_banner() â†’ visual checklist panel
+#       - inject_mis_validation(expected_data) â†’ sends message to switch mode
 #       - V2 architecture: If validator already active, just sends message
 #       - Message tells validator to switch from 'manual' to 'automation'
 #     * IMPLEMENTATION (line ~22380):
 #       inject_checklist_banner(driver, expected_data, mode='compare')  # Visual
 #       inject_mis_validation(driver, expected_data=expected_data)      # Mode switch
 #     * CONSOLE OUTPUT (expected after fix):
-#       [V2] ✅ Validator already active, sending message instead of re-injecting
-#       [V2] ✅ Switched to AUTOMATION mode
+#       [V2] âœ… Validator already active, sending message instead of re-injecting
+#       [V2] âœ… Switched to AUTOMATION mode
 #       [MIS-VALIDATION] Validation mode: automation  (NOT manual!)
 #     * RESULT:
-#       - Checklist panel appears ✅
-#       - Validator runs in automation mode ✅
-#       - Phase 2 validation (all fields including After Wholesale) ✅
+#       - Checklist panel appears âœ…
+#       - Validator runs in automation mode âœ…
+#       - Phase 2 validation (all fields including After Wholesale) âœ…
 #
 # v12.22.5 CHANGELOG (FIX: MIS ID BUTTON VALIDATION + CHECKLIST):
-#   🔴 FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
+#   ðŸ”´ FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
 #     * ISSUE: MIS ID button click had broken validation
 #       - After Wholesale toggle not being validated
 #       - Checklist popup not appearing
 #       - Banner said "Check Deal Entry Checklist" but checklist didn't exist
 #     * ROOT CAUSE: Two separate validation systems
-#       - MIS ID button used: inject_mis_validation() → summary banner only
-#       - Compare to Google Sheet used: inject_checklist_banner() → full checklist
+#       - MIS ID button used: inject_mis_validation() â†’ summary banner only
+#       - Compare to Google Sheet used: inject_checklist_banner() â†’ full checklist
 #       - inject_mis_validation() NEVER called inject_checklist_banner()
 #     * THE FIX: Unified validation system (Option B)
 #       - MIS ID button now calls inject_checklist_banner() directly
@@ -121,26 +237,26 @@
 #       [MIS LOOKUP] Injecting checklist banner with row data
 #       [MIS LOOKUP] Expected: Brand=Stiiizy, Weekday=Monday
 #       [MIS LOOKUP] After Wholesale: True
-#       [MIS LOOKUP] ✅ Checklist banner injected for MIS ID 12345
+#       [MIS LOOKUP] âœ… Checklist banner injected for MIS ID 12345
 #     * RESULT:
-#       - MIS ID button shows same checklist popup as Compare to Google Sheet ✅
-#       - After Wholesale toggle now validated properly ✅
-#       - All field mismatches visible in checklist panel ✅
-#       - Single unified validation system (no duplication) ✅
+#       - MIS ID button shows same checklist popup as Compare to Google Sheet âœ…
+#       - After Wholesale toggle now validated properly âœ…
+#       - All field mismatches visible in checklist panel âœ…
+#       - Single unified validation system (no duplication) âœ…
 #
 # v12.22.4 CHANGELOG (FIX: WEEKLY DEALS USE COLUMN A FOR WEEKDAY):
-#   🔴 FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
+#   ðŸ”´ FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
 #     * ISSUE: Weekly deals incorrectly used Column K ('Weekday/ Day of Month')
 #       - Column A header: "Weekday" (correct for Weekly)
 #       - Column K header: "Weekday/ Day of Month" (correct for Monthly/Sale)
 #       - get_col() checked Column K FIRST, so Weekly used wrong column
 #     * ROOT CAUSE: Column priority in get_col() calls
 #       - Old: get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')
-#       - Column K checked first → always used if data exists
-#       - All sections used same priority → Weekly got wrong column
+#       - Column K checked first â†’ always used if data exists
+#       - All sections used same priority â†’ Weekly got wrong column
 #     * THE FIX: Section-aware column selection
-#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') → Column A first
-#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) → Column K first
+#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') â†’ Column A first
+#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) â†’ Column K first
 #     * LOCATIONS FIXED (10 total):
 #       - Line ~4048: detect_multi_day_groups()
 #       - Line ~4167: enhanced_match_mis_ids()
@@ -157,14 +273,14 @@
 #           weekday = get_col(row, ['Weekday', 'Day of Week'], '')
 #       else:
 #           weekday = get_col(row, ['Weekday/ Day of Month', ...], '')
-#     * RESULT: Weekly deals now correctly read from Column A ✅
-#       - Monthly deals still use Column K (ordinals like "1st, 10th") ✅
-#       - Sale deals still use Column K or Column C as appropriate ✅
+#     * RESULT: Weekly deals now correctly read from Column A âœ…
+#       - Monthly deals still use Column K (ordinals like "1st, 10th") âœ…
+#       - Sale deals still use Column K or Column C as appropriate âœ…
 #
 # v12.22.3 CHANGELOG (FIX: SUGGESTIONS POPUP END DATE AUTOMATION):
-#   🔴 FIX: End Date Update Button in MIS ID Suggestions Popup
+#   ðŸ”´ FIX: End Date Update Button in MIS ID Suggestions Popup
 #     * ISSUE: End Date "Update" button in Suggestions popup fails
-#       - User clicks date → adjusts with dropdowns → clicks Update
+#       - User clicks date â†’ adjusts with dropdowns â†’ clicks Update
 #       - Automation fails to find MIS ID in datatable
 #       - Phase 1 End Date button works fine (different code path)
 #     * ROOT CAUSE: Wrong API endpoint
@@ -174,7 +290,7 @@
 #       - Changed from: `/api/mis/update-end-date`
 #       - Changed to: `/api/mis/automate-end-date`
 #       - Added proper loading overlay (matches Phase 1 style)
-#       - Fixed date format: MM/DD/YY → MM/DD/YYYY (full year)
+#       - Fixed date format: MM/DD/YY â†’ MM/DD/YYYY (full year)
 #       - Added googleRow from matchesData for better context
 #     * IMPLEMENTATION (line ~12156):
 #       - Gets date values from dropdown selectors (unchanged)
@@ -184,18 +300,18 @@
 #       - Updates display on success
 #     * CONSOLE OUTPUT:
 #       [UPDATE-END-DATE] Starting with date: 01/31/2026 MIS ID: 12345
-#     * RESULT: Suggestions popup End Date button now works ✅
+#     * RESULT: Suggestions popup End Date button now works âœ…
 #
 # v12.22.2 CHANGELOG (FIX: CONTINUE ROW REBATE TYPE):
-#   🔴 FIX: Rebate Type Not Populating for Continue Row Create Button
-#     * ISSUE: Continue row in Up-Down Planning Phase 1 → Create → Pre-Flight
+#   ðŸ”´ FIX: Rebate Type Not Populating for Continue Row Create Button
+#     * ISSUE: Continue row in Up-Down Planning Phase 1 â†’ Create â†’ Pre-Flight
 #       - All fields populate correctly EXCEPT Rebate Type (empty)
 #       - GAP row works fine (has Rebate Type)
 #     * ROOT CAUSE (Backend): splits_required structure missing rebate fields
 #       - Lines ~26817-26855: splits_required object built for each split
 #       - Only `interrupting_deal` nested object had retail/wholesale/after_wholesale
 #       - Main split (weekly deal) was MISSING these fields
-#       - Continue rows use main split data → no rebate type available
+#       - Continue rows use main split data â†’ no rebate type available
 #     * ROOT CAUSE (Frontend): Strict equality check
 #       - Code: `if (sourceData.wholesale === 'TRUE')` 
 #       - Failed if value was 'true', true (boolean), or other formats
@@ -212,10 +328,10 @@
 #       - if (wholesaleVal === 'TRUE') rebateType = 'Wholesale';
 #     * CONSOLE OUTPUT (after fix):
 #       [AUTOMATE] Rebate Type: Wholesale (W: TRUE -> TRUE, R: FALSE -> FALSE)
-#     * RESULT: Continue row Create button now populates Rebate Type ✅
+#     * RESULT: Continue row Create button now populates Rebate Type âœ…
 #
 # v12.22.1 CHANGELOG (ENHANCEMENT: WEEKLY DEAL DATE AUTO-FILL):
-#   🟢 ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
+#   ðŸŸ¢ ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
 #     * FEATURE: Automatically set Start/End dates for Weekly deals
 #       - Start Date: 1st day of the month
 #       - End Date: Last day of the month (handles 28/29/30/31 correctly)
@@ -243,10 +359,10 @@
 #         Start Date: 01/01/2026 (1st of month)
 #         End Date: 01/31/2026 (last day of month)
 #     * NON-WEEKLY DEALS: Unchanged behavior (parses from date_raw field)
-#     * RESULT: Weekly deals auto-fill with full month date range ✅
+#     * RESULT: Weekly deals auto-fill with full month date range âœ…
 #
 # v12.22.0 CHANGELOG (CRITICAL FIX: MULTI-DAY DEAL WEEKDAY COLLECTION):
-#   🔴 CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
+#   ðŸ”´ CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
 #     * ISSUE: Pre-Flight popup only shows ONE weekday for multi-day deals
 #       - Google Sheet has a multi-day group (3 rows, same deal):
 #         Row 45: Monday    - Highatus, 40% off (GROUP HEADER)
@@ -255,7 +371,7 @@
 #       - User clicks Create on any row in group
 #       - Pre-Flight popup opens with Weekday field
 #       - Expected: "Monday, Wednesday, Friday" (ALL weekdays selected)
-#       - Actual: Only shows weekday of clicked row (e.g., "Monday") ❌
+#       - Actual: Only shows weekday of clicked row (e.g., "Monday") âŒ
 #     * ROOT CAUSE: useUnifiedPreFlightForIDMatcher() at line ~12128
 #       - Code: `const weekday = match.weekday || '';`
 #       - Only reads single row's weekday, ignores group membership
@@ -281,11 +397,11 @@
 #       [MULTI-DAY-FIX] Group detected! group_id: 9a3d328682f4
 #       [MULTI-DAY-FIX] All weekdays in group: ["Monday", "Wednesday", "Friday"]
 #       [MULTI-DAY-FIX] Combined weekday string: Monday, Wednesday, Friday
-#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals ✅
-#       - Click Create on header row → Shows all weekdays ✅
-#       - Click Create on member row → Shows all weekdays ✅
-#       - Single-day deals → Shows single weekday (unchanged) ✅
-#       - openUnifiedPreFlight() already handles comma-separated weekdays ✅
+#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals âœ…
+#       - Click Create on header row â†’ Shows all weekdays âœ…
+#       - Click Create on member row â†’ Shows all weekdays âœ…
+#       - Single-day deals â†’ Shows single weekday (unchanged) âœ…
+#       - openUnifiedPreFlight() already handles comma-separated weekdays âœ…
 #   - TECHNICAL NOTES:
 #     * match.multi_day_group structure:
 #       { group_id: "9a3d328682f4", weekdays: ["Monday", "Wednesday", "Friday"], is_first: true }
@@ -295,19 +411,19 @@
 #     * No changes needed to openUnifiedPreFlight() - it's already ready!
 #
 # v12.21.4.2 CHANGELOG (CRITICAL FIX: LINKED BRAND AUTO-FILL):
-#   ðŸ”´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
+#   Ã°Å¸â€Â´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
 #     * ISSUE: Linked Brand dropdown shows empty, not auto-selected
 #       - User clicks Create from ID Matcher
 #       - Google Sheet has: Brand="Highatus", Linked Brand="Cannabiotix"
 #       - Pre-Flight popup opens:
-#         * Brand dropdown: empty âŒ
-#         * Linked Brand dropdown: empty âŒ
+#         * Brand dropdown: empty Ã¢ÂÅ’
+#         * Linked Brand dropdown: empty Ã¢ÂÅ’
 #       - Console shows: "brandOptions: Array(0)" (empty!)
 #     * ROOT CAUSE: brandOptions uses splitPlanningData.brand_list
 #       - splitPlanningData is ONLY populated for Up-Down Planning tab
 #       - When coming from ID Matcher, splitPlanningData is empty
 #       - Result: brandOptions = [] (no brands to select from!)
-#       - Code tries to select "Cannabiotix" in empty dropdown â†’ fails âŒ
+#       - Code tries to select "Cannabiotix" in empty dropdown Ã¢â€ â€™ fails Ã¢ÂÅ’
 #     * THE FIX: Build brandOptions from settingsCache.brandLinkedMap
 #       - settingsCache.brandLinkedMap is populated by loadSettingsDropdownData()
 #       - Contains: {highatus: "Cannabiotix", raw: "Cookies", ...}
@@ -345,19 +461,19 @@
 #     * CONSOLE OUTPUT (after fix):
 #       [PRE-FLIGHT] Brand options from Settings: 45 brands
 #       [LINKED-BRAND-DROPDOWN] data.linked_brand: Cannabiotix
-#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  â† NOW HAS OPTIONS!
-#       [LINKED-BRAND-DROPDOWN] âœ… SELECTED: "Cannabiotix" (matches...)
-#     * RESULT: Brand and Linked Brand dropdowns now populated âœ…
-#       - Works for ID Matcher Create button âœ…
-#       - Works for Up-Down Planning Create button âœ…
-#       - Works for Suggestions popup Create button âœ…
-#       - Linked brand auto-selected correctly âœ…
+#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  Ã¢â€ Â NOW HAS OPTIONS!
+#       [LINKED-BRAND-DROPDOWN] Ã¢Å“â€¦ SELECTED: "Cannabiotix" (matches...)
+#     * RESULT: Brand and Linked Brand dropdowns now populated Ã¢Å“â€¦
+#       - Works for ID Matcher Create button Ã¢Å“â€¦
+#       - Works for Up-Down Planning Create button Ã¢Å“â€¦
+#       - Works for Suggestions popup Create button Ã¢Å“â€¦
+#       - Linked brand auto-selected correctly Ã¢Å“â€¦
 #   - USER IMPACT:
-#     * Linked Brand dropdown now has options âœ…
-#     * Linked Brand auto-fills from Google Sheet âœ…
-#     * Brand dropdown also populated from Settings âœ…
-#     * Works consistently across all Create button locations âœ…
-#     * No more empty dropdowns in Pre-Flight popup âœ…
+#     * Linked Brand dropdown now has options Ã¢Å“â€¦
+#     * Linked Brand auto-fills from Google Sheet Ã¢Å“â€¦
+#     * Brand dropdown also populated from Settings Ã¢Å“â€¦
+#     * Works consistently across all Create button locations Ã¢Å“â€¦
+#     * No more empty dropdowns in Pre-Flight popup Ã¢Å“â€¦
 #   - TECHNICAL NOTES:
 #     * getBrandOptionsFromSettings() helper function added
 #     * Extracts brands from settingsCache.brandLinkedMap (both keys and values)
@@ -368,7 +484,7 @@
 #     * Falls back to splitPlanningData.brand_list if settings not loaded
 #     * Debug logging: "[PRE-FLIGHT] Brand options from Settings: X brands"
 # v12.21.4.1 CHANGELOG (DEBUG: ENHANCED EXCEPTION LOGGING):
-#   ðŸ” DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
+#   Ã°Å¸â€Â DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
 #     * ISSUE REPORTED: "All Locations Except: Davis, Dixon" only excludes Davis
 #     * SYMPTOM: Second exception (Dixon) not being excluded
 #     * DIAGNOSTIC ADDITIONS:
@@ -383,11 +499,11 @@
 #          - Shows each store being checked
 #          - Shows which exception it matches (if any)
 #          - Example output:
-#            âŒ EXCLUDING: "Davis" (matches exception "Davis")
-#            âŒ EXCLUDING: "Dixon" (matches exception "Dixon")
-#            âœ… KEEPING: "Beverly Hills"
+#            Ã¢ÂÅ’ EXCLUDING: "Davis" (matches exception "Davis")
+#            Ã¢ÂÅ’ EXCLUDING: "Dixon" (matches exception "Dixon")
+#            Ã¢Å“â€¦ KEEPING: "Beverly Hills"
 #       5. Summary logging:
-#          "12 total â†’ 2 excluded â†’ 10 remaining"
+#          "12 total Ã¢â€ â€™ 2 excluded Ã¢â€ â€™ 10 remaining"
 #     * EXPECTED CONSOLE OUTPUT:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Input String: "All Locations Except: Davis, Dixon"
@@ -395,30 +511,30 @@
 #         Master List: [12 stores]
 #         Exceptions Raw: ["Davis", "Dixon"]
 #         Exceptions Expanded: ["Davis", "Dixon"]
-#         âŒ EXCLUDING: "Davis" (matches exception "Davis")
-#         âœ… KEEPING: "Beverly Hills"
-#         âŒ EXCLUDING: "Dixon" (matches exception "Dixon")
-#         âœ… KEEPING: "El Sobrante"
+#         Ã¢ÂÅ’ EXCLUDING: "Davis" (matches exception "Davis")
+#         Ã¢Å“â€¦ KEEPING: "Beverly Hills"
+#         Ã¢ÂÅ’ EXCLUDING: "Dixon" (matches exception "Dixon")
+#         Ã¢Å“â€¦ KEEPING: "El Sobrante"
 #         ... (continues for all stores)
 #         Final Result: [10 stores]
-#         Summary: 12 total â†’ 2 excluded â†’ 10 remaining
+#         Summary: 12 total Ã¢â€ â€™ 2 excluded Ã¢â€ â€™ 10 remaining
 #     * PURPOSE: Identify where comma-separated parsing is failing
 #     * ACTION: User should check console logs and report what they see
 # v12.21.4 CHANGELOG (CRITICAL FIXES: STORE MAPPING + ALL LOCATIONS EXCEPT):
-#   ðŸ”´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
+#   Ã°Å¸â€Â´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
 #     * ISSUE: Settings tab stores don't match MIS dropdown names
-#       - Settings tab: "Fresno (Palm)" âŒ
-#       - MIS dropdown: "Fresno" âœ…
+#       - Settings tab: "Fresno (Palm)" Ã¢ÂÅ’
+#       - MIS dropdown: "Fresno" Ã¢Å“â€¦
 #       - Result: Automation fails to select stores
 #     * ROOT CAUSE: resolve_store_selection() returned names directly without mapping
 #       - User selects "Fresno (Palm)" in Pre-Flight popup
 #       - Function returns ["Fresno (Palm)"] 
 #       - atomic_multi_select tries to find "Fresno (Palm)" in MIS
-#       - MIS only has "Fresno" â†’ selection fails âŒ
+#       - MIS only has "Fresno" Ã¢â€ â€™ selection fails Ã¢ÂÅ’
 #     * THE FIX: Apply STORE_MAPPING before automation
 #       - resolve_store_selection() now applies STORE_MAPPING
-#       - "Fresno (Palm)" â†’ "Fresno" âœ…
-#       - "Beverly" â†’ "Beverly Hills" âœ…
+#       - "Fresno (Palm)" Ã¢â€ â€™ "Fresno" Ã¢Å“â€¦
+#       - "Beverly" Ã¢â€ â€™ "Beverly Hills" Ã¢Å“â€¦
 #       - Specific stores AND exceptions both mapped
 #     * STORE_MAPPING Dictionary (lines 1627-1642, 1668-1683):
 #       {
@@ -440,28 +556,28 @@
 #     * IMPLEMENTATION:
 #       - Case 3 (Specific Stores): Apply mapping to each store
 #         mapped = STORE_MAPPING.get(store, store)
-#         Logs: "Store mapping: 'Fresno (Palm)' â†’ 'Fresno'"
+#         Logs: "Store mapping: 'Fresno (Palm)' Ã¢â€ â€™ 'Fresno'"
 #       - Case 2 (All Except): Apply mapping to exceptions list
 #         mapped_exceptions = [STORE_MAPPING.get(exc, exc) for exc in exceptions]
-#     * RESULT: Automation now works with Settings tab store names âœ…
+#     * RESULT: Automation now works with Settings tab store names Ã¢Å“â€¦
 #       - User sees: "Fresno (Palm)" in Pre-Flight dropdown
 #       - Backend sends: "Fresno" to MIS automation
-#       - MIS finds: "Fresno" in dropdown âœ…
-#   ðŸ”´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
+#       - MIS finds: "Fresno" in dropdown Ã¢Å“â€¦
+#   Ã°Å¸â€Â´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
 #     * ISSUE: Pre-Flight popup doesn't handle "All Locations Except:" correctly
 #       - Google Sheet: "All Locations Except: Davis, Hawthorne"
 #       - Expected: Auto-select 10 stores (all except Davis, Hawthorne)
-#       - Actual: Only selected Davis and Hawthorne (backwards!) âŒ
+#       - Actual: Only selected Davis and Hawthorne (backwards!) Ã¢ÂÅ’
 #     * ROOT CAUSE: expandLocationCodes() had broken logic
-#       - Line 9229: return exceptions.map(...) âŒ
+#       - Line 9229: return exceptions.map(...) Ã¢ÂÅ’
 #       - This returned ONLY the exceptions, not the remaining stores
 #       - Should return: Master List MINUS exceptions
 #     * THE FIX: Implement proper subtraction logic
 #       Step 1: Start with Master List (all 12 stores from Settings tab)
 #       Step 2: Extract exceptions ("Davis, Hawthorne")
-#       Step 3: Expand exception codes ("DV" â†’ "Davis")
+#       Step 3: Expand exception codes ("DV" Ã¢â€ â€™ "Davis")
 #       Step 4: Subtract exceptions from master list
-#       Result: Return 10 stores (all except Davis, Hawthorne) âœ…
+#       Result: Return 10 stores (all except Davis, Hawthorne) Ã¢Å“â€¦
 #     * IMPLEMENTATION (line ~9219):
 #       const masterList = settingsCache.stores || [12 default stores];
 #       const exceptions = exceptionsRaw.map(code => 
@@ -470,22 +586,22 @@
 #       const result = masterList.filter(store => 
 #           !exceptions.some(exc => exc.toLowerCase() === store.toLowerCase())
 #       );
-#       return result;  // âœ… All stores EXCEPT exceptions
+#       return result;  // Ã¢Å“â€¦ All stores EXCEPT exceptions
 #     * CONSOLE LOGGING:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Master List: [Dixon, Davis, Beverly Hills, ...]
 #         Exceptions Raw: ["Davis", "Hawthorne"]
 #         Exceptions Expanded: ["Davis", "Hawthorne"]
 #         Result (Master - Exceptions): [Dixon, Beverly Hills, El Sobrante, ...]
-#     * RESULT: Pre-Flight popup now auto-selects correct stores âœ…
+#     * RESULT: Pre-Flight popup now auto-selects correct stores Ã¢Å“â€¦
 #       - Input: "All Locations Except: Davis, Hawthorne"
-#       - Auto-selected: 10 stores (all except Davis, Hawthorne) âœ…
+#       - Auto-selected: 10 stores (all except Davis, Hawthorne) Ã¢Å“â€¦
 #   - USER IMPACT:
-#     * Store automation now works correctly âœ…
-#     * No more "Could not fill Store" warnings âœ…
-#     * "All Locations Except:" logic works in Pre-Flight popup âœ…
-#     * Settings tab controls store names (single source of truth) âœ…
-#     * Mapping handles special characters, parentheses, etc. âœ…
+#     * Store automation now works correctly Ã¢Å“â€¦
+#     * No more "Could not fill Store" warnings Ã¢Å“â€¦
+#     * "All Locations Except:" logic works in Pre-Flight popup Ã¢Å“â€¦
+#     * Settings tab controls store names (single source of truth) Ã¢Å“â€¦
+#     * Mapping handles special characters, parentheses, etc. Ã¢Å“â€¦
 #   - TECHNICAL NOTES:
 #     * STORE_MAPPING defined twice (lines 1627 and 1668) - duplicate, safe
 #     * Mapping applied in resolve_store_selection() (backend automation)
@@ -494,7 +610,7 @@
 #     * Fallback: If store not in mapping, uses original name
 #     * Debug logging shows mapping transformations and subtraction results
 # v12.21.3 CHANGELOG (FINAL FIXES FOR PHASE 3):
-#   ðŸ”´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
+#   Ã°Å¸â€Â´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
 #     * ISSUE: Rebate Type dropdown in Pre-Flight popup not auto-filling
 #     * ROOT CAUSE: Google Sheet columns named "Wholesale?" and "Retail?" (with ?)
 #       - Code was checking for 'Wholesale' and 'Retail' (without ?)
@@ -503,13 +619,13 @@
 #       - raw_row_data?.['Retail?'] (primary check)
 #       - raw_row_data?.['Retail'] (fallback)
 #       - Added console logging: [REBATE-TYPE-DEBUG] for debugging
-#     * RESULT: Rebate Type now auto-fills correctly âœ…
-#   ðŸ”´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
+#     * RESULT: Rebate Type now auto-fills correctly Ã¢Å“â€¦
+#   Ã°Å¸â€Â´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
 #     * ISSUE: Hardcoded store list showing wrong locations
 #       - Showed: San Jose, Santa Cruz, Fresno, DTSJ, Campbell, etc.
 #       - Should show: Dixon, Davis, Beverly Hills, El Sobrante, etc.
 #     * ROOT CAUSE: Pre-Flight popup used hardcoded array instead of Settings tab
-#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] âŒ
+#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] Ã¢ÂÅ’
 #       - Should use: settingsCache.stores (loaded from Settings tab)
 #     * FIX: Use Settings tab stores like brands/categories
 #       - const storeOptions = settingsCache.stores || fallback
@@ -518,8 +634,8 @@
 #     * FIX: Ensure settings loaded before popup opens
 #       - Added await loadSettingsDropdownData() in automateCreateDeal
 #       - Adapter function already had this (useUnifiedPreFlightForIDMatcher)
-#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab âœ…
-#   ðŸ”´ ENHANCEMENT: Compare Checklist Visibility Improvements
+#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab Ã¢Å“â€¦
+#   Ã°Å¸â€Â´ ENHANCEMENT: Compare Checklist Visibility Improvements
 #     * ISSUE: Checklist sometimes not visible after Compare
 #     * IMPROVEMENTS:
 #       - Increased setTimeout from 500ms to 800ms (more reliable)
@@ -527,19 +643,19 @@
 #       - Enhanced console logging with DEBUG details
 #       - Added search for all checklist elements if main banner not found
 #       - Logs banner display/opacity status for debugging
-#     * RESULT: More reliable checklist visibility + better debugging âœ…
+#     * RESULT: More reliable checklist visibility + better debugging Ã¢Å“â€¦
 #   - TECHNICAL DETAILS:
 #     * Column name checks now resilient to ? punctuation
 #     * Settings loading ensures fresh data from Google Sheet
 #     * Store list dynamically updates when Settings tab changes
 #     * Checklist injection verified with comprehensive logging
 #   - USER IMPACT:
-#     * Rebate Type auto-fills correctly from Google Sheet âœ…
-#     * Store locations match Settings tab exactly âœ…
-#     * Compare checklist more reliably visible âœ…
-#     * Better console debugging for troubleshooting âœ…
+#     * Rebate Type auto-fills correctly from Google Sheet Ã¢Å“â€¦
+#     * Store locations match Settings tab exactly Ã¢Å“â€¦
+#     * Compare checklist more reliably visible Ã¢Å“â€¦
+#     * Better console debugging for troubleshooting Ã¢Å“â€¦
 # v12.21.2 CHANGELOG (ADDITIONAL CRITICAL FIXES):
-#   ðŸ”´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
+#   Ã°Å¸â€Â´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
 #     * ISSUE: Clicking Create in Suggestions Popup caused error:
 #       "TypeError: (match.discount || "").replace is not a function"
 #     * ROOT CAUSE: match.discount was a number, not a string
@@ -548,8 +664,8 @@
 #     * FIX: Convert to string before .replace() operation
 #       - const discount = String(match.discount || '').replace('%', '');
 #       - const vendorContrib = String(match.vendor_contrib || '').replace('%', '');
-#     * RESULT: Create button in Suggestions Popup now works âœ…
-#   ðŸ”´ CRITICAL FIX 4: Compare Button Checklist Visibility
+#     * RESULT: Create button in Suggestions Popup now works Ã¢Å“â€¦
+#   Ã°Å¸â€Â´ CRITICAL FIX 4: Compare Button Checklist Visibility
 #     * ISSUE: Compare button validates correctly but checklist popup not visible
 #     * SYMPTOM: Console shows "Found MIS ID" but no visual checklist sidebar
 #     * ROOT CAUSE: Timing issue between backend injection and frontend display
@@ -562,34 +678,34 @@
 #       - Forces visibility: display='block', opacity='1'
 #       - Scrolls into view if off-screen
 #       - Triggers runValidation() to update field states
-#     * RESULT: Compare button now shows checklist popup âœ…
+#     * RESULT: Compare button now shows checklist popup Ã¢Å“â€¦
 #   - TECHNICAL DETAILS:
 #     * String() wrapper safely handles null, undefined, numbers, strings
 #     * setTimeout(500ms) allows backend Selenium injection time to complete
 #     * scrollIntoView with smooth behavior for better UX
 #     * runValidation() refresh ensures field icons update correctly
 #   - USER IMPACT:
-#     * Create in Suggestions Popup â†’ Now works (no more TypeError) âœ…
-#     * Compare to Google Sheet â†’ Checklist popup now visible âœ…
-#     * Consistent validation experience across all workflows âœ…
+#     * Create in Suggestions Popup Ã¢â€ â€™ Now works (no more TypeError) Ã¢Å“â€¦
+#     * Compare to Google Sheet Ã¢â€ â€™ Checklist popup now visible Ã¢Å“â€¦
+#     * Consistent validation experience across all workflows Ã¢Å“â€¦
 # v12.21.1 CHANGELOG (CRITICAL BUGFIXES):
-#   ðŸ”´ CRITICAL FIX 1: ID Matcher Create Button Unification
+#   Ã°Å¸â€Â´ CRITICAL FIX 1: ID Matcher Create Button Unification
 #     * ISSUE: ID Matcher was using old white "Create New Deal in MIS" popup
 #     * Up-Down Planning was using new dark "Pre-Flight Confirmation" popup
 #     * INCONSISTENT USER EXPERIENCE - Two different UIs for same action
 #     * FIX: Created `useUnifiedPreFlightForIDMatcher()` adapter function
 #       - Converts ID Matcher data format to Pre-Flight data format
 #       - Calls `openUnifiedPreFlight()` (same as Up-Down Planning)
-#       - BOTH tabs now use identical dark blue Pre-Flight popup âœ…
+#       - BOTH tabs now use identical dark blue Pre-Flight popup Ã¢Å“â€¦
 #     * RESULT: Consistent UX across all Create workflows
-#   ðŸ”´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
+#   Ã°Å¸â€Â´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
 #     * ISSUE: Backend returns mode='comparison', frontend checks mode='automation'
 #     * ISSUE: Backend doesn't return expected_data in JSON
-#     * RESULT: Frontend never activates automation mode, stays in manual âŒ
+#     * RESULT: Frontend never activates automation mode, stays in manual Ã¢ÂÅ’
 #     * Console showed: "Found MIS ID 973" then "MIS ID not found" (contradictory!)
 #     * FIX: Backend now returns:
-#       - mode: 'automation' (matches frontend check) âœ…
-#       - expected_data: {...} (frontend needs this) âœ…
+#       - mode: 'automation' (matches frontend check) Ã¢Å“â€¦
+#       - expected_data: {...} (frontend needs this) Ã¢Å“â€¦
 #     * RESULT: Compare button correctly activates checklist validation
 #   - TECHNICAL DETAILS:
 #     * ID Matcher adapter extracts: brand, linked_brand, weekday, categories, 
@@ -599,21 +715,21 @@
 #     * Compare endpoint injection still works (v12.19 feature preserved)
 #     * Compare endpoint now returns data for frontend validation activation
 #   - USER IMPACT:
-#     * ID Matcher Create â†’ Now shows dark Pre-Flight popup (consistent) âœ…
-#     * Compare button â†’ Now correctly finds matches and activates checklist âœ…
-#     * No more "MIS ID not found" false warnings âœ…
+#     * ID Matcher Create Ã¢â€ â€™ Now shows dark Pre-Flight popup (consistent) Ã¢Å“â€¦
+#     * Compare button Ã¢â€ â€™ Now correctly finds matches and activates checklist Ã¢Å“â€¦
+#     * No more "MIS ID not found" false warnings Ã¢Å“â€¦
 # v12.21 CHANGELOG (PHASE 3: SMART PRE-FLIGHT & DATA INTEGRITY):
-#   âœ… SMART LOCATION EXPANSION:
+#   Ã¢Å“â€¦ SMART LOCATION EXPANSION:
 #     * JavaScript now auto-expands location codes to full store names
-#     * Mapping: "DV"â†’"Davis", "MOD"â†’"Modesto", "SJ"â†’"San Jose", etc.
+#     * Mapping: "DV"Ã¢â€ â€™"Davis", "MOD"Ã¢â€ â€™"Modesto", "SJ"Ã¢â€ â€™"San Jose", etc.
 #     * Pre-Flight popup automatically checks correct Store checkboxes
 #     * No more manual checkbox selection for known codes
 #     * Handles "All Locations" and "All Locations Except" patterns
-#   âœ… SMART REBATE TYPE DETECTION:
+#   Ã¢Å“â€¦ SMART REBATE TYPE DETECTION:
 #     * Detects "Rebate After Wholesale" vs plain "Retail"/"Wholesale"
-#     * Logic: If rebate_type="Retail" AND after_wholesale=True â†’ "Rebate After Wholesale"
+#     * Logic: If rebate_type="Retail" AND after_wholesale=True Ã¢â€ â€™ "Rebate After Wholesale"
 #     * Provides clearer semantic meaning to users
-#   âœ… ORIGINAL VALUE TRACKING:
+#   Ã¢Å“â€¦ ORIGINAL VALUE TRACKING:
 #     * Added 9 hidden input fields to track original Google Sheet values:
 #       - pf-original-discount
 #       - pf-original-vendor
@@ -626,8 +742,8 @@
 #       - pf-original-after-wholesale
 #     * Enables "Modified" status detection in future validation
 #     * Checklist can show Yellow Warning when user edits values
-#   âœ… FUNCTION RENAME:
-#     * showPreFlightPopup() â†’ openUnifiedPreFlight()
+#   Ã¢Å“â€¦ FUNCTION RENAME:
+#     * showPreFlightPopup() Ã¢â€ â€™ openUnifiedPreFlight()
 #     * Signifies architectural shift to unified, intelligent popup
 #     * Maintains all v12.20 date dropdown functionality
 #   - ARCHITECTURE IMPROVEMENTS:
@@ -641,16 +757,16 @@
 #     * Data integrity preserved (original values tracked)
 #     * Future checklist can warn: "You changed Discount from 20% to 25%"
 #   - TESTING PRIORITY:
-#     * Location codes expand correctly (DV â†’ Davis checkbox selected)
+#     * Location codes expand correctly (DV Ã¢â€ â€™ Davis checkbox selected)
 #     * Rebate After Wholesale detected and displayed
 #     * Hidden fields populated with original values
 #     * Store checkboxes auto-selected based on smart expansion
 # v12.20 CHANGELOG (PHASE 2: FRONTEND UNIFICATION):
-#   âœ… TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
+#   Ã¢Å“â€¦ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
 #     * Compare endpoint now calls inject_checklist_banner with mode='compare'
 #     * Checklist banner supports dual modes (create/compare)
 #     * Alert banner simplified to show only status + metadata
-#   âœ… TASK 4 COMPLETED (Frontend Refactor):
+#   Ã¢Å“â€¦ TASK 4 COMPLETED (Frontend Refactor):
 #     * UNIFIED CREATE WORKFLOW:
 #       - Both Up-Down Planning AND ID Matcher now use /api/mis/automate-create-deal
 #       - Pre-Flight Popup date inputs converted to dropdowns (Month/Day/Year)
@@ -660,7 +776,7 @@
 #       - Start/End Date now use dropdown selectors instead of text inputs
 #       - Month: Jan-Dec dropdown
 #       - Day: 1-31 dropdown (auto-populated)
-#       - Year: Current year Â±2 years
+#       - Year: Current year Ã‚Â±2 years
 #       - Auto-initialization from data.start_date/end_date (MM/DD/YY format)
 #     * ID MATCHER CREATE BUTTON:
 #       - Now reads all form values (Weekday, Category, Locations, etc.)
@@ -675,8 +791,8 @@
 #   - REMOVED ENDPOINTS:
 #     * /api/mis/create-deal (legacy ID Matcher endpoint) - no longer called
 #   - TESTING PRIORITY:
-#     * Up-Down Planning Create button â†’ Pre-Flight popup â†’ Checklist appears
-#     * ID Matcher Create button â†’ Pre-Flight popup â†’ Checklist appears
+#     * Up-Down Planning Create button Ã¢â€ â€™ Pre-Flight popup Ã¢â€ â€™ Checklist appears
+#     * ID Matcher Create button Ã¢â€ â€™ Pre-Flight popup Ã¢â€ â€™ Checklist appears
 #     * Date dropdowns populate correctly from Google Sheet dates
 #     * All field validations work consistently
 # v12.19 CHANGELOG (PHASE 1: BACKEND API WIRING):
@@ -4365,6 +4481,9 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
         category_raw = str(g_row.get('Categories', '')).strip()
         current_sheet_id = str(get_col(g_row, ['MIS ID', 'ID'], '')).strip()
         
+        # v12.23.0: Extract locations from Google Sheet for enhanced matching
+        google_locations_raw = format_location_display(*resolve_location_columns(g_row))
+        
         # v12.1: Parse multi-brand - create separate entries for each brand
         individual_brands = parse_multi_brand(brand_raw)
         is_multi_brand_row = len(individual_brands) > 1
@@ -4541,8 +4660,68 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 elif not category_raw and not mis_category:
                     score_category = 5
             
-                # Final Confidence Calculation
-                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category), 100)
+                # v12.23.0: 5. Location Match Score (enhanced matching)
+                mis_locations = str(c_row.get('Store', '')).strip().lower()
+                google_locations = google_locations_raw.lower() if google_locations_raw else ''
+                score_locations = 0
+                if apply_bonuses:
+                    # Handle "All Locations" cases
+                    google_is_all = 'all' in google_locations or not google_locations or google_locations == '-'
+                    mis_is_all = 'all' in mis_locations or not mis_locations or mis_locations == 'nan'
+                    
+                    if google_is_all and mis_is_all:
+                        score_locations = 10  # Both are "All Locations"
+                    elif google_is_all or mis_is_all:
+                        score_locations = 5  # One is "All", partial match
+                    else:
+                        # Compare individual store names
+                        google_stores = set(s.strip() for s in google_locations.replace(' except:', ',').split(',') if s.strip() and s.strip() not in ['all', 'locations', 'all locations'])
+                        mis_stores = set(s.strip() for s in mis_locations.split(',') if s.strip() and s.strip() not in ['all', 'locations', 'all locations', 'nan'])
+                        if google_stores and mis_stores:
+                            # Fuzzy match store names (handle abbreviations like "Beverly Hills" vs "Beverly")
+                            matched = 0
+                            for g_store in google_stores:
+                                for m_store in mis_stores:
+                                    if g_store == m_store or g_store in m_store or m_store in g_store:
+                                        matched += 1
+                                        break
+                            if matched > 0:
+                                ratio = matched / max(len(google_stores), len(mis_stores))
+                                score_locations = round(10 * ratio)  # Proportional score
+                
+                # v12.23.0: 6. Weekday Match Score (enhanced matching)
+                mis_weekday = str(c_row.get('Weekday', '')).strip().lower()
+                google_weekday = weekday_raw.lower() if weekday_raw else ''
+                score_weekday = 0
+                if apply_bonuses:
+                    # Normalize weekday names
+                    def normalize_weekdays_list(wd_str):
+                        days = []
+                        wd_lower = wd_str.lower()
+                        if 'mon' in wd_lower: days.append('mon')
+                        if 'tue' in wd_lower: days.append('tue')
+                        if 'wed' in wd_lower: days.append('wed')
+                        if 'thu' in wd_lower: days.append('thu')
+                        if 'fri' in wd_lower: days.append('fri')
+                        if 'sat' in wd_lower: days.append('sat')
+                        if 'sun' in wd_lower: days.append('sun')
+                        return set(days)
+                    
+                    google_days = normalize_weekdays_list(google_weekday)
+                    mis_days = normalize_weekdays_list(mis_weekday)
+                    
+                    if google_days and mis_days:
+                        if google_days == mis_days:
+                            score_weekday = 10  # Exact match
+                        elif google_days & mis_days:  # Intersection
+                            overlap = len(google_days & mis_days)
+                            total = len(google_days | mis_days)
+                            score_weekday = round(10 * (overlap / total))  # Proportional
+                    elif not google_days and not mis_days:
+                        score_weekday = 5  # Both have no specific weekday
+            
+                # Final Confidence Calculation (now includes locations + weekdays)
+                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category + score_locations + score_weekday), 100)
             
                 # Build Display Data
                 locs = str(c_row.get('Store', '')).strip()
@@ -9686,7 +9865,7 @@ HTML_TEMPLATE = r"""
                 if (!locationStr) return [];
                 
                 // Handle "All Locations Except:" logic
-                // Example: "All Locations Except: Davis, Hawthorne" â†’ Returns 10 stores (all except Davis, Hawthorne)
+                // Example: "All Locations Except: Davis, Hawthorne" Ã¢â€ â€™ Returns 10 stores (all except Davis, Hawthorne)
                 if (locationStr.toLowerCase().includes('all locations')) {
                     if (locationStr.toLowerCase().includes('except')) {
                         // v12.21.4: FIXED - Return all stores EXCEPT the listed ones
@@ -9710,7 +9889,7 @@ HTML_TEMPLATE = r"""
                                 .map(s => s.trim())
                                 .filter(s => s.length > 0);  // Remove empty strings
                             
-                            // Step 3: Expand exception codes (e.g., "DV" â†’ "Davis")
+                            // Step 3: Expand exception codes (e.g., "DV" Ã¢â€ â€™ "Davis")
                             const exceptions = exceptionsRaw.map(code => 
                                 locationCodeMap[code.toLowerCase()] || code
                             );
@@ -9729,24 +9908,24 @@ HTML_TEMPLATE = r"""
                                     const excLower = exc.toLowerCase();
                                     const matches = excLower === storeLower;
                                     if (matches) {
-                                        console.log(`  âŒ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                        console.log(`  Ã¢ÂÅ’ EXCLUDING: "${store}" (matches exception "${exc}")`);
                                     }
                                     return matches;
                                 });
                                 
                                 if (!isExcluded) {
-                                    console.log(`  âœ… KEEPING: "${store}"`);
+                                    console.log(`  Ã¢Å“â€¦ KEEPING: "${store}"`);
                                 }
                                 
                                 return !isExcluded;
                             });
                             
                             console.log('  Final Result (Master - Exceptions):', result);
-                            console.log(`  Summary: ${masterList.length} total â†’ ${exceptions.length} excluded â†’ ${result.length} remaining`);
+                            console.log(`  Summary: ${masterList.length} total Ã¢â€ â€™ ${exceptions.length} excluded Ã¢â€ â€™ ${result.length} remaining`);
                             return result;
                         }
                     }
-                    // Just "All Locations" with no exceptions â†’ return empty array (auto-selects all)
+                    // Just "All Locations" with no exceptions Ã¢â€ â€™ return empty array (auto-selects all)
                     console.log('[SMART-LOCATION] All Locations (no exceptions) - returning empty array');
                     return [];
                 }
@@ -9758,7 +9937,7 @@ HTML_TEMPLATE = r"""
                     return locationCodeMap[codeLower] || code; // Use mapping or original if not found
                 });
                 
-                console.log('[SMART-LOCATION] Expanded:', locationStr, 'â†’', expanded);
+                console.log('[SMART-LOCATION] Expanded:', locationStr, 'Ã¢â€ â€™', expanded);
                 return expanded;
             }
             
@@ -9881,7 +10060,7 @@ HTML_TEMPLATE = r"""
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
                     if (sel) {
-                        console.log(`[LINKED-BRAND-DROPDOWN] âœ… SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                        console.log(`[LINKED-BRAND-DROPDOWN] Ã¢Å“â€¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
                     }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
@@ -9942,7 +10121,7 @@ HTML_TEMPLATE = r"""
             
             document.body.appendChild(popup);
             
-            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current Â±2 years)
+            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current Ã‚Â±2 years)
             const currentYear = new Date().getFullYear();
             const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
             
@@ -12108,6 +12287,11 @@ HTML_TEMPLATE = r"""
                 const discountStyle = getMatchStyle(match.discount, sDiscount, true);
                 const vendorStyle = getMatchStyle(match.vendor_contrib, sVendor, true);
                 
+                // v12.23.0: Check if this suggestion is the currently assigned MIS ID
+                const currentMisId = match.mis_id ? String(match.mis_id).replace(' (Estimated)', '').trim() : '';
+                const suggestionMisId = String(s.mis_id).trim();
+                const isAssignedMisId = currentMisId && currentMisId !== '-' && currentMisId === suggestionMisId;
+                
                 // v12.1: Check Continue/Recycle eligibility
                 const continueCheck = checkContinueEligibility(match, s, match.section || 'weekly');
                 
@@ -12159,11 +12343,11 @@ HTML_TEMPLATE = r"""
                             ${continueIndicator}
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" 
+                            <button class="btn btn-sm ${isAssignedMisId ? '' : 'btn-outline-secondary'} py-0 px-2" 
                                     onclick="lookupMisIdWithValidation(this, '${s.mis_id}')" 
-                                    style="font-weight:bold;" 
-                                    title="Click to lookup in MIS">
-                                ${s.mis_id}
+                                    style="font-weight:bold;${isAssignedMisId ? ' background:#ffc107; color:#000; border-color:#ffc107;' : ''}" 
+                                    title="${isAssignedMisId ? 'Currently Assigned - Click to lookup in MIS' : 'Click to lookup in MIS'}">
+                                ${s.mis_id}${isAssignedMisId ? ' ⭐' : ''}
                             </button>
                         </td>
                         <td title="${sWeekdayTooltip}" style="white-space:normal;">${sWeekdayDisplay}</td>
@@ -12414,7 +12598,7 @@ HTML_TEMPLATE = r"""
                     // Update the display in the Suggestions popup
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">✅ ${newEndDate}</span>`;
+                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">âœ… ${newEndDate}</span>`;
                     }
                     
                     // Hide the editor
@@ -12423,7 +12607,7 @@ HTML_TEMPLATE = r"""
                         editorEl.style.display = 'none';
                     }
                     
-                    alert('✅ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('âœ… End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                 } else {
                     alert('Error updating end date: ' + (data.error || 'Unknown error'));
                 }
@@ -12437,7 +12621,7 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        // v12.21: Adapter function for ID Matcher â†’ Unified Pre-Flight
+        // v12.21: Adapter function for ID Matcher Ã¢â€ â€™ Unified Pre-Flight
         async function useUnifiedPreFlightForIDMatcher(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) {
@@ -12588,7 +12772,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
             
-            console.log('[ID-MATCHER â†’ PRE-FLIGHT] Converted data:', preFlightData);
+            console.log('[ID-MATCHER Ã¢â€ â€™ PRE-FLIGHT] Converted data:', preFlightData);
             
             // Call unified Pre-Flight popup
             openUnifiedPreFlight(preFlightData, match.google_row, match.section_type || 'weekly', null, null);
@@ -22305,10 +22489,38 @@ def api_mis_lookup_mis_id():
                         # Search for the MIS ID - collect ALL matching rows for multi-day detection
                         matching_rows = []
                         
+                        # v12.23.1: Improved search that handles multi-line and tagged MIS IDs
                         for idx, row in google_df.iterrows():
-                            sheet_mis_id = str(row.get(id_col, '')).strip()
-                            # Handle multi-part IDs (W1: 123, W2: 456)
-                            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                            sheet_mis_id_raw = str(row.get(id_col, '')).strip()
+                            
+                            # Skip empty cells
+                            if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
+                                continue
+                            
+                            # v12.23.1: Normalize the cell - handle both newlines and commas
+                            # Replace literal '\n' strings and actual newlines with commas
+                            normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
+                            
+                            # Split into parts and extract just the numeric IDs
+                            parts = [p.strip() for p in normalized.split(',') if p.strip()]
+                            
+                            found = False
+                            for part in parts:
+                                # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
+                                if ':' in part:
+                                    numeric_id = part.split(':')[-1].strip()
+                                else:
+                                    numeric_id = part.strip()
+                                
+                                # Remove any "(Estimated)" suffix
+                                numeric_id = numeric_id.replace('(Estimated)', '').strip()
+                                
+                                # Compare just the numbers
+                                if numeric_id == mis_id:
+                                    found = True
+                                    break
+                            
+                            if found:
                                 matching_rows.append(row)
                         
                         if matching_rows:
@@ -22444,6 +22656,19 @@ def api_mis_lookup_mis_id():
                             if len(matching_rows) > 1:
                                 print(f"[MIS LOOKUP] [EMOJI] Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
                             
+                        else:
+                            # v12.23.1: Debug when MIS ID not found
+                            print(f"[MIS LOOKUP] [EMOJI] MIS ID {mis_id} NOT FOUND in Google Sheet!")
+                            print(f"[MIS LOOKUP] Searched {len(google_df)} rows in combined DataFrame")
+                            # Sample some IDs for debugging
+                            sample_ids = []
+                            for idx, row in google_df.head(10).iterrows():
+                                sample_id = str(row.get(id_col, '')).strip()[:50]
+                                if sample_id:
+                                    sample_ids.append(sample_id)
+                            if sample_ids:
+                                print(f"[MIS LOOKUP] Sample IDs from sheet: {sample_ids[:5]}")
+                            
                     else:
                         print(f"[MIS LOOKUP] [EMOJI] Could not find MIS ID column in Google Sheet")
                 else:
@@ -22478,16 +22703,16 @@ def api_mis_lookup_mis_id():
                     
                     # v12.22.5: Inject checklist banner for visual checklist panel
                     inject_checklist_banner(driver, expected_data, mode='compare')
-                    print(f"[MIS LOOKUP] ✅ Checklist banner injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] âœ… Checklist banner injected for MIS ID {mis_id}")
                     
                     # v12.22.6: ALSO send message to existing validator to switch to automation mode
                     # The V2 validator may already be running (persistent from previous entry)
                     # This will send it the expected_data so it validates properly
                     inject_mis_validation(driver, expected_data=expected_data)
-                    print(f"[MIS LOOKUP] ✅ Validator switched to automation mode")
+                    print(f"[MIS LOOKUP] âœ… Validator switched to automation mode")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] ❌ Could not inject checklist: {e}")
+                    print(f"[MIS LOOKUP] âŒ Could not inject checklist: {e}")
                     # Fallback to basic validation
                     inject_mis_validation(driver, expected_data=None)
             else:
@@ -22534,31 +22759,61 @@ def api_mis_validate_lookup():
         if google_df is not None and not google_df.empty:
             print(f"[V2-LOOKUP] [EMOJI] Searching Google Sheet for MIS ID {mis_id}")
             
-            # Search for MIS ID in sheet
-            found_data = None
-            for idx, row in google_df.iterrows():
-                # Check multiple possible ID columns
-                for id_col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
-                    if id_col in google_df.columns:
-                        sheet_mis_id = str(row.get(id_col, '')).strip()
-                        if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
-                            # Found it!
-                            found_data = {
-                                'brand': str(row.get('Brand', '')).strip(),
-                                'linked_brand': str(row.get('Linked Brand', '')).strip(),
-                                'weekday': str(row.get('Weekday', '')).strip(),
-                                'categories': str(row.get('Categories', '')).strip(),
-                                'discount': str(row.get('Discount', '')).strip(),
-                                'vendor_contrib': str(row.get('Vendor %', '')).strip(),
-                                'locations': str(row.get('Locations', 'All Locations')).strip(),
-                                'rebate_type': str(row.get('Rebate Type', '')).strip(),
-                                'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
-                            }
-                            print(f"[V2-LOOKUP] [EMOJI] Found in Google Sheet!")
-                            print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
-                            break
-                if found_data:
+            # v12.23.2: Find ID column first
+            id_col = None
+            for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+                if col in google_df.columns:
+                    id_col = col
                     break
+            
+            # v12.23.2: Search using improved logic that handles multi-line and tagged formats
+            found_data = None
+            if id_col:
+                for idx, row in google_df.iterrows():
+                    sheet_mis_id_raw = str(row.get(id_col, '')).strip()
+                    
+                    # Skip empty cells
+                    if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
+                        continue
+                    
+                    # v12.23.2: Normalize the cell - handle both newlines and commas
+                    normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
+                    
+                    # Split into parts and extract just the numeric IDs
+                    parts = [p.strip() for p in normalized.split(',') if p.strip()]
+                    
+                    found = False
+                    for part in parts:
+                        # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
+                        if ':' in part:
+                            numeric_id = part.split(':')[-1].strip()
+                        else:
+                            numeric_id = part.strip()
+                        
+                        # Remove any "(Estimated)" suffix
+                        numeric_id = numeric_id.replace('(Estimated)', '').strip()
+                        
+                        # Compare just the numbers
+                        if numeric_id == mis_id:
+                            found = True
+                            break
+                    
+                    if found:
+                        # Found it! Extract data
+                        found_data = {
+                            'brand': str(row.get('Brand', '')).strip(),
+                            'linked_brand': str(row.get('Linked Brand', '')).strip(),
+                            'weekday': str(row.get('Weekday', '')).strip(),
+                            'categories': str(row.get('Categories', '')).strip(),
+                            'discount': str(row.get('Discount', '')).strip(),
+                            'vendor_contrib': str(row.get('Vendor %', '')).strip(),
+                            'locations': str(row.get('Locations', 'All Locations')).strip(),
+                            'rebate_type': str(row.get('Rebate Type', '')).strip(),
+                            'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                        }
+                        print(f"[V2-LOOKUP] [EMOJI] Found in Google Sheet!")
+                        print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
+                        break
             
             if found_data:
                 # Send automation message
@@ -22969,11 +23224,38 @@ def api_mis_compare_to_sheet():
                 'error': 'Could not find MIS ID column in Google Sheet'
             })
         
-        # Search for matching rows (same logic as api_mis_lookup_mis_id)
+        # Search for matching rows (v12.23.2: same improved logic as api_mis_lookup_mis_id)
         matching_rows = []
         for idx, row in google_df.iterrows():
-            sheet_mis_id = str(row.get(id_col, '')).strip()
-            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+            sheet_mis_id_raw = str(row.get(id_col, '')).strip()
+            
+            # Skip empty cells
+            if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
+                continue
+            
+            # v12.23.2: Normalize the cell - handle both newlines and commas
+            normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
+            
+            # Split into parts and extract just the numeric IDs
+            parts = [p.strip() for p in normalized.split(',') if p.strip()]
+            
+            found = False
+            for part in parts:
+                # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
+                if ':' in part:
+                    numeric_id = part.split(':')[-1].strip()
+                else:
+                    numeric_id = part.strip()
+                
+                # Remove any "(Estimated)" suffix
+                numeric_id = numeric_id.replace('(Estimated)', '').strip()
+                
+                # Compare just the numbers
+                if numeric_id == mis_id:
+                    found = True
+                    break
+            
+            if found:
                 matching_rows.append(row)
         
         if not matching_rows:
@@ -26339,14 +26621,14 @@ def api_mis_create_deal():
             stores = [s.strip() for s in text.split(',') if s.strip()]
             
             # v12.21.3: Apply STORE_MAPPING to convert Settings tab names to MIS names
-            # Example: "Fresno (Palm)" â†’ "Fresno"
+            # Example: "Fresno (Palm)" Ã¢â€ â€™ "Fresno"
             mapped_stores = []
             for store in stores:
                 mapped = STORE_MAPPING.get(store, store)  # Try mapping, else use original
                 if mapped:
                     mapped_stores.append(mapped)
                     if mapped != store:
-                        log(f"  Store mapping: '{store}' â†’ '{mapped}'", "DEBUG")
+                        log(f"  Store mapping: '{store}' Ã¢â€ â€™ '{mapped}'", "DEBUG")
             
             log(f"Store logic: Specific stores = {mapped_stores}", "DEBUG")
             return mapped_stores
@@ -31064,6 +31346,28 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
             }}
             
+            // v12.23.0: Handle date fields with normalization (01/01/2026 vs 1/1/2026)
+            if (expectedKey === 'start_date' || expectedKey === 'end_date') {{
+                function normalizeDate(d) {{
+                    if (!d) return '';
+                    // Handle MM/DD/YYYY or M/D/YYYY formats - normalize to M/D/YYYY
+                    const parts = String(d).split('/');
+                    if (parts.length === 3) {{
+                        const m = parseInt(parts[0], 10);
+                        const day = parseInt(parts[1], 10);
+                        const y = parts[2];
+                        return m + '/' + day + '/' + y;  // "1/1/2026" format (no leading zeros)
+                    }}
+                    return d;
+                }}
+                const actualVal = Array.isArray(actual) ? (actual[0] || '') : actual;
+                const actualNorm = normalizeDate(actualVal);
+                const expectedNorm = normalizeDate(expected);
+                if (!expectedNorm) return 'empty';
+                if (!actualNorm) return 'empty';
+                return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
+            }}
+            
             // Standard comparison
             if (!expected || expected === '') {{
                 return 'empty';  // No expected value
@@ -31376,6 +31680,10 @@ def api_mis_automate_create_deal():
         sheet_data = data.get('sheet_data', {})
         section_type = data.get('section_type', 'unknown')
         
+        # v12.23.2: Full automation mode - fills ALL fields including multi-selects
+        full_automation = data.get('full_automation', True)  # Default to True for complete automation
+        print(f"[DEBUG] Full Automation Mode: {full_automation}")
+        
         def clean(val): return str(val).strip() if val else ""
 
         target_brand = clean(sheet_data.get('brand'))
@@ -31606,12 +31914,12 @@ def api_mis_automate_create_deal():
                     log(f"  [{field_name}] Could not find Select2 container!", "ERROR")
                     return False
                 
-                # Click to open dropdown
+                # v12.23.2: Improved timing - Click to open dropdown
                 actions = ActionChains(driver)
                 actions.move_to_element(container)
                 actions.click()
                 actions.perform()
-                time.sleep(0.25)
+                time.sleep(0.4)  # v12.23.2: Increased from 0.25 for slower connections
                 
                 # Check if search input exists and is VISIBLE
                 search_input = None
@@ -31632,9 +31940,9 @@ def api_mis_automate_create_deal():
                     actions.move_to_element(search_input)
                     actions.click()
                     actions.perform()
-                    time.sleep(0.1)
+                    time.sleep(0.15)  # v12.23.2: Increased from 0.1
                     search_input.send_keys(str(value))
-                    time.sleep(0.5)
+                    time.sleep(0.6)  # v12.23.2: Increased from 0.5 for search results to load
                 
                 # Find and click the matching option
                 try:
@@ -31684,10 +31992,23 @@ def api_mis_automate_create_deal():
                     log(f"  [{field_name}] Click failed, using ENTER: {e}", "WARN")
                     ActionChains(driver).send_keys(Keys.ENTER).perform()
                 
-                time.sleep(0.1)
+                time.sleep(0.15)  # v12.23.2: Increased from 0.1
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                time.sleep(0.08)
+                time.sleep(0.1)  # v12.23.2: Increased from 0.08
                 click_backdrop()
+                
+                # v12.23.2: VERIFICATION - Check if value was actually set
+                try:
+                    time.sleep(0.2)  # Wait for DOM update
+                    container_id = f'select2-{select_id}-container'
+                    verify_container = driver.find_element(By.ID, container_id)
+                    actual_value = verify_container.get_attribute('title') or ''
+                    if value.lower() in actual_value.lower():
+                        log(f"  [{field_name}] VERIFIED: '{actual_value}'", "SUCCESS")
+                    else:
+                        log(f"  [{field_name}] VERIFICATION WARNING: Expected '{value}', got '{actual_value}'", "WARN")
+                except:
+                    log(f"  [{field_name}] Could not verify value (container not found)", "DEBUG")
                 
                 return True
                 
@@ -31768,12 +32089,12 @@ def api_mis_automate_create_deal():
                     actions.click()
                     actions.perform()
                 
-                time.sleep(0.3)
+                time.sleep(0.4)  # v12.23.2: Increased from 0.3 for slower connections
                 
                 # Wait for dropdown to open and search field to be ready
                 search_input = None
                 try:
-                    search_input = WebDriverWait(driver, 2).until(
+                    search_input = WebDriverWait(driver, 3).until(  # v12.23.2: Increased from 2
                         EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
                     )
                     log(f"  [{field_name}] Dropdown open, search field ready", "DEBUG")
@@ -31798,14 +32119,14 @@ def api_mis_automate_create_deal():
                         try:
                             search_input.clear()
                             search_input.send_keys(val_clean)
-                            time.sleep(0.4)
+                            time.sleep(0.5)  # v12.23.2: Increased from 0.4
                         except:
                             # Re-acquire search field if stale
                             try:
                                 search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
                                 search_input.clear()
                                 search_input.send_keys(val_clean)
-                                time.sleep(0.4)
+                                time.sleep(0.5)  # v12.23.2: Increased from 0.4
                             except:
                                 pass
                     
@@ -31813,7 +32134,7 @@ def api_mis_automate_create_deal():
                     try:
                         option_xpath_value = build_xpath_contains(val_clean)
                         option_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
-                        option = WebDriverWait(driver, 1.5).until(EC.element_to_be_clickable((By.XPATH, option_xpath)))
+                        option = WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, option_xpath)))  # v12.23.2: Increased from 1.5
                         
                         actions = ActionChains(driver)
                         actions.move_to_element(option)
@@ -31922,8 +32243,47 @@ def api_mis_automate_create_deal():
             else:
                 warnings.append('Could not fill End Date')
 
-        # v12.18: DO NOT automate these fields - show in checklist instead:
-        # - Weekday, Store/Locations, Category, After Wholesale
+        # v12.23.2: FULL AUTOMATION MODE - Also fill multi-select fields
+        # ================================================================
+        if full_automation:
+            print("\n[AUTOMATION] v12.23.2 FULL AUTOMATION MODE - Filling multi-select fields...")
+            
+            # 9. WEEKDAY (multi-select) - AUTOMATE
+            if target_weekday:
+                print(f"[DEBUG] Attempting Weekday automation: '{target_weekday}'")
+                if atomic_multi_select("Weekday", target_weekday, "Weekday"):
+                    automated_fields.append('Weekday')
+                else:
+                    warnings.append('Could not fill Weekday')
+            
+            # 10. STORE/LOCATIONS (multi-select) - AUTOMATE
+            if target_locations and target_locations.lower() not in ['all locations', 'all', '']:
+                print(f"[DEBUG] Attempting Locations automation: '{target_locations}'")
+                if atomic_multi_select("Store", target_locations, "Store/Locations"):
+                    automated_fields.append('Store/Locations')
+                else:
+                    warnings.append('Could not fill Store/Locations')
+            else:
+                print(f"[SKIP] Locations is 'All Locations' - no selection needed")
+            
+            # 11. CATEGORY (multi-select) - AUTOMATE
+            if target_category and target_category.lower() not in ['all categories', 'all', '']:
+                print(f"[DEBUG] Attempting Category automation: '{target_category}'")
+                if atomic_multi_select("Category", target_category, "Category"):
+                    automated_fields.append('Category')
+                else:
+                    warnings.append('Could not fill Category')
+            else:
+                print(f"[SKIP] Category is 'All Categories' - no selection needed")
+            
+            # 12. AFTER WHOLESALE (checkbox) - AUTOMATE
+            print(f"[DEBUG] Attempting After Wholesale automation: {after_wholesale}")
+            if atomic_toggle("rebate_wholesale_discount", after_wholesale, "After Wholesale"):
+                automated_fields.append('After Wholesale')
+            else:
+                warnings.append('Could not set After Wholesale checkbox')
+        else:
+            print("\n[AUTOMATION] Partial mode - Weekday, Store, Category, After Wholesale left for manual entry")
         
         # v12.18: Lookup linked brand from Settings tab if not provided
         if not target_linked and target_brand:
@@ -31935,10 +32295,17 @@ def api_mis_automate_create_deal():
                 print(f"[LINKED BRAND] Brand '{target_brand}' has no linked brand in Settings")
 
         print("\n" + "="*60)
-        print("[AUTOMATION] v12.18 PARTIAL AUTOMATION COMPLETE")
+        print("[AUTOMATION] v12.23.2 AUTOMATION COMPLETE")
         print("="*60)
         print(f"[AUTOMATED] {len(automated_fields)} fields: {', '.join(automated_fields)}")
-        print(f"[MANUAL] User must fill: Weekday, Store, Category, After Wholesale")
+        if full_automation:
+            manual_fields = [f for f in ['Weekday', 'Store/Locations', 'Category', 'After Wholesale'] if f not in automated_fields]
+            if manual_fields:
+                print(f"[MANUAL] User may need to verify: {', '.join(manual_fields)}")
+            else:
+                print(f"[MANUAL] None - all fields automated!")
+        else:
+            print(f"[MANUAL] User must fill: Weekday, Store, Category, After Wholesale")
         if warnings:
             print(f"[WARNINGS] {len(warnings)} issue(s): {', '.join(warnings)}")
         print("="*60 + "\n")
