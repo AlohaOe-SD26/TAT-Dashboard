@@ -1,4 +1,24 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.23.11 DATE NORMALIZATION + SUGGESTIONS HIGHLIGHT
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.23.12 DISCOUNT HIGHLIGHTING FIX
+# v12.23.12 CHANGELOG (DISCOUNT HIGHLIGHTING FIX):
+#   🔴 FIX: Discount column not highlighting in Suggestions popup
+#     * ISSUE: getMatchStyle() returned empty string when values were falsy (0, '', null)
+#     * ROOT CAUSE: JavaScript falsy check `!sourceVal` treats 0 as falsy
+#     * THE FIX: Rewrote getMatchStyle() to:
+#       - Convert values to strings first
+#       - Check for "empty" values explicitly ('-', 'N/A', 'nan', '', null)
+#       - Handle numeric comparison after proper validation
+#     * RESULT: Discount (and Vendor %) now highlight correctly ✅
+#
+#   🟢 HIGHLIGHTING NOW WORKS FOR ALL FIELDS:
+#     | Field      | Green ✅           | Yellow ⚠️          | Red ❌           |
+#     |------------|--------------------|--------------------|------------------|
+#     | Discount   | Values match       | One missing        | Values differ    |
+#     | Vendor %   | Values match       | One missing        | Values differ    |
+#     | Weekday    | All days match     | Partial overlap    | No match         |
+#     | Category   | Match/both "All"   | Partial            | No match         |
+#     | Locations  | All stores match   | Partial            | No match         |
+#     | Brand      | Exact/contains     | Missing            | No match         |
+#
 # v12.23.11 CHANGELOG (DATE NORMALIZATION + SUGGESTIONS HIGHLIGHT):
 #   🔴 FIX 1: Date verification showing false mismatch errors
 #     * ISSUE: "02/01/2026" entered → MIS normalizes to "2/1/2026" → verification fails
@@ -12265,17 +12285,30 @@ HTML_TEMPLATE = r"""
             };
 
             // Helper: Get cell style based on match
+            // Helper: Get cell style based on match (v12.23.12 - fixed to always highlight)
             const getMatchStyle = (sourceVal, targetVal, isNumeric = false) => {
-                if (!sourceVal && !targetVal) return '';
-                if (!sourceVal || !targetVal) return 'background:#fff3cd; color:#856404;'; // Yellow - missing
+                // Convert to strings for checking
+                const srcStr = String(sourceVal ?? '').trim();
+                const tgtStr = String(targetVal ?? '').trim();
                 
+                // Check if values are "empty" (null, undefined, '', '-', 'N/A', 'nan')
+                const srcEmpty = !srcStr || srcStr === '-' || srcStr.toLowerCase() === 'n/a' || srcStr.toLowerCase() === 'nan';
+                const tgtEmpty = !tgtStr || tgtStr === '-' || tgtStr.toLowerCase() === 'n/a' || tgtStr.toLowerCase() === 'nan';
+                
+                // Both empty = no highlight needed
+                if (srcEmpty && tgtEmpty) return '';
+                
+                // One empty, one has value = yellow (missing data)
+                if (srcEmpty || tgtEmpty) return 'background:#fff3cd; color:#856404;';
+                
+                // Both have values - compare them
                 let matches = false;
                 if (isNumeric) {
-                    const s = parseFloat(String(sourceVal).replace(/[%$,]/g, '')) || 0;
-                    const t = parseFloat(String(targetVal).replace(/[%$,]/g, '')) || 0;
+                    const s = parseFloat(srcStr.replace(/[%$,]/g, '')) || 0;
+                    const t = parseFloat(tgtStr.replace(/[%$,]/g, '')) || 0;
                     matches = Math.abs(s - t) < 0.01;
                 } else {
-                    matches = String(sourceVal).toLowerCase().trim() === String(targetVal).toLowerCase().trim();
+                    matches = srcStr.toLowerCase() === tgtStr.toLowerCase();
                 }
                 
                 return matches ? 'background:#d4edda; color:#155724;' : 'background:#f8d7da; color:#721c24;';
@@ -32908,7 +32941,7 @@ def api_mis_automate_create_deal():
 
         # 1. Open Modal
         print("\n" + "="*70)
-        print("[AUTOMATION] v12.23.11 FAST FIELD ENTRY - Starting...")
+        print("[AUTOMATION] v12.23.12 FAST FIELD ENTRY - Starting...")
         print("="*70)
         print("\n[STEP 1] Opening 'Add New' modal...")
         try:
@@ -33063,7 +33096,7 @@ def api_mis_automate_create_deal():
         # FINAL SUMMARY
         # =========================================================
         print("\n" + "="*70)
-        print("[AUTOMATION] v12.23.11 AUTOMATION COMPLETE")
+        print("[AUTOMATION] v12.23.12 AUTOMATION COMPLETE")
         print("="*70)
         print(f"[RESULTS] {len(automated_fields)}/11 fields automated successfully:")
         for field in automated_fields:
