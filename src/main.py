@@ -1,4 +1,61 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.24.5 BLAZE ECOM SYNC
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.24.8 ENHANCED COMPARISON + END DATE FIX
+# v12.24.8 CHANGELOG (ENHANCED COMPARISON + END DATE BUTTON FIX):
+#   🔴 FIX: End Date Buttons Now Show Correct Colors
+#     * ISSUE: End date buttons showed INFO color (light blue) instead of RED/GREEN/ORANGE
+#     * ROOT CAUSE: Empty inline style when getEndDateButtonColor() returned empty style
+#     * THE FIX: Added fallback style if empty: `style || 'background:#6c757d; ...'`
+#   🔴 FIX: Credential Loading Crash When No Profile Detected
+#     * ISSUE: Setup tab didn't populate, credentials didn't load
+#     * ROOT CAUSE: BLAZE_CONFIG_FILE/TOKEN_FILE/CREDENTIALS_FILE could be None
+#       - Calling .exists() on None crashes with AttributeError
+#     * THE FIX: Added None guards in load_credentials_config() and authenticate_google_sheets()
+#   🟢 NEW: Multiple Assigned MIS IDs Support
+#     * Google Sheet can have multiple MIS IDs (line-separated in cell)
+#     * Each ID rendered as its own row in Assigned section
+#     * Tag shown per row: "ASSIGNED (W1)", "ASSIGNED (W2)", etc.
+#   🟢 NEW: Enhanced Comparison Helpers
+#     * getWeekdayMatchStyle() - Multi-day aware, GREEN if MIS contains all sheet days
+#     * getCategoryMatchStyle() - Handles blank=All, "All Except", specific lists
+#     * getLocationMatchStyle() - Same logic as category
+#   🟢 NEW: All Comparable Fields Now Color-Coded
+#     * Weekday: GREEN if MIS weekdays contain all Google Sheet weekdays
+#     * Brand: GREEN if exact/contains match
+#     * Category: GREEN if both All, or both have same specific list
+#     * Discount: GREEN if values match
+#     * Vendor %: GREEN if values match
+#     * Locations: GREEN if both All, or both have same specific list
+#
+# v12.24.7 CHANGELOG (FIX: ASSIGNED MIS ID TAG STRIPPING):
+#   🔴 FIX: Assigned MIS ID Now Strips Tag Prefixes for Lookup
+#     * ISSUE: Assigned section showed "MIS ID not found in CSV" even when present
+#     * ROOT CAUSE: Google Sheet IDs have tags like "W1 12345", CSV has clean "12345"
+#       - Comparison: String(s.mis_id) === assignedMisId failed
+#       - "12345" !== "W1 12345"
+#     * THE FIX: Added cleanMisId() helper function
+#       - Strips tag prefixes: "W1 12345" → "12345"
+#       - Handles patterns: "W1", "M2", "S1", etc.
+#       - Falls back to last numeric sequence if no tag pattern
+#     * DISPLAY: Shows tag in header if present: "(Tag: W1)"
+#     * LOOKUP: Uses clean ID for suggestion matching & MIS automation
+#
+# v12.24.6 CHANGELOG (NEW: ASSIGNED SECTION + END DATE COLORS):
+#   🟢 NEW: Assigned MIS ID Section in Suggestions Popup
+#     * Shows currently assigned MIS ID above suggestions list
+#     * Same datatable structure as suggestions for consistency
+#     * Green border/header to distinguish from suggestions
+#     * Full data display if ID found in CSV, minimal if not
+#     * "ASSIGNED" status badge + "Current" action badge
+#   🟢 NEW: End Date Button Color Coding
+#     * Compares end date month to Google Sheet tab name month
+#     * RED: End date is in PAST month (expired - needs update!)
+#     * GREEN: End date is CURRENT month (correct)
+#     * ORANGE: End date is FUTURE month (already extended)
+#     * Applied to BOTH Assigned section and all Suggestions
+#     * Tooltip shows detailed status message
+#   🟢 NEW: Updated Color Legend
+#     * Added End Date color legend (Past/Current/Future Month)
+#     * Separated from field match legend for clarity
+#
 # v12.24.5 CHANGELOG (FIX: JWT KEY EXTRACTION):
 #   🔴 FIX: Token Extraction Now Checks "jwt" Key FIRST
 #     * ISSUE: Auth 200 OK but token not found - server uses "jwt" key
@@ -1963,6 +2020,10 @@ if CHROME_PROFILE_DIR:
 # ============================================================================
 def load_credentials_config() -> dict:
     """Load credentials from profile-specific blaze config file."""
+    # v12.24.8: Guard against None config file (no profile detected)
+    if BLAZE_CONFIG_FILE is None:
+        print(f"[INFO] No profile configured - credentials not available")
+        return {}
     if BLAZE_CONFIG_FILE.exists():
         try:
             with open(BLAZE_CONFIG_FILE, 'r') as f:
@@ -3469,6 +3530,11 @@ def monitor_browser_return(promo_id: str):
 def authenticate_google_sheets() -> Optional[object]:
     """Authenticate with Google Sheets API."""
     creds = None
+    
+    # v12.24.8: Guard against None config files (no profile detected)
+    if TOKEN_FILE is None or CREDENTIALS_FILE is None:
+        print(f"[INFO] No profile configured - Google Sheets auth not available")
+        return None
     
     if TOKEN_FILE.exists():
         try:
@@ -12474,6 +12540,377 @@ HTML_TEMPLATE = r"""
                 </div>
             `;
 
+            // v12.24.6: Helper function to determine End Date button color based on month comparison
+            // RED = past month (expired), GREEN = current month, ORANGE = future month
+            const getEndDateButtonColor = (endDateStr) => {
+                const tabInfo = parseTabMonthYear(currentTabName);
+                if (tabInfo.month < 0 || tabInfo.year < 0) {
+                    // Cannot parse tab name - use PURPLE as "unknown" indicator
+                    return { 
+                        btnClass: 'btn-secondary', 
+                        style: 'background:#6c757d; border-color:#6c757d; color:white;',
+                        tooltip: 'Cannot determine month from tab name: ' + currentTabName
+                    };
+                }
+                
+                const parsedEnd = parseDate(endDateStr);
+                if (!parsedEnd) {
+                    // Cannot parse date - use GRAY as "invalid" indicator
+                    return { 
+                        btnClass: 'btn-secondary', 
+                        style: 'background:#6c757d; border-color:#6c757d; color:white;',
+                        tooltip: 'Invalid date format: ' + endDateStr
+                    };
+                }
+                
+                // Compare year and month
+                const tabYearMonth = tabInfo.year * 12 + tabInfo.month;
+                const endYearMonth = parsedEnd.year * 12 + parsedEnd.month;
+                
+                if (endYearMonth < tabYearMonth) {
+                    // End date is in a PAST month - RED (expired/needs update)
+                    return { 
+                        btnClass: 'btn-danger', 
+                        style: 'background:#dc3545; border-color:#dc3545; color:white;',
+                        tooltip: 'EXPIRED: End date is before ' + currentTabName + ' - needs update!'
+                    };
+                } else if (endYearMonth === tabYearMonth) {
+                    // End date is in CURRENT month - GREEN (correct)
+                    return { 
+                        btnClass: 'btn-success', 
+                        style: 'background:#28a745; border-color:#28a745; color:white;',
+                        tooltip: 'CURRENT: End date is within ' + currentTabName
+                    };
+                } else {
+                    // End date is in a FUTURE month - ORANGE (already extended)
+                    return { 
+                        btnClass: 'btn-warning', 
+                        style: 'background:#fd7e14; border-color:#fd7e14; color:white;',
+                        tooltip: 'FUTURE: End date extends beyond ' + currentTabName
+                    };
+                }
+            };
+
+            // --- v12.24.8: ASSIGNED MIS ID SECTION (supports multiple IDs, proper comparison) ---
+            const assignedMisIdRaw = match.current_sheet_id ? String(match.current_sheet_id).trim() : '';
+            
+            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" → "12345")
+            const cleanMisId = (rawId) => {
+                if (!rawId) return '';
+                const str = String(rawId).trim();
+                // Pattern: optional tag prefix (letters + optional digits) followed by space, then the actual ID
+                // Examples: "W1 12345", "M2 67890", "S1 11111", "12345" (no tag)
+                const tagMatch = str.match(/^([A-Za-z]+\d*)\s+(\d+)$/);
+                if (tagMatch) return tagMatch[2];
+                // Also try: just extract the last numeric sequence
+                const numMatch = str.match(/(\d+)\s*$/);
+                if (numMatch) return numMatch[1];
+                return str;
+            };
+            
+            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" → "W1")
+            const extractTag = (rawId) => {
+                if (!rawId) return '';
+                const str = String(rawId).trim();
+                const tagMatch = str.match(/^([A-Za-z]+\d*)\s+\d+$/);
+                return tagMatch ? tagMatch[1] : '';
+            };
+            
+            // v12.24.8: Parse multiple MIS IDs from cell (line-separated or tag-detected)
+            const parseMultipleMisIds = (rawValue) => {
+                if (!rawValue) return [];
+                const str = String(rawValue).trim();
+                // Split by newlines first
+                let parts = str.split(/\n|\r\n|\r/).map(p => p.trim()).filter(p => p);
+                // If only one part, check if it contains multiple tagged IDs (space-separated tags)
+                if (parts.length === 1) {
+                    // Try to find multiple tagged IDs like "W1 12345 W2 67890"
+                    const multiTagMatch = str.match(/([A-Za-z]+\d*\s+\d+)/g);
+                    if (multiTagMatch && multiTagMatch.length > 1) {
+                        parts = multiTagMatch;
+                    }
+                }
+                return parts;
+            };
+            
+            // v12.24.8: Enhanced comparison helpers
+            // Weekday comparison - GREEN if MIS weekdays contain the Google Sheet weekday(s)
+            const getWeekdayMatchStyle = (sheetWeekday, misWeekdays) => {
+                if (!sheetWeekday || sheetWeekday === '-') return '';
+                if (!misWeekdays || misWeekdays === '-' || misWeekdays === 'N/A') return 'background:#fff3cd; color:#856404;';
+                
+                // Normalize both to lowercase arrays of 3-letter codes
+                const normalize = (str) => {
+                    const days = ['mon','tue','wed','thu','fri','sat','sun'];
+                    const lower = String(str).toLowerCase();
+                    return days.filter(d => lower.includes(d));
+                };
+                
+                // Get sheet weekdays (may be from multi-day group)
+                let sheetDays = [];
+                if (match.multi_day_group && match.multi_day_group.weekdays) {
+                    sheetDays = match.multi_day_group.weekdays
+                        .map(w => String(w).toLowerCase().substring(0,3))
+                        .filter(w => w && !w.includes('missing'));
+                } else {
+                    sheetDays = normalize(sheetWeekday);
+                }
+                
+                const misDays = normalize(misWeekdays);
+                
+                if (sheetDays.length === 0 || misDays.length === 0) return 'background:#fff3cd; color:#856404;';
+                
+                // Check if all sheet days are in MIS days (MIS can have more, that's OK)
+                const allMatch = sheetDays.every(d => misDays.includes(d));
+                return allMatch ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+            };
+            
+            // v12.24.8: Category comparison - handles "All", blank=All, specific lists, "All Except"
+            const getCategoryMatchStyle = (sheetCategory, misCategory) => {
+                const sheetCat = String(sheetCategory || '').toLowerCase().trim();
+                const misCat = String(misCategory || '').toLowerCase().trim();
+                
+                // Normalize "all" values
+                const isSheetAll = !sheetCat || sheetCat === 'all' || sheetCat === '-' || 
+                                   sheetCat === 'all categories' || sheetCat.includes('all categories');
+                const isMisAll = !misCat || misCat === 'all' || misCat === '-' || 
+                                 misCat === 'n/a' || misCat === 'nan' || misCat === 'all categories';
+                
+                // Check for "All Except" pattern
+                const sheetExceptMatch = sheetCat.match(/all\s*(?:categories\s*)?except[:\s]*(.+)/i);
+                const misExceptMatch = misCat.match(/all\s*(?:categories\s*)?except[:\s]*(.+)/i);
+                
+                // Both are "All"
+                if (isSheetAll && isMisAll) return 'background:#d4edda; color:#155724;';
+                
+                // Sheet is "All Except X" - MIS should list everything except X
+                if (sheetExceptMatch) {
+                    // For "All Except", we'd need to compare what's excluded
+                    // Simplified: if both have "except" and same exceptions, match
+                    if (misExceptMatch) {
+                        const sheetExcepts = sheetExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).sort();
+                        const misExcepts = misExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).sort();
+                        return JSON.stringify(sheetExcepts) === JSON.stringify(misExcepts) 
+                            ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                    }
+                    return 'background:#fff3cd; color:#856404;';
+                }
+                
+                // One is All, other is specific - mismatch
+                if (isSheetAll !== isMisAll) return 'background:#fff3cd; color:#856404;';
+                
+                // Both are specific lists - compare
+                const sheetCats = sheetCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
+                const misCats = misCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
+                return JSON.stringify(sheetCats) === JSON.stringify(misCats) 
+                    ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+            };
+            
+            // v12.24.8: Location comparison - same logic as category
+            const getLocationMatchStyle = (sheetLocations, misLocations) => {
+                const sheetLoc = String(sheetLocations || '').toLowerCase().trim();
+                const misLoc = String(misLocations || '').toLowerCase().trim();
+                
+                // Normalize "all" values
+                const isSheetAll = !sheetLoc || sheetLoc === 'all' || sheetLoc === '-' || 
+                                   sheetLoc === 'all locations' || sheetLoc.includes('all locations');
+                const isMisAll = !misLoc || misLoc === 'all' || misLoc === '-' || 
+                                 misLoc === 'n/a' || misLoc === 'nan' || misLoc === 'all locations';
+                
+                // Check for "All Except" pattern
+                const sheetExceptMatch = sheetLoc.match(/all\s*(?:locations\s*)?except[:\s]*(.+)/i);
+                
+                // Both are "All"
+                if (isSheetAll && isMisAll) return 'background:#d4edda; color:#155724;';
+                
+                // Sheet is "All Except X"
+                if (sheetExceptMatch) {
+                    return 'background:#fff3cd; color:#856404;'; // Simplified - would need full location list to verify
+                }
+                
+                // One is All, other is specific - mismatch
+                if (isSheetAll !== isMisAll) return 'background:#fff3cd; color:#856404;';
+                
+                // Both are specific lists - compare
+                const sheetLocs = sheetLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
+                const misLocs = misLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
+                return JSON.stringify(sheetLocs) === JSON.stringify(misLocs) 
+                    ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+            };
+            
+            // v12.24.8: Parse multiple assigned MIS IDs
+            const assignedMisIds = parseMultipleMisIds(assignedMisIdRaw);
+            
+            if (assignedMisIds.length > 0) {
+                html += `
+                    <div style="margin-bottom:20px;">
+                        <h6 style="color:#198754; margin-bottom:10px; border-bottom:2px solid #198754; padding-bottom:5px;">
+                            ✅ Currently Assigned in Google Sheet
+                            ${assignedMisIds.length > 1 ? '<small style="color:#6c757d; font-weight:normal;"> (' + assignedMisIds.length + ' IDs)</small>' : ''}
+                        </h6>
+                        <div style="overflow-x:auto;">
+                            <table class="table table-sm table-bordered" style="font-size:0.85em; white-space:nowrap; border:2px solid #198754;">
+                                <thead style="background:#d4edda;">
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>MIS ID</th>
+                                        <th>Weekday</th>
+                                        <th>Brand / Linked</th>
+                                        <th>Category</th>
+                                        <th>Discount</th>
+                                        <th>Vendor %</th>
+                                        <th>Locations</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>More Info</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                
+                // v12.24.8: Render each assigned MIS ID as its own row
+                assignedMisIds.forEach((rawId, aIdx) => {
+                    const cleanId = cleanMisId(rawId);
+                    const tag = extractTag(rawId);
+                    const assignedSuggestion = match.suggestions.find(s => String(s.mis_id) === cleanId);
+                    
+                    if (assignedSuggestion) {
+                        // We have full data for the assigned ID
+                        const aData = assignedSuggestion.mis_data;
+                        const aLinkedBrand = aData.linked_brand && aData.linked_brand !== 'N/A' ? aData.linked_brand : '';
+                        const aWeekday = aData.weekdays && aData.weekdays !== 'N/A' ? aData.weekdays : '-';
+                        const aCategory = aData.category && aData.category !== 'N/A' && aData.category !== '-' && aData.category !== 'nan' ? aData.category : '';
+                        const aDiscount = aData.discount !== null && aData.discount !== undefined ? aData.discount : '-';
+                        const aVendor = aData.vendor_contribution !== null && aData.vendor_contribution !== undefined ? aData.vendor_contribution : '-';
+                        const aLocations = aData.locations || '';
+                        const aStartDate = aData.start_date && aData.start_date !== 'N/A' ? aData.start_date : '-';
+                        const aEndDate = aData.end_date && aData.end_date !== 'N/A' ? aData.end_date : '-';
+                        
+                        // v12.24.8: Get end date button color with proper styling
+                        const endDateColor = getEndDateButtonColor(aEndDate);
+                        const endBtnStyle = endDateColor.style || 'background:#6c757d; border-color:#6c757d; color:white;';
+                        
+                        // Format weekday/category for display
+                        const aWeekdayParts = aWeekday.split(',').map(w => w.trim()).filter(w => w && w !== '-');
+                        const aWeekdayDisplay = aWeekdayParts.length > 0 ? aWeekdayParts.join('<br>') : '-';
+                        const aWeekdayTooltip = aWeekdayParts.length > 0 ? aWeekdayParts.join('&#10;') : '-';
+                        const aCategoryDisplay = aCategory || 'All Categories';
+                        const aCategoryParts = aCategoryDisplay.split(',').map(c => c.trim()).filter(c => c);
+                        const aCategoryDisplayShort = aCategoryParts.slice(0, 3).join('<br>') + (aCategoryParts.length > 3 ? '<br>...' : '');
+                        const aCategoryTooltip = aCategoryParts.join('&#10;');
+                        const aLocationsDisplay = aLocations || 'All Locations';
+                        
+                        // v12.24.8: Enhanced color coding for all comparable fields
+                        const weekdayStyle = getWeekdayMatchStyle(match.weekday, aWeekday);
+                        const brandStyle = getBrandMatchStyle(match.brand, aData.brand);
+                        const categoryStyle = getCategoryMatchStyle(match.categories, aCategory);
+                        const discountStyle = getMatchStyle(match.discount, aDiscount, true);
+                        const vendorStyle = getMatchStyle(match.vendor_contrib, aVendor, true);
+                        const locationStyle = getLocationMatchStyle(match.locations, aLocations);
+                        
+                        html += `
+                            <tr style="background:#e8f5e9;">
+                                <td style="text-align:center; background:#d4edda;">
+                                    <span style="color:#198754; font-weight:bold;">ASSIGNED</span>
+                                    ${tag ? '<br><small style="color:#6c757d;">(' + tag + ')</small>' : ''}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-success py-0 px-2" 
+                                            onclick="lookupMisIdWithValidation(this, '${cleanId}')" 
+                                            style="font-weight:bold;" 
+                                            title="Click to lookup in MIS">
+                                        ${cleanId}
+                                    </button>
+                                </td>
+                                <td title="${aWeekdayTooltip}" style="${weekdayStyle} white-space:normal;">${aWeekdayDisplay}</td>
+                                <td style="${brandStyle}">
+                                    <strong>${aData.brand || '-'}</strong>
+                                    ${aLinkedBrand ? '<br><small style="color:#6c757d;">' + aLinkedBrand + '</small>' : ''}
+                                </td>
+                                <td title="${aCategoryTooltip}" style="${categoryStyle} white-space:normal;">${aCategoryDisplayShort}</td>
+                                <td style="${discountStyle}"><strong>${aDiscount}%</strong></td>
+                                <td style="${vendorStyle}">${aVendor}%</td>
+                                <td title="${formatLocationsVertical(aLocationsDisplay)}" style="${locationStyle}">${aLocationsDisplay.substring(0, 20)}${aLocationsDisplay.length > 20 ? '...' : ''}</td>
+                                <td>${aStartDate}</td>
+                                <td title="${endDateColor.tooltip}">
+                                    <div id="end-date-display-assigned-${aIdx}">
+                                        <button class="btn btn-sm py-0 px-1" 
+                                                style="${endBtnStyle}"
+                                                onclick="showEndDateEditor('assigned', ${aIdx}, '${cleanId}', '${aEndDate}')"
+                                                title="${endDateColor.tooltip}">
+                                            ${aEndDate}
+                                        </button>
+                                    </div>
+                                    <div id="end-date-editor-assigned-${aIdx}" style="display:none;">
+                                        <div style="display:flex; gap:2px; align-items:center; flex-wrap:wrap;">
+                                            <select id="end-month-assigned-${aIdx}" class="form-select form-select-sm" style="width:60px; padding:2px;">
+                                                <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                                                <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                                                <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                                                <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                                            </select>
+                                            <select id="end-day-assigned-${aIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
+                                            <select id="end-year-assigned-${aIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
+                                            <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate('assigned', ${aIdx}, '${cleanId}')">Update</button>
+                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">✕</button>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info py-0 px-2" 
+                                            onclick="lookupMisIdWithValidation(this, '${cleanId}')"
+                                            title="View full details in MIS">
+                                        View
+                                    </button>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">Current</span>
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        // Assigned ID not found in suggestions - show minimal info
+                        html += `
+                            <tr style="background:#e8f5e9;">
+                                <td style="text-align:center; background:#d4edda;">
+                                    <span style="color:#198754; font-weight:bold;">ASSIGNED</span>
+                                    ${tag ? '<br><small style="color:#6c757d;">(' + tag + ')</small>' : ''}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-success py-0 px-2" 
+                                            onclick="lookupMisIdWithValidation(this, '${cleanId}')" 
+                                            style="font-weight:bold;" 
+                                            title="Click to lookup in MIS">
+                                        ${cleanId}
+                                    </button>
+                                </td>
+                                <td colspan="8" style="text-align:center; color:#6c757d; font-style:italic;">
+                                    MIS ID not found in current CSV data - click ID to view in MIS
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info py-0 px-2" 
+                                            onclick="lookupMisIdWithValidation(this, '${cleanId}')"
+                                            title="View full details in MIS">
+                                        View
+                                    </button>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">Current</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
             // --- SUGGESTIONS SECTION ---
             html += `
                 <div>
@@ -12527,10 +12964,13 @@ HTML_TEMPLATE = r"""
                 const sCategoryDisplay = sCategoryParts.slice(0, 3).join('<br>') + (sCategoryParts.length > 3 ? '<br>...' : '');
                 const sCategoryTooltip = sCategoryParts.join('&#10;');
                 
-                // Color coding for comparison
+                // v12.24.8: Enhanced color coding for all comparable fields
+                const weekdayStyle = getWeekdayMatchStyle(match.weekday, sWeekday);
                 const brandStyle = getBrandMatchStyle(match.brand, s.mis_data.brand);
+                const categoryStyle = getCategoryMatchStyle(match.categories, s.mis_data.category);
                 const discountStyle = getMatchStyle(match.discount, sDiscount, true);
                 const vendorStyle = getMatchStyle(match.vendor_contrib, sVendor, true);
+                const locationStyle = getLocationMatchStyle(match.locations, sLocations);
                 
                 // v12.1: Check Continue/Recycle eligibility
                 const continueCheck = checkContinueEligibility(match, s, match.section || 'weekly');
@@ -12552,7 +12992,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">[EMOJI] Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠️ Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -12570,11 +13010,15 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">[EMOJI] Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠️ Needs Linked Brand</span>';
                     }
                 }
                 
                 const rawCsvDataJson = s.mis_data.raw_csv_data ? escapeForAttr(JSON.stringify(s.mis_data.raw_csv_data)) : '{}';
+                
+                // v12.24.8: Get end date button color with fallback styling
+                const suggEndDateColor = getEndDateButtonColor(sEndDate);
+                const suggEndBtnStyle = suggEndDateColor.style || 'background:#6c757d; border-color:#6c757d; color:white;';
                 
                 html += `
                     <tr>
@@ -12590,21 +13034,22 @@ HTML_TEMPLATE = r"""
                                 ${s.mis_id}
                             </button>
                         </td>
-                        <td title="${sWeekdayTooltip}" style="white-space:normal;">${sWeekdayDisplay}</td>
+                        <td title="${sWeekdayTooltip}" style="${weekdayStyle} white-space:normal;">${sWeekdayDisplay}</td>
                         <td style="${brandStyle}">
                             <strong>${s.mis_data.brand}</strong>
                             ${sLinkedBrand ? '<br><small style="color:#6c757d;">' + sLinkedBrand + '</small>' : ''}
                         </td>
-                        <td title="${sCategoryTooltip}" style="white-space:normal;">${sCategoryDisplay}</td>
+                        <td title="${sCategoryTooltip}" style="${categoryStyle} white-space:normal;">${sCategoryDisplay}</td>
                         <td style="${discountStyle}"><strong>${sDiscount}%</strong></td>
                         <td style="${vendorStyle}">${sVendor}%</td>
-                        <td title="${sLocationsVertical}">${sLocations.substring(0, 20)}${sLocations.length > 20 ? '...' : ''}</td>
+                        <td title="${sLocationsVertical}" style="${locationStyle}">${sLocations.substring(0, 20)}${sLocations.length > 20 ? '...' : ''}</td>
                         <td>${sStartDate}</td>
                         <td style="${endDateStyle}" title="${endDateTooltip}">
                             <div id="end-date-display-${rowIdx}-${sIdx}">
-                                <button class="btn btn-sm btn-outline-warning py-0 px-1" 
+                                <button class="btn btn-sm py-0 px-1" 
+                                        style="${suggEndBtnStyle}"
                                         onclick="showEndDateEditor(${rowIdx}, ${sIdx}, '${s.mis_id}', '${sEndDate}')"
-                                        title="Click to update end date in MIS">
+                                        title="${suggEndDateColor.tooltip}">
                                     ${sEndDate}
                                 </button>
                             </div>
@@ -12619,7 +13064,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">[EMOJI]</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">✕</button>
                                 </div>
                             </div>
                         </td>
@@ -12650,10 +13095,15 @@ HTML_TEMPLATE = r"""
                 </div>
                 
                 <div style="margin-top:15px; padding-top:10px; border-top:1px solid #dee2e6; text-align:right;">
-                    <small class="text-muted">Color Legend: </small>
+                    <small class="text-muted">Field Match: </small>
                     <span class="badge" style="background:#d4edda; color:#155724;">Match</span>
                     <span class="badge" style="background:#fff3cd; color:#856404;">Partial/Missing</span>
                     <span class="badge" style="background:#f8d7da; color:#721c24;">Mismatch</span>
+                    <span style="margin-left:15px;"></span>
+                    <small class="text-muted">End Date: </small>
+                    <span class="badge" style="background:#dc3545; color:white;">Past Month</span>
+                    <span class="badge" style="background:#28a745; color:white;">Current Month</span>
+                    <span class="badge" style="background:#fd7e14; color:white;">Future Month</span>
                 </div>
             `;
             
