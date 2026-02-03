@@ -1,494 +1,84 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.23.12 DISCOUNT HIGHLIGHTING FIX
-# v12.23.12 CHANGELOG (DISCOUNT HIGHLIGHTING FIX):
-#   🔴 FIX: Discount column not highlighting in Suggestions popup
-#     * ISSUE: getMatchStyle() returned empty string when values were falsy (0, '', null)
-#     * ROOT CAUSE: JavaScript falsy check `!sourceVal` treats 0 as falsy
-#     * THE FIX: Rewrote getMatchStyle() to:
-#       - Convert values to strings first
-#       - Check for "empty" values explicitly ('-', 'N/A', 'nan', '', null)
-#       - Handle numeric comparison after proper validation
-#     * RESULT: Discount (and Vendor %) now highlight correctly ✅
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.24.5 BLAZE ECOM SYNC
+# v12.24.5 CHANGELOG (FIX: JWT KEY EXTRACTION):
+#   🔴 FIX: Token Extraction Now Checks "jwt" Key FIRST
+#     * ISSUE: Auth 200 OK but token not found - server uses "jwt" key
+#     * ROOT CAUSE: Blaze Ecom API returns token as top-level "jwt" key
+#       - Response: {"jwt": "eyJ...", ...}
+#       - We were checking data.attributes.token, headers, etc.
+#     * THE FIX: Added priority check for response_data.get('jwt')
+#       - Line ~2258: if 'jwt' in response_data: token = response_data['jwt']
+#     * EXTRACTION ORDER NOW:
+#       1. Authorization header
+#       2. Access-Token header  
+#       3. response.json()['jwt']  ← NEW PRIORITY
+#       4. data.attributes.token
+#       5. data.id / data.token / meta.token / token / access_token
+#     * RESULT: JWT successfully captured → sync can proceed
 #
-#   🟢 HIGHLIGHTING NOW WORKS FOR ALL FIELDS:
-#     | Field      | Green ✅           | Yellow ⚠️          | Red ❌           |
-#     |------------|--------------------|--------------------|------------------|
-#     | Discount   | Values match       | One missing        | Values differ    |
-#     | Vendor %   | Values match       | One missing        | Values differ    |
-#     | Weekday    | All days match     | Partial overlap    | No match         |
-#     | Category   | Match/both "All"   | Partial            | No match         |
-#     | Locations  | All stores match   | Partial            | No match         |
-#     | Brand      | Exact/contains     | Missing            | No match         |
+# v12.24.3 CHANGELOG (FIX: COMPREHENSIVE TOKEN EXTRACTION):
+#   🔴 FIX: Token Extraction Now Checks Headers FIRST + Multiple Body Paths
+#     * ISSUE: Still getting "Authentication failed" after json.dumps fix
+#     * ROOT CAUSE: Token location varies in JSON:API - may be in headers OR body
+#     * THE FIX: Comprehensive extraction in get_ecom_token():
+#       1. Headers (checked FIRST - common in JSON:API):
+#          - Authorization: Bearer [token]
+#          - Access-Token: [token]
+#       2. Body Paths (fallback):
+#          - data.attributes.token
+#          - data.id (some APIs return token as ID)
+#          - data.token
+#          - meta.token
+#          - token (top-level)
+#          - access_token (OAuth style)
+#     * DEBUG LOGGING ADDED:
+#       - Full response headers printed
+#       - Response body printed (first 1000 chars)
+#       - Payload debug with redacted password
+#       - Shows which path found the token
+#     * PAYLOAD VERIFIED: type="auth" (not "login")
+#     * 422 HANDLING: Added specific error for payload format rejection
 #
-# v12.23.11 CHANGELOG (DATE NORMALIZATION + SUGGESTIONS HIGHLIGHT):
-#   🔴 FIX 1: Date verification showing false mismatch errors
-#     * ISSUE: "02/01/2026" entered → MIS normalizes to "2/1/2026" → verification fails
-#     * ROOT CAUSE: String comparison without date normalization
-#     * THE FIX: Added normalize_date() to robust_text_input()
-#       - Strips leading zeros: 02/01/2026 → 2/1/2026
-#       - Compares normalized versions of both entered and actual values
-#       - Detects date fields via field_name or input_id ('date_start', 'date_end')
-#     * RESULT: Date fields now verify correctly without unnecessary retries ✅
+# v12.24.2 CHANGELOG (FIX: JSON:API CONTENT-TYPE OVERRIDE):
+#   🔴 FIX: requests.post(json=) Was Overriding Content-Type Header
+#     * ISSUE: 401 "Invalid Blaze credentials" despite correct payload
+#     * ROOT CAUSE: Using `json=payload` in requests.post() auto-sets
+#       Content-Type to "application/json", OVERRIDING our explicit
+#       "application/vnd.api+json" header required by JSON:API spec
+#     * THE FIX: Use `data=json.dumps(payload)` instead of `json=payload`
+#       - get_ecom_token(): Line ~2183 - data=json.dumps(payload)
+#       - trigger_ecom_sync(): Line ~2288 - data=json.dumps(payload)
+#     * ADDED: Extra debug logging for Content-Type verification
+#     * RESULT: Correct Content-Type preserved → API accepts credentials
 #
-#   🟢 FIX 2: MIS ID Suggestions Popup - Enhanced Field Highlighting
-#     * ISSUE: Only Brand, Discount, Vendor % were highlighted for comparison
-#     * THE FIX: Added comparison highlighting for:
-#       - Weekday: Green if all days match, Yellow if partial, Red if mismatch
-#       - Category: Green if match/both "All", Yellow if partial, Red if mismatch
-#       - Locations: Green if match, Yellow if partial, Red if mismatch
-#         (Handles name normalization: "Beverly Hills" ↔ "Beverly")
-#     * NEW HELPER FUNCTIONS:
-#       - getWeekdayMatchStyle() - compares weekday lists
-#       - getCategoryMatchStyle() - compares category lists
-#       - getLocationMatchStyle() - compares locations with store name mapping
+# v12.24.1 CHANGELOG (FIX: ECOM SYNC - MISSION CONTROL API):
+#   🟢 FIX: Corrected API Integration for Blaze Ecom Sync
+#     * ISSUE: v12.24.0 used wrong endpoint (api.blaze.me/api/v1/sync - 404)
+#     * ROOT CAUSE: Tymber sync uses Ecom Mission Control API, not Retail API
+#     * THE FIX: Implemented correct 3-step flow:
+#       1. Authenticate: POST https://ecom-api.blaze.me/api/v1/auth/login
+#       2. Get JWT token from response
+#       3. Sync: POST https://ecom-api.blaze.me/api/v1/store/sync-requests
+#     * NEW FUNCTIONS:
+#       - get_ecom_token(email, password) → JWT token
+#       - trigger_ecom_sync(store_uuid, token) → sync result
+#     * HEADERS REQUIRED:
+#       - X-Store: [STORE_UUID]
+#       - Authorization: Bearer [JWT_TOKEN]
+#       - Content-Type: application/vnd.api+json
+#     * PAYLOAD: {"data":{"type":"store_sync_requests","attributes":{"request_type":"on_demand"}}}
+#     * sync_keys.json NOW USES store_uuid (not api_key/api_secret)
+#     * UI: Now requires Blaze email/password from Blaze Config section
+#     * STATUS: Enhanced error messages (🔑 auth, 📍 UUID, 🚫 permission)
 #
-#   🟡 HIGHLIGHTING COLOR KEY (Suggestions Popup):
-#     | Color  | Meaning       | Example                        |
-#     |--------|---------------|--------------------------------|
-#     | Green  | Exact Match   | Both have "Monday, Tuesday"    |
-#     | Yellow | Partial Match | One has "Monday", other "Mon-Fri" |
-#     | Red    | No Match      | "Monday" vs "Saturday"         |
-#
-#   🟡 CONFIDENCE SCORING (already includes these factors):
-#     | Factor   | Weight | Criteria                       |
-#     |----------|--------|--------------------------------|
-#     | Brand    | 35%    | Exact/partial/fuzzy match      |
-#     | Discount | 30%    | Exact = full, ±5% = half       |
-#     | Vendor % | 15%    | Exact match                    |
-#     | Weekday  | 10%    | Proportional overlap           |
-#     | Locations| 10%    | Proportional store match       |
-#     | Category |  5%    | Exact/subset/overlap           |
-#
-# v12.23.10 CHANGELOG (FAST MULTI-SELECT + CHECKLIST FIX + CATEGORY DROPDOWN):
-#   🔴 FIX 1: Checklist popup showing false errors for locations
-#     * ISSUE: "Beverly Hills" vs "Beverly" comparison failing
-#     * THE FIX: Added storeNameMap to compareMultiSelect() JavaScript
-#       - 'beverly hills' → 'beverly'
-#       - 'fresno (palm)' → 'fresno'
-#       - 'fresno (shaw)' → 'fresno shaw'
-#     * Now checklist correctly validates mapped location names
-#
-#   🔴 FIX 2: Pre-Flight popup Category dropdown not using Settings tab
-#     * ISSUE: Categories not loading from Settings tab Column C
-#     * ROOT CAUSE: Data starts at row 4, code was reading from row 2
-#     * THE FIX: 
-#       - load_settings_dropdown_data() now reads categories from row 4 (index 3)
-#       - Both Pre-Flight popups now use settingsCache.categories
-#       - Categories sourced from: Settings tab, Column C, starting row 4
-#
-#   🟢 FIX 3: FASTER multi-select data entry
-#     * OLD: Add value → Verify → Repeat (slow, ~2s per value)
-#     * NEW: Add ALL values → Verify ONCE → Retry missing only
-#     * SPEED IMPROVEMENT: ~50% faster for multi-value fields
-#
-#   🟢 NEW APPROACH in robust_multi_select():
-#     * PHASE 1: Add all values quickly (no per-value verification)
-#       - Open dropdown, search, click, repeat
-#       - Minimal waits between values (0.15s → 0.35s → 0.4s → 0.2s)
-#     * PHASE 2: Final verification
-#       - Check selection pills once after all values added
-#       - Identify any missing values
-#     * PHASE 3: Retry only missing values
-#       - If any values missing, retry those specific ones
-#       - 2 retry attempts per missing value
-#       - Final verification report
-#
-#   🟡 TIMING COMPARISON (10 locations):
-#     * OLD: ~20-25 seconds (2-2.5s per value with verification)
-#     * NEW: ~10-12 seconds (add all first, verify once)
-#
-# v12.23.9 CHANGELOG (FIXED LOCATION MAPPING):
-#   🔴 FIX: "Beverly Hills" not mapping to "Beverly" in MIS dropdown
-#     * ISSUE: Location mapping was defined but log was at DEBUG level
-#     * Verified mapping matches STORE_NAME_MAP:
-#       - "Beverly Hills" → "Beverly" ✓
-#       - "Fresno (Palm)" → "Fresno" ✓
-#       - "Fresno (Shaw)" → "Fresno Shaw" ✓
-#     * Changed mapping log from DEBUG to INFO for visibility
-#
-#   🟢 LOCATION MAPPING (Sheet → MIS Dropdown):
-#     | Google Sheet Name | MIS Dropdown Name |
-#     |-------------------|-------------------|
-#     | Beverly Hills     | Beverly           |
-#     | Fresno (Palm)     | Fresno            |
-#     | Fresno (Shaw)     | Fresno Shaw       |
-#     | (all others same) | (same name)       |
-#
-#   🟡 Expected Console Output:
-#     [Store/Locations] Adding 10 values...
-#     [Store/Locations] Mapped 'Beverly Hills' to 'Beverly'
-#     [Store/Locations] Mapped 'Fresno (Palm)' to 'Fresno'
-#     [Store/Locations] ✅ Added 10/10 values
-#
-# v12.23.8 CHANGELOG (SMART MULTI-SELECT WITH LOCATION MAPPING):
-#   🔴 FIX: Multi-select still missing entries + Fresno naming issues
-#     * ISSUE: "Fresno" not matching "Fresno (Palm)" in dropdown
-#       - Location names in sheet don't match dropdown exactly
-#       - Matching logic too strict
-#     * THE FIX: Location name normalization + smarter matching
-#
-#   🟢 NEW: Location Name Normalization Map
-#     * 'fresno' → 'Fresno (Palm)'
-#     * 'fresno palm' → 'Fresno (Palm)'
-#     * 'fresno shaw' → 'Fresno (Shaw)'
-#     * 'fresno (shaw)' → 'Fresno (Shaw)'
-#     * 'weho' → 'West Hollywood'
-#     * All standard locations mapped
-#
-#   🟢 IMPROVED: 4-Pass Option Matching
-#     * Pass 1: Exact match (case-insensitive)
-#     * Pass 2: Option text contains search value
-#     * Pass 3: Search value contains option text
-#     * Pass 4: Fuzzy match on key word (e.g., "Fresno" matches "Fresno (Palm)")
-#
-#   🟢 IMPROVED: Verification Logic
-#     * Checks both full value and base name against selection pills
-#     * "Fresno (Palm)" verified if pills contain "fresno"
-#     * If option was clicked but verification fails, still counts as success
-#
-#   🟡 TIMING ADJUSTMENTS:
-#     * Dropdown open wait: 0.5s (was 0.4s)
-#     * Search results wait: 0.6s (was 0.4s)
-#     * Post-click wait: 0.3s
-#     * More generous waits for reliability
-#
-# v12.23.7 CHANGELOG (ROBUST MULTI-SELECT):
-#   🔴 FIX: Multi-select fields (Weekday, Store, Category) failing with multiple values
-#     * ISSUE: Select2 multi-selects often close after each selection
-#       - Search field becomes stale after selection
-#       - Container needs to be re-acquired
-#       - Values weren't being verified
-#     * THE FIX: Complete rewrite of robust_multi_select()
-#
-#   🟢 NEW: Per-Value Processing in robust_multi_select()
-#     * Re-opens dropdown for EACH value (handles Select2 auto-close)
-#     * Re-acquires container and search field fresh each time
-#     * 3 retry attempts per value
-#     * Verification after each value via selection pills
-#     * Scrolls container into view before each interaction
-#     * Handles stale element exceptions gracefully
-#
-#   🟢 VERIFICATION: Checks selection pills after each value
-#     * Reads .select2-selection__choice elements
-#     * Confirms value appears in selected list
-#     * Only moves to next value after verification OR 3 failed attempts
-#
-#   🟢 LOGGING: Reports success/failure per field
-#     * "[Weekday] ✅ Added 3/3 values" on success
-#     * "[Store] ⚠️ Added 8/10 - Failed: ['Location1', 'Location2']" on partial
-#
-#   🟡 TIMING (per value):
-#     * Dropdown open wait: 0.4s
-#     * Search input wait: 0.4s  
-#     * Post-click wait: 0.3s
-#     * Retry delay: 0.2s
-#
-# v12.23.6 CHANGELOG (FAST FORM AUTOMATION):
-#   🔴 CRITICAL FIX: Form Readiness Check Was Too Slow (30+ seconds)
-#     * ISSUE: Multi-select container IDs didn't match expected format
-#       - Weekday, Store, Category fields have different Select2 IDs
-#       - Old check waited for all 11 fields, only 8 were found
-#       - MAX_TOTAL_WAIT of 30s meant full timeout every time
-#     * THE FIX: Simplified form check - only verify CORE fields
-#
-#   🟢 FASTER: wait_for_form_ready() 
-#     * Now checks only 7 core fields (single-selects + inputs)
-#     * MAX_WAIT reduced from 30s to 8s
-#     * MIN_REQUIRED reduced from 9 to 5
-#     * Poll interval: 0.3s (was 1.0s)
-#     * Stabilization wait: 1.0s (was 3.0s)
-#     * Always returns True to proceed
-#
-#   🟢 FASTER: robust_single_select()
-#     * Reduced container wait: 3s (was 5s)
-#     * Reduced dropdown wait: 0.5s (was 1.0s)
-#     * Reduced search wait: 0.5s (was 1.0s)
-#     * Reduced post-click wait: 0.3s (was 0.8s)
-#     * Less verbose logging
-#
-#   🟢 FASTER: robust_multi_select()
-#     * Opens dropdown once, adds ALL values, verifies at end
-#     * Per-value wait: 0.3s (was 0.8s)
-#     * No per-value retry loop (faster)
-#     * Less verbose logging
-#
-#   🟢 FASTER: robust_text_input()
-#     * Single pass with verification
-#     * Reduced per-field delays
-#
-#   🟡 TIMING SUMMARY:
-#     * Form readiness: ~2-5s (was 30+s)
-#     * Per single-select: ~2-3s (was 4-5s)
-#     * Per multi-select: ~0.5-1s per value (was 1-2s)
-#     * Per text input: ~0.5-1s (was 1-2s)
-#     * FIELD_DELAY: 0.5s (was 1.0s)
-#     * ELEMENT_WAIT: 5s (was 10s)
-#
-# v12.23.5 CHANGELOG (PATIENT FORM AUTOMATION - WAIT FOR ALL FIELDS):
-#   🔴 CRITICAL FIX: Automation Running Too Fast, Missing Fields
-#     * ISSUE: Modal fields weren't fully loaded when automation started
-#       - Select2 dropdowns not initialized
-#       - Fields found but not interactive
-#       - Automation speeding through without proper waits
-#     * THE FIX: Complete rewrite with patient polling approach
-#
-#   🟢 IMPROVED: wait_for_form_ready() - Polling Loop
-#     * Uses polling loop (1s interval) instead of single pass
-#     * MAX_TOTAL_WAIT = 30 seconds to find all fields
-#     * MIN_FIELDS_REQUIRED = 9 (allows some optional fields)
-#     * Shows progress: "5s: Found 8/11 fields"
-#     * After fields found, waits 3 additional seconds for Select2 init
-#     * Scrolls modal to top before starting
-#
-#   🟢 IMPROVED: robust_single_select() - Step-by-Step
-#     * 12 explicit steps with waits between each
-#     * STEP 1: Close any open dropdowns (0.5s wait)
-#     * STEP 2: Find container (5s timeout)
-#     * STEP 3: Scroll into view (0.5s wait)
-#     * STEP 4: Click to open (retry 3x, 1s wait each)
-#     * STEP 5: Wait for dropdown visible (0.5s)
-#     * STEP 6: Find search input
-#     * STEP 7: Type search SLOWLY (0.05s per char)
-#     * STEP 8: Wait for results (1.0s)
-#     * STEP 9: Find matching option
-#     * STEP 10: Click option with JS fallback
-#     * STEP 11: Wait for selection (0.8s)
-#     * STEP 12: Verify and close
-#
-#   🟡 TIMING CHANGES:
-#     * Modal initial wait: 3.0s (unchanged)
-#     * Form readiness poll: 1.0s interval, 30s max
-#     * Select2 init wait: 3.0s (increased from 1.5s)
-#     * Dropdown open wait: 1.0s (increased from 0.7s)
-#     * Search typing: 0.05s per character (NEW)
-#     * Search results wait: 1.0s (increased from 0.8s)
-#     * Selection verify wait: 0.8s
-#     * FIELD_DELAY: 1.0s between fields
-#
-# v12.23.4 CHANGELOG (FORM READINESS CHECK BEFORE AUTOMATION):
-#   🔴 CRITICAL FIX: Automation Rushing Through Fields
-#     * ISSUE: Automation was speeding through, missing most fields
-#       - Modal wasn't fully loaded when automation started
-#       - Select2 dropdowns not initialized
-#       - Fields not visible/interactable
-#     * ROOT CAUSE: No check for form readiness before starting
-#     * THE FIX: Added comprehensive form readiness system
-#
-#   🟢 NEW: wait_for_form_ready() Function
-#     * Checks ALL 11 form fields before automation starts
-#     * Uses WebDriverWait with ELEMENT_WAIT (10 seconds) per field
-#     * Verifies each field is present AND visible
-#     * For Select2 dropdowns: waits for container element
-#     * For inputs: waits for element to be clickable
-#     * Reports which fields are ready vs not ready
-#     * Adds extra stabilization delay after check
-#
-#   🟢 NEW: wait_for_element() Helper
-#     * Waits for specific element with configurable timeout
-#     * Handles both Select2 containers and regular inputs
-#     * Returns element or None for graceful failure
-#
-#   🟢 NEW: scroll_element_into_view() Helper
-#     * Scrolls element to center of viewport
-#     * Uses smooth scrolling for stability
-#     * Waits 0.5s after scroll for DOM to settle
-#
-#   🟡 TIMING IMPROVEMENTS:
-#     * ELEMENT_WAIT = 10 seconds (max wait per element)
-#     * FIELD_DELAY = 1.0 second (between fields, was 0.8)
-#     * Modal initial wait: 2.5s → 3.0s
-#     * Dropdown animation wait: 0.5s → 0.7s
-#     * Search result wait: 0.6s → 0.8s
-#     * Post-click verification: 0.3s → 0.5s
-#
-#   🟢 EXECUTION FLOW (13 Steps):
-#     * [STEP 1] Open modal
-#     * [STEP 2] FORM READINESS CHECK ← NEW
-#     * [STEP 3-5] Single-select fields (Brand, Linked Brand, Rebate Type)
-#     * [STEP 6-9] Text input fields (Discount, Vendor, Start, End)
-#     * [STEP 10-13] Multi-select/checkbox (Weekday, Locations, Category, After Wholesale)
-#
-#   🟢 PER-FIELD IMPROVEMENTS:
-#     * Each robust function now waits for element before interacting
-#     * Scrolls element into view before clicking
-#     * Longer delays for dropdown animations
-#     * More robust error handling
-#
-# v12.23.3 CHANGELOG (SEQUENTIAL FIELD ENTRY WITH VERIFY-RETRY):
-#   🔴 CRITICAL FIX: Automation Skipping Fields / Missing Entries
-#     * ISSUE: Pre-Flight automation was rushing through fields
-#       - Fields were being skipped or not properly filled
-#       - No verification that values were actually entered
-#       - Multi-select fields especially unreliable
-#     * ROOT CAUSE: Old atomic functions lacked:
-#       - Verification after entry
-#       - Retry logic on failure
-#       - Sufficient delays between operations
-#     * THE FIX: Complete rewrite with new "robust_*" functions
-#
-#   🟢 NEW: robust_text_input() - Text fields with verify-retry
-#     * 3 retry attempts per field (MAX_RETRIES = 3)
-#     * After entry, reads back value from element
-#     * Compares actual vs expected (handles % normalization)
-#     * Logs ✅ VERIFIED or ⚠️ Verification failed
-#     * Only proceeds to next field after success
-#
-#   🟢 NEW: robust_checkbox() - Checkbox with verify-retry
-#     * Reads current state before clicking
-#     * Only clicks if state change needed
-#     * Verifies state changed after click
-#     * 3 retry attempts if verification fails
-#
-#   🟢 NEW: robust_single_select() - Dropdown with verify-retry
-#     * Closes any open dropdowns first (clean state)
-#     * Opens dropdown, searches for value
-#     * Clicks matching option (exact or partial match)
-#     * Reads back container title to verify
-#     * 3 retry attempts if verification fails
-#
-#   🟢 NEW: robust_multi_select() - Multi-select with per-value verify
-#     * Opens dropdown ONCE for all values
-#     * For EACH value:
-#       - Types search term
-#       - Clicks matching option
-#       - Verifies value appears in selection pills
-#       - Retries individual value if not found
-#     * Reports success/failure count per field
-#
-#   🟡 TIMING IMPROVEMENTS:
-#     * FIELD_DELAY = 0.8s between fields (stability)
-#     * Modal wait: 2.0s → 2.5s
-#     * Search result wait: 0.5s → 0.6s → 0.7s
-#     * Post-click verification: 0.3s delays
-#
-#   🟢 EXECUTION FLOW: Step-by-step with logging
-#     * [STEP 1] Open modal
-#     * [STEP 2] BRAND → verify → proceed
-#     * [STEP 3] LINKED BRAND → verify → proceed
-#     * [STEP 4] REBATE TYPE → verify → proceed
-#     * [STEP 5] DISCOUNT → verify → proceed
-#     * [STEP 6] VENDOR % → verify → proceed
-#     * [STEP 7] START DATE → verify → proceed
-#     * [STEP 8] END DATE → verify → proceed
-#     * [STEP 9] WEEKDAY → verify each day → proceed
-#     * [STEP 10] LOCATIONS → verify each store → proceed
-#     * [STEP 11] CATEGORY → verify each category → proceed
-#     * [STEP 12] AFTER WHOLESALE → verify → done
-#
-# v12.23.2 CHANGELOG (COMPREHENSIVE AUTOMATION & SEARCH FIXES):
-#   🔴 FIX 1: Search Logic Fixed in 3 Endpoints
-#     * ISSUE: MIS ID search was broken in multiple endpoints, causing:
-#       - "Compare to Google Sheet" failed to find IDs
-#       - Datatable click validation failed to find IDs
-#       - Both fell back to manual mode incorrectly
-#     * ENDPOINTS FIXED:
-#       - /api/mis/compare-to-sheet (line ~23142) ✅
-#       - /api/mis/validate-lookup (line ~22704) ✅
-#       - /api/mis/lookup-mis-id (fixed in v12.23.1) ✅
-#     * THE FIX: Applied same normalization logic to all 3 endpoints
-#       - Handles newlines: "W1: 123\nW2: 456"
-#       - Handles commas: "W1: 123, W2: 456"
-#       - Handles tags: "Part 1: 123", "S1: 456"
-#       - Strips "(Estimated)" suffix
-#
-#   🟢 FIX 2: Full Automation Mode Added
-#     * FEATURE: Pre-Flight confirmation now fills ALL fields, not just 7
-#     * NEW PARAMETER: full_automation=True (default)
-#     * PREVIOUSLY AUTOMATED (7 fields):
-#       - Brand, Linked Brand, Rebate Type, Discount, Vendor %, Start Date, End Date
-#     * NOW ALSO AUTOMATED (4 more fields):
-#       - Weekday (multi-select) ✅
-#       - Store/Locations (multi-select) ✅
-#       - Category (multi-select) ✅
-#       - After Wholesale (checkbox) ✅
-#     * TOTAL: 11 fields automated
-#     * Checklist banner still appears for verification
-#
-#   🟡 FIX 3: Improved Timing & Verification
-#     * TIMING IMPROVEMENTS in atomic_single_select():
-#       - Dropdown open wait: 0.25s → 0.4s
-#       - Search input focus: 0.1s → 0.15s
-#       - Search results load: 0.5s → 0.6s
-#       - Post-selection escape: 0.08s → 0.1s
-#     * TIMING IMPROVEMENTS in atomic_multi_select():
-#       - Initial dropdown wait: 0.3s → 0.4s
-#       - WebDriverWait timeout: 2s → 3s
-#       - Search filter wait: 0.4s → 0.5s
-#       - Option click timeout: 1.5s → 2s
-#     * VERIFICATION ADDED:
-#       - After setting single-select, reads back container title
-#       - Logs warning if actual value doesn't match expected
-#       - Helps diagnose silent failures
-#
-#   🟢 FIX 4: Multi-Select Automation Enabled
-#     * atomic_multi_select() already existed but was never called
-#     * Now called for Weekday, Store/Locations, Category
-#     * atomic_toggle() now called for After Wholesale checkbox
-#     * Field ID mapping verified:
-#       - Weekday → weekday_ids
-#       - Store/Locations → store_ids
-#       - Category → category_ids
-#       - After Wholesale → rebate_wholesale_discount
-#
-# v12.23.1 CHANGELOG (FIX: MIS ID SEARCH IN GOOGLE SHEET):
-#   🔴 CRITICAL FIX: "Compare to Google Sheet" Not Finding MIS IDs
-#     * ISSUE: MIS ID lookup failed to find IDs that existed in Google Sheet
-#       - User clicked MIS ID in suggestions popup
-#       - Backend searched Google Sheet but reported "not found"
-#       - Incorrectly fell back to Manual validation mode
-#     * ROOT CAUSE 1: Search logic didn't handle multi-line IDs
-#       - Google Sheet MIS ID column can have newlines: "W1: 123\nW2: 456"
-#       - Simple `in` check failed for newline-separated formats
-#     * ROOT CAUSE 2: No debug output when ID not found
-#       - Silent failure made diagnosis impossible
-#       - No "else" clause for matching_rows check
-#     * THE FIX: Enhanced MIS ID search in api_mis_lookup_mis_id()
-#       - Normalizes cell: replaces literal '\n' and actual newlines with commas
-#       - Splits into parts and extracts numeric IDs from tagged format
-#       - Handles "W1: 123", "Part 1: 456", plain "789" formats
-#       - Strips "(Estimated)" suffix before comparison
-#       - Added else clause with debug output when not found
-#       - Logs sample IDs from sheet to help diagnose mismatches
-#     * LOCATION: api_mis_lookup_mis_id() endpoint (~line 22416-22450)
-#
-# v12.23.0 CHANGELOG (CHECKLIST DATE FIX + SUGGESTIONS ENHANCEMENTS):
-#   🔴 FIX 1: Date Comparison Format Mismatch (Issue 1)
-#     * ISSUE: Start Date/End Date always showed red even when dates matched
-#       - MIS might store "1/1/2026" while Google Sheet has "01/01/2026"
-#       - String comparison failed due to leading zeros difference
-#     * THE FIX: Added date normalization in compareSingleValue()
-#       - Extracts month/day/year parts from date strings
-#       - Normalizes both to "M/D/YYYY" format (no leading zeros)
-#       - "01/01/2026" and "1/1/2026" now match correctly
-#     * LOCATION: compareSingleValue() in inject_checklist_banner()
-#
-#   🟡 ENHANCEMENT 2: Yellow Highlight for Assigned MIS ID (Issue 4)
-#     * FEATURE: In suggestions popup, currently assigned MIS ID now highlighted
-#       - Yellow background (#ffc107) with star icon (⭐)
-#       - Title shows "Currently Assigned - Click to lookup in MIS"
-#       - Makes it easy to identify which suggestion is already in the Google Sheet
-#     * IMPLEMENTATION:
-#       - Added isAssignedMisId check in showSuggestionTooltip()
-#       - Compares s.mis_id against match.mis_id (current assignment)
-#       - Conditional styling applied to MIS ID button
-#
-#   🟢 ENHANCEMENT 3: More Aggressive Matching Logic (Issue 5)
-#     * NEW SCORING FACTORS: Locations and Weekdays now contribute to confidence
-#       - Location match: up to 10 points
-#         * "All Locations" on both = 10 pts
-#         * One is "All" = 5 pts (partial)
-#         * Store name fuzzy match = proportional (handles "Beverly Hills" vs "Beverly")
-#       - Weekday match: up to 10 points
-#         * Exact match = 10 pts
-#         * Partial overlap = proportional
-#         * Handles singular/plural ("Monday" vs "Mondays")
-#     * SCORING BREAKDOWN (total still capped at 100):
-#       - Brand: 50 pts (+ 5 linked brand bonus)
-#       - Discount: 30 pts
-#       - Vendor %: 15 pts
-#       - Category: 5 pts
-#       - Locations: 10 pts (NEW)
-#       - Weekdays: 10 pts (NEW)
-#     * RESULT: Better suggestions ranked higher, more reliable matching
+# v12.24.0 CHANGELOG (NEW: BLAZE ECOM SYNC TO TYMBER):
+#   🟢 NEW: Blaze Ecom Sync Feature
+#     * UI: Added store dropdown (12 locations) + "SYNC TO TYMBER" button in Setup tab
+#     * BACKEND: New /api/blaze/ecom-sync endpoint for store-specific sync
+#     * SECURITY: API keys stored in secrets/sync_keys.json (not in code)
+#     * STORES: DAVIS, DIXON, NAPA, SANTA ROSA, OAKLAND, SAN FRANCISCO,
+#               LOS ANGELES, SAN DIEGO, SAN JOSE, SACRAMENTO, FRESNO, LONG BEACH
+#     * HELPER: load_sync_keys() function with graceful error handling
+#     * STATUS: Real-time feedback (Ready → Syncing... → Sync Complete/Failed)
 #
 # v12.22.8 CHANGELOG (FIX: SINGLE-SELECT SELECT2 DROPDOWNS IN CHECKLIST):
 #   ðŸ”´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
@@ -2542,6 +2132,319 @@ TAX_CONFIG_FILE = BASE_DIR / 'tax_config.json'
 
 # Inventory Reporter Config
 INVENTORY_KEYS_FILE = BASE_DIR / 'blaze_inventory_keys.json'
+
+# v12.24.0: Ecom Sync Keys File (for Tymber integration)
+# Note: secrets/ lives at project root level (sibling to TAT-Dashboard/, not inside it)
+SYNC_KEYS_FILE = BASE_DIR.parent / 'secrets' / 'sync_keys.json'
+
+
+def load_sync_keys(store_name: str) -> dict | None:
+    """
+    v12.24.1: Load store UUID for Blaze Ecom Sync from secrets/sync_keys.json.
+    
+    Args:
+        store_name: The store name (e.g., 'DAVIS', 'DIXON')
+    
+    Returns:
+        dict with 'store_uuid' if found, None otherwise
+    
+    JSON Structure Expected:
+        {
+            "DAVIS": {"store_uuid": "e70c671b-8954-4524-a021-cd00a5e6b3a0"},
+            "DIXON": {"store_uuid": "a6122a4f-47c9-44b9-b50b-3c1e4934c72f"}
+        }
+    """
+    try:
+        if not SYNC_KEYS_FILE.exists():
+            print(f"[ECOM-SYNC] ⚠️ Sync keys file not found: {SYNC_KEYS_FILE}")
+            return None
+        
+        with open(SYNC_KEYS_FILE, 'r') as f:
+            all_keys = json.load(f)
+        
+        # Normalize store name for lookup (uppercase)
+        store_upper = store_name.upper().strip()
+        
+        if store_upper not in all_keys:
+            print(f"[ECOM-SYNC] ⚠️ No UUID found for store: {store_name}")
+            return None
+        
+        store_data = all_keys[store_upper]
+        
+        # Validate required field
+        if 'store_uuid' not in store_data:
+            print(f"[ECOM-SYNC] ⚠️ Missing store_uuid for store: {store_name}")
+            return None
+        
+        print(f"[ECOM-SYNC] ✅ Loaded UUID for store: {store_name}")
+        return store_data
+    
+    except json.JSONDecodeError as e:
+        print(f"[ECOM-SYNC] ❌ Invalid JSON in sync_keys.json: {e}")
+        return None
+    except Exception as e:
+        print(f"[ECOM-SYNC] ❌ Error loading sync keys: {e}")
+        return None
+
+
+def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
+    """
+    v12.24.3: Authenticate with Blaze Ecom Mission Control API and retrieve JWT token.
+    
+    Args:
+        email: Blaze account email
+        password: Blaze account password
+    
+    Returns:
+        Tuple of (token, error_message). Token is None if auth fails.
+    
+    API Endpoint: POST https://ecom-api.blaze.me/api/v1/auth/login
+    Content-Type: application/vnd.api+json (JSON:API spec)
+    
+    Token Location: May be in Response Headers OR Body (JSON:API varies)
+    """
+    login_url = "https://ecom-api.blaze.me/api/v1/auth/login"
+    
+    headers = {
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json'
+    }
+    
+    payload = {
+        "data": {
+            "type": "auth",  # MUST be "auth", not "login"
+            "attributes": {
+                "email_or_phone": email,
+                "password": password
+            }
+        }
+    }
+    
+    try:
+        # Debug logging (password redacted)
+        debug_payload = {
+            "data": {
+                "type": payload["data"]["type"],
+                "attributes": {
+                    "email_or_phone": email,
+                    "password": "***REDACTED***"
+                }
+            }
+        }
+        print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+        print(f"[ECOM-AUTH] Authenticating as: {email}")
+        print(f"[ECOM-AUTH] Endpoint: {login_url}")
+        print(f"[ECOM-AUTH] Content-Type: {headers['Content-Type']}")
+        print(f"[ECOM-AUTH] Accept: {headers['Accept']}")
+        print(f"[DEBUG] Auth Payload: {json.dumps(debug_payload)}")
+        
+        # CRITICAL: Use data=json.dumps() NOT json= to preserve Content-Type header
+        response = requests.post(
+            login_url, 
+            headers=headers, 
+            data=json.dumps(payload),
+            timeout=30
+        )
+        
+        print(f"[ECOM-AUTH] Response Status: {response.status_code}")
+        print(f"[ECOM-AUTH] Response Headers: {dict(response.headers)}")
+        
+        if response.status_code == 200 or response.status_code == 201:
+            token = None
+            
+            # ===== METHOD 1: Check Response Headers FIRST (Common in JSON:API) =====
+            auth_header = response.headers.get('Authorization')
+            if auth_header:
+                token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
+                print(f"[ECOM-AUTH] ✅ Token found in Authorization header")
+            
+            # Check Access-Token header (alternate pattern)
+            if not token:
+                access_token = response.headers.get('Access-Token')
+                if access_token:
+                    token = access_token
+                    print(f"[ECOM-AUTH] ✅ Token found in Access-Token header")
+            
+            # ===== METHOD 2: Check Response Body (multiple paths) =====
+            if not token and response.text:
+                print(f"[ECOM-AUTH] Response Body: {response.text[:1000]}")
+                try:
+                    response_data = response.json()
+                    
+                    # PRIORITY: Check for "jwt" key (Blaze Ecom specific)
+                    if 'jwt' in response_data:
+                        token = response_data['jwt']
+                        print(f"[ECOM-AUTH] ✅ Token found in: jwt key")
+                    
+                    # Path 1: data.attributes.token
+                    if not token and 'data' in response_data:
+                        data = response_data['data']
+                        if isinstance(data, dict):
+                            if 'attributes' in data and isinstance(data['attributes'], dict):
+                                token = data['attributes'].get('token')
+                                if token:
+                                    print(f"[ECOM-AUTH] ✅ Token found in data.attributes.token")
+                            
+                            # Path 2: data.id (some APIs return token as ID)
+                            if not token and 'id' in data:
+                                potential_token = data['id']
+                                # Token IDs are typically long strings
+                                if isinstance(potential_token, str) and len(potential_token) > 20:
+                                    token = potential_token
+                                    print(f"[ECOM-AUTH] ✅ Token found in data.id")
+                            
+                            # Path 3: data.token
+                            if not token and 'token' in data:
+                                token = data['token']
+                                print(f"[ECOM-AUTH] ✅ Token found in data.token")
+                    
+                    # Path 4: meta.token
+                    if not token and 'meta' in response_data:
+                        meta = response_data['meta']
+                        if isinstance(meta, dict) and 'token' in meta:
+                            token = meta['token']
+                            print(f"[ECOM-AUTH] ✅ Token found in meta.token")
+                    
+                    # Path 5: top-level token
+                    if not token and 'token' in response_data:
+                        token = response_data['token']
+                        print(f"[ECOM-AUTH] ✅ Token found at top level")
+                    
+                    # Path 6: access_token (OAuth style)
+                    if not token and 'access_token' in response_data:
+                        token = response_data['access_token']
+                        print(f"[ECOM-AUTH] ✅ Token found in access_token")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"[ECOM-AUTH] ⚠️ Could not parse JSON response: {e}")
+            
+            if token:
+                print(f"[ECOM-AUTH] ✅ Token acquired (length: {len(token)})")
+                print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+                return token, None
+            else:
+                print(f"[ECOM-AUTH] ⚠️ 200 OK but no token found anywhere!")
+                print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+                return None, "Authentication succeeded but no token in response"
+        
+        elif response.status_code == 401:
+            print(f"[ECOM-AUTH] ❌ Invalid credentials (401)")
+            print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
+            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            return None, "Invalid Blaze credentials"
+        
+        elif response.status_code == 403:
+            print(f"[ECOM-AUTH] ❌ Access forbidden")
+            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            return None, "Access forbidden - check account permissions"
+        
+        elif response.status_code == 422:
+            print(f"[ECOM-AUTH] ❌ Unprocessable Entity (422) - payload format issue")
+            print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
+            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            return None, "Payload format rejected by API"
+        
+        else:
+            error_text = response.text[:300] if response.text else 'No response body'
+            print(f"[ECOM-AUTH] ❌ Auth failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            return None, f"Auth failed ({response.status_code})"
+    
+    except requests.exceptions.Timeout:
+        print("[ECOM-AUTH] ❌ Request timed out")
+        return None, "Authentication timed out"
+    except requests.exceptions.ConnectionError as e:
+        print(f"[ECOM-AUTH] ❌ Connection error: {e}")
+        return None, "Unable to connect to Blaze Ecom API"
+    except Exception as e:
+        print(f"[ECOM-AUTH] ❌ Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, f"Auth error: {str(e)}"
+
+
+def trigger_ecom_sync(store_uuid: str, token: str) -> tuple[bool, str]:
+    """
+    v12.24.2: Trigger inventory sync to Tymber via Blaze Ecom Mission Control API.
+    
+    Args:
+        store_uuid: The store's UUID from sync_keys.json
+        token: JWT Bearer token from get_ecom_token()
+    
+    Returns:
+        Tuple of (success, message)
+    
+    API Endpoint: POST https://ecom-api.blaze.me/api/v1/store/sync-requests
+    Content-Type: application/vnd.api+json (JSON:API spec)
+    """
+    sync_url = "https://ecom-api.blaze.me/api/v1/store/sync-requests"
+    
+    headers = {
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json',
+        'Authorization': f'Bearer {token}',
+        'X-Store': store_uuid
+    }
+    
+    payload = {
+        "data": {
+            "type": "store_sync_requests",
+            "attributes": {
+                "request_type": "on_demand"
+            }
+        }
+    }
+    
+    try:
+        print(f"[ECOM-SYNC] Triggering sync for store UUID: {store_uuid[:8]}...")
+        print(f"[ECOM-SYNC] POST {sync_url}")
+        print(f"[ECOM-SYNC] Content-Type: {headers['Content-Type']}")
+        
+        # CRITICAL: Use data=json.dumps() NOT json= to preserve Content-Type header
+        response = requests.post(
+            sync_url, 
+            headers=headers, 
+            data=json.dumps(payload),  # Preserve application/vnd.api+json
+            timeout=60
+        )
+        
+        print(f"[ECOM-SYNC] Response Status: {response.status_code}")
+        
+        if response.status_code in [200, 201, 202]:
+            response_data = response.json() if response.text else {}
+            print(f"[ECOM-SYNC] ✅ Sync triggered successfully")
+            return True, "Sync request accepted"
+        
+        elif response.status_code == 401:
+            print(f"[ECOM-SYNC] ❌ Token expired or invalid")
+            return False, "Token expired - try again"
+        
+        elif response.status_code == 403:
+            print(f"[ECOM-SYNC] ❌ Forbidden - no permission for this store")
+            return False, "No permission for this store"
+        
+        elif response.status_code == 404:
+            print(f"[ECOM-SYNC] ❌ Store not found")
+            return False, "Store UUID not found"
+        
+        elif response.status_code == 429:
+            print(f"[ECOM-SYNC] ❌ Rate limited")
+            return False, "Rate limited - wait before retrying"
+        
+        else:
+            error_text = response.text[:300] if response.text else 'No details'
+            print(f"[ECOM-SYNC] ❌ Sync failed: {response.status_code} - {error_text}")
+            return False, f"Sync failed ({response.status_code})"
+    
+    except requests.exceptions.Timeout:
+        print("[ECOM-SYNC] ❌ Request timed out")
+        return False, "Sync request timed out"
+    except requests.exceptions.ConnectionError as e:
+        print(f"[ECOM-SYNC] ❌ Connection error: {e}")
+        return False, "Unable to connect to Blaze Ecom API"
+    except Exception as e:
+        print(f"[ECOM-SYNC] ❌ Unexpected error: {e}")
+        return False, f"Sync error: {str(e)}"
 
 # Default Tax Rates (Hardcoded - can be overridden via tax_config.json)
 DEFAULT_TAX_RATES = {
@@ -4856,9 +4759,6 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
         category_raw = str(g_row.get('Categories', '')).strip()
         current_sheet_id = str(get_col(g_row, ['MIS ID', 'ID'], '')).strip()
         
-        # v12.23.0: Extract locations from Google Sheet for enhanced matching
-        google_locations_raw = format_location_display(*resolve_location_columns(g_row))
-        
         # v12.1: Parse multi-brand - create separate entries for each brand
         individual_brands = parse_multi_brand(brand_raw)
         is_multi_brand_row = len(individual_brands) > 1
@@ -5035,68 +4935,8 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 elif not category_raw and not mis_category:
                     score_category = 5
             
-                # v12.23.0: 5. Location Match Score (enhanced matching)
-                mis_locations = str(c_row.get('Store', '')).strip().lower()
-                google_locations = google_locations_raw.lower() if google_locations_raw else ''
-                score_locations = 0
-                if apply_bonuses:
-                    # Handle "All Locations" cases
-                    google_is_all = 'all' in google_locations or not google_locations or google_locations == '-'
-                    mis_is_all = 'all' in mis_locations or not mis_locations or mis_locations == 'nan'
-                    
-                    if google_is_all and mis_is_all:
-                        score_locations = 10  # Both are "All Locations"
-                    elif google_is_all or mis_is_all:
-                        score_locations = 5  # One is "All", partial match
-                    else:
-                        # Compare individual store names
-                        google_stores = set(s.strip() for s in google_locations.replace(' except:', ',').split(',') if s.strip() and s.strip() not in ['all', 'locations', 'all locations'])
-                        mis_stores = set(s.strip() for s in mis_locations.split(',') if s.strip() and s.strip() not in ['all', 'locations', 'all locations', 'nan'])
-                        if google_stores and mis_stores:
-                            # Fuzzy match store names (handle abbreviations like "Beverly Hills" vs "Beverly")
-                            matched = 0
-                            for g_store in google_stores:
-                                for m_store in mis_stores:
-                                    if g_store == m_store or g_store in m_store or m_store in g_store:
-                                        matched += 1
-                                        break
-                            if matched > 0:
-                                ratio = matched / max(len(google_stores), len(mis_stores))
-                                score_locations = round(10 * ratio)  # Proportional score
-                
-                # v12.23.0: 6. Weekday Match Score (enhanced matching)
-                mis_weekday = str(c_row.get('Weekday', '')).strip().lower()
-                google_weekday = weekday_raw.lower() if weekday_raw else ''
-                score_weekday = 0
-                if apply_bonuses:
-                    # Normalize weekday names
-                    def normalize_weekdays_list(wd_str):
-                        days = []
-                        wd_lower = wd_str.lower()
-                        if 'mon' in wd_lower: days.append('mon')
-                        if 'tue' in wd_lower: days.append('tue')
-                        if 'wed' in wd_lower: days.append('wed')
-                        if 'thu' in wd_lower: days.append('thu')
-                        if 'fri' in wd_lower: days.append('fri')
-                        if 'sat' in wd_lower: days.append('sat')
-                        if 'sun' in wd_lower: days.append('sun')
-                        return set(days)
-                    
-                    google_days = normalize_weekdays_list(google_weekday)
-                    mis_days = normalize_weekdays_list(mis_weekday)
-                    
-                    if google_days and mis_days:
-                        if google_days == mis_days:
-                            score_weekday = 10  # Exact match
-                        elif google_days & mis_days:  # Intersection
-                            overlap = len(google_days & mis_days)
-                            total = len(google_days | mis_days)
-                            score_weekday = round(10 * (overlap / total))  # Proportional
-                    elif not google_days and not mis_days:
-                        score_weekday = 5  # Both have no specific weekday
-            
-                # Final Confidence Calculation (now includes locations + weekdays)
-                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category + score_locations + score_weekday), 100)
+                # Final Confidence Calculation
+                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category), 100)
             
                 # Build Display Data
                 locs = str(c_row.get('Store', '')).strip()
@@ -5677,11 +5517,9 @@ def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
                         if store_name not in result['stores']:
                             result['stores'].append(store_name)
         
-        # 5. Extract Categories (Column C, starting at row 4 per user specification)
-        # Category data starts at row 4, so we use index 3 (0-indexed)
-        CATEGORY_START_ROW = 3  # Row 4 in 0-indexed (row 1 = index 0)
+        # 5. Extract Categories (skip header row, filter special values)
         if category_col_idx >= 0:
-            for row in rows[CATEGORY_START_ROW:]:  # Start from row 4
+            for row in rows[1:]:  # Skip header
                 if category_col_idx < len(row):
                     category = str(row[category_col_idx]).strip()
                     cat_lower = category.lower()
@@ -7748,6 +7586,36 @@ HTML_TEMPLATE = r"""
                                 <div class="mb-2 mt-1">
                                     <input type="text" id="blaze-email" class="form-control form-control-sm mb-1" placeholder="Blaze Email">
                                     <input type="password" id="blaze-password" class="form-control form-control-sm" placeholder="Blaze Password">
+                                </div>
+                                
+                                <!-- v12.24.0: Blaze Ecom Sync to Tymber -->
+                                <div class="mt-2 pt-2 border-top">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h6 class="text-muted fw-bold mb-0" style="font-size: 0.75em;">Ecom Sync</h6>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <select id="ecom-sync-store" class="form-select form-select-sm" style="flex: 1; font-size: 0.8em;">
+                                            <option value="">Select Store...</option>
+                                            <option value="DAVIS">DAVIS</option>
+                                            <option value="DIXON">DIXON</option>
+                                            <option value="NAPA">NAPA</option>
+                                            <option value="SANTA ROSA">SANTA ROSA</option>
+                                            <option value="OAKLAND">OAKLAND</option>
+                                            <option value="SAN FRANCISCO">SAN FRANCISCO</option>
+                                            <option value="LOS ANGELES">LOS ANGELES</option>
+                                            <option value="SAN DIEGO">SAN DIEGO</option>
+                                            <option value="SAN JOSE">SAN JOSE</option>
+                                            <option value="SACRAMENTO">SACRAMENTO</option>
+                                            <option value="FRESNO">FRESNO</option>
+                                            <option value="LONG BEACH">LONG BEACH</option>
+                                        </select>
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                onclick="syncToTymber(this)"
+                                                title="Sync inventory to Tymber menu for selected store">
+                                            <i class="bi bi-cloud-upload"></i> SYNC TO TYMBER
+                                        </button>
+                                    </div>
+                                    <div id="ecom-sync-status" class="small mt-1" style="min-height: 18px; font-size: 0.75em; color: #6c757d;">Ready</div>
                                 </div>
                             </div>
                         </div>
@@ -10341,12 +10209,10 @@ HTML_TEMPLATE = r"""
             console.log('[PRE-FLIGHT v12.21] Smart rebate type:', smartRebateType, '(raw:', data.rebate_type, ', after_wholesale:', data.after_wholesale, ')');
             
             const weekdayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            // v12.23.10: Use categories from Settings tab (Column C, starting row 4)
-            const categoryOptions = settingsCache.categories && settingsCache.categories.length > 0
-                ? settingsCache.categories
-                : (splitPlanningData.category_list && splitPlanningData.category_list.length > 0 
-                    ? splitPlanningData.category_list 
-                    : ['Flowers', 'Prerolls', 'Vapes', 'Edibles', 'Concentrates', 'Tinctures', 'Topicals', 'Accessories']);
+            // v12.18.3: Dynamic category options from Settings tab
+            const categoryOptions = splitPlanningData.category_list && splitPlanningData.category_list.length > 0 
+                ? splitPlanningData.category_list 
+                : ['Flower', 'Prerolls', 'Vapes', 'Edibles', 'Concentrates', 'Tinctures', 'Topicals', 'Accessories', 'Capsules', 'CBD', 'Other'];
             // v12.21.3: Use stores from Settings tab (loaded via settingsCache)
             const storeOptions = settingsCache.stores && settingsCache.stores.length > 0
                 ? settingsCache.stores
@@ -12285,30 +12151,17 @@ HTML_TEMPLATE = r"""
             };
 
             // Helper: Get cell style based on match
-            // Helper: Get cell style based on match (v12.23.12 - fixed to always highlight)
             const getMatchStyle = (sourceVal, targetVal, isNumeric = false) => {
-                // Convert to strings for checking
-                const srcStr = String(sourceVal ?? '').trim();
-                const tgtStr = String(targetVal ?? '').trim();
+                if (!sourceVal && !targetVal) return '';
+                if (!sourceVal || !targetVal) return 'background:#fff3cd; color:#856404;'; // Yellow - missing
                 
-                // Check if values are "empty" (null, undefined, '', '-', 'N/A', 'nan')
-                const srcEmpty = !srcStr || srcStr === '-' || srcStr.toLowerCase() === 'n/a' || srcStr.toLowerCase() === 'nan';
-                const tgtEmpty = !tgtStr || tgtStr === '-' || tgtStr.toLowerCase() === 'n/a' || tgtStr.toLowerCase() === 'nan';
-                
-                // Both empty = no highlight needed
-                if (srcEmpty && tgtEmpty) return '';
-                
-                // One empty, one has value = yellow (missing data)
-                if (srcEmpty || tgtEmpty) return 'background:#fff3cd; color:#856404;';
-                
-                // Both have values - compare them
                 let matches = false;
                 if (isNumeric) {
-                    const s = parseFloat(srcStr.replace(/[%$,]/g, '')) || 0;
-                    const t = parseFloat(tgtStr.replace(/[%$,]/g, '')) || 0;
+                    const s = parseFloat(String(sourceVal).replace(/[%$,]/g, '')) || 0;
+                    const t = parseFloat(String(targetVal).replace(/[%$,]/g, '')) || 0;
                     matches = Math.abs(s - t) < 0.01;
                 } else {
-                    matches = srcStr.toLowerCase() === tgtStr.toLowerCase();
+                    matches = String(sourceVal).toLowerCase().trim() === String(targetVal).toLowerCase().trim();
                 }
                 
                 return matches ? 'background:#d4edda; color:#155724;' : 'background:#f8d7da; color:#721c24;';
@@ -12322,119 +12175,6 @@ HTML_TEMPLATE = r"""
                 if (s === t) return 'background:#d4edda; color:#155724;'; // Exact match - green
                 if (s.includes(t) || t.includes(s)) return 'background:#d4edda; color:#155724;'; // Contains - green
                 return 'background:#f8d7da; color:#721c24;'; // No match - red
-            };
-            
-            // v12.23.11: Helper: Compare weekdays with normalization
-            const getWeekdayMatchStyle = (sourceWeekday, targetWeekday, multiDayGroup) => {
-                // Get source weekdays (from multi_day_group if available)
-                let srcDays = [];
-                if (multiDayGroup && multiDayGroup.weekdays) {
-                    srcDays = multiDayGroup.weekdays.filter(w => w && !w.toLowerCase().includes('missing'));
-                } else if (sourceWeekday) {
-                    srcDays = normalizeWeekdays(sourceWeekday);
-                }
-                const tgtDays = normalizeWeekdays(targetWeekday);
-                
-                // Both empty = match
-                if (srcDays.length === 0 && tgtDays.length === 0) return 'background:#d4edda; color:#155724;';
-                // One empty, one not = yellow
-                if (srcDays.length === 0 || tgtDays.length === 0) return 'background:#fff3cd; color:#856404;';
-                
-                // Normalize both for comparison
-                const srcNorm = srcDays.map(d => d.toLowerCase().substring(0, 3)).sort();
-                const tgtNorm = tgtDays.map(d => d.toLowerCase().substring(0, 3)).sort();
-                
-                // Exact match
-                if (JSON.stringify(srcNorm) === JSON.stringify(tgtNorm)) return 'background:#d4edda; color:#155724;';
-                
-                // Partial overlap
-                const overlap = srcNorm.filter(d => tgtNorm.includes(d));
-                if (overlap.length > 0) return 'background:#fff3cd; color:#856404;';
-                
-                // No match
-                return 'background:#f8d7da; color:#721c24;';
-            };
-            
-            // v12.23.11: Helper: Compare categories with normalization
-            const getCategoryMatchStyle = (sourceCategory, targetCategory) => {
-                const srcCat = String(sourceCategory || '').toLowerCase().trim();
-                const tgtCat = String(targetCategory || '').toLowerCase().trim();
-                
-                // Handle "all categories" cases
-                const srcIsAll = !srcCat || srcCat === '-' || srcCat === 'all' || srcCat.includes('all categories');
-                const tgtIsAll = !tgtCat || tgtCat === '-' || tgtCat === 'all' || tgtCat === 'n/a' || tgtCat === 'nan' || tgtCat === 'all categories';
-                
-                // Both "all" = match
-                if (srcIsAll && tgtIsAll) return 'background:#d4edda; color:#155724;';
-                // One "all", one specific = yellow (partial)
-                if (srcIsAll !== tgtIsAll) return 'background:#fff3cd; color:#856404;';
-                
-                // Compare specific categories
-                const srcCats = srcCat.split(',').map(c => c.trim().toLowerCase()).filter(c => c).sort();
-                const tgtCats = tgtCat.split(',').map(c => c.trim().toLowerCase()).filter(c => c).sort();
-                
-                // Exact match
-                if (JSON.stringify(srcCats) === JSON.stringify(tgtCats)) return 'background:#d4edda; color:#155724;';
-                
-                // Partial overlap
-                const overlap = srcCats.filter(c => tgtCats.some(t => c.includes(t) || t.includes(c)));
-                if (overlap.length > 0) return 'background:#fff3cd; color:#856404;';
-                
-                // No match
-                return 'background:#f8d7da; color:#721c24;';
-            };
-            
-            // v12.23.11: Helper: Compare locations with normalization (handles "Beverly Hills" vs "Beverly")
-            const getLocationMatchStyle = (sourceLocation, targetLocation) => {
-                const srcLoc = String(sourceLocation || '').toLowerCase().trim();
-                const tgtLoc = String(targetLocation || '').toLowerCase().trim();
-                
-                // Store name normalization map (matches STORE_NAME_MAP)
-                const storeNormMap = {
-                    'beverly hills': 'beverly',
-                    'fresno (palm)': 'fresno',
-                    'fresno palm': 'fresno',
-                    'fresno (shaw)': 'fresno shaw'
-                };
-                const normalizeStoreName = (name) => {
-                    const lower = name.toLowerCase().trim();
-                    return storeNormMap[lower] || lower;
-                };
-                
-                // Handle "all locations" cases
-                const srcIsAll = !srcLoc || srcLoc === '-' || srcLoc === 'all' || srcLoc.includes('all locations') || srcLoc === 'nan';
-                const tgtIsAll = !tgtLoc || tgtLoc === '-' || tgtLoc === 'all' || tgtLoc.includes('all locations') || tgtLoc === 'nan';
-                
-                // Both "all" = match
-                if (srcIsAll && tgtIsAll) return 'background:#d4edda; color:#155724;';
-                // One "all", one specific = yellow (partial)
-                if (srcIsAll !== tgtIsAll) return 'background:#fff3cd; color:#856404;';
-                
-                // Compare specific locations
-                const srcLocs = srcLoc.replace(/all locations except:?/gi, '').split(',').map(l => normalizeStoreName(l.trim())).filter(l => l && l !== 'all' && l !== 'locations').sort();
-                const tgtLocs = tgtLoc.split(',').map(l => normalizeStoreName(l.trim())).filter(l => l && l !== 'all' && l !== 'locations' && l !== 'nan').sort();
-                
-                // Exact match
-                if (JSON.stringify(srcLocs) === JSON.stringify(tgtLocs)) return 'background:#d4edda; color:#155724;';
-                
-                // Check overlap with fuzzy matching
-                let matchCount = 0;
-                for (const src of srcLocs) {
-                    for (const tgt of tgtLocs) {
-                        if (src === tgt || src.includes(tgt) || tgt.includes(src)) {
-                            matchCount++;
-                            break;
-                        }
-                    }
-                }
-                
-                // Full overlap
-                if (matchCount === srcLocs.length && matchCount === tgtLocs.length) return 'background:#d4edda; color:#155724;';
-                // Partial overlap
-                if (matchCount > 0) return 'background:#fff3cd; color:#856404;';
-                
-                // No match
-                return 'background:#f8d7da; color:#721c24;';
             };
             
             // v12.1: Get tab name for month/year parsing
@@ -12792,16 +12532,6 @@ HTML_TEMPLATE = r"""
                 const discountStyle = getMatchStyle(match.discount, sDiscount, true);
                 const vendorStyle = getMatchStyle(match.vendor_contrib, sVendor, true);
                 
-                // v12.23.11: Add highlighting for Weekday, Category, and Locations
-                const weekdayStyle = getWeekdayMatchStyle(match.weekday, sWeekday, match.multi_day_group);
-                const categoryStyle = getCategoryMatchStyle(match.categories, sCategory);
-                const locationStyle = getLocationMatchStyle(match.locations, sLocations);
-                
-                // v12.23.0: Check if this suggestion is the currently assigned MIS ID
-                const currentMisId = match.mis_id ? String(match.mis_id).replace(' (Estimated)', '').trim() : '';
-                const suggestionMisId = String(s.mis_id).trim();
-                const isAssignedMisId = currentMisId && currentMisId !== '-' && currentMisId === suggestionMisId;
-                
                 // v12.1: Check Continue/Recycle eligibility
                 const continueCheck = checkContinueEligibility(match, s, match.section || 'weekly');
                 
@@ -12853,22 +12583,22 @@ HTML_TEMPLATE = r"""
                             ${continueIndicator}
                         </td>
                         <td>
-                            <button class="btn btn-sm ${isAssignedMisId ? '' : 'btn-outline-secondary'} py-0 px-2" 
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" 
                                     onclick="lookupMisIdWithValidation(this, '${s.mis_id}')" 
-                                    style="font-weight:bold;${isAssignedMisId ? ' background:#ffc107; color:#000; border-color:#ffc107;' : ''}" 
-                                    title="${isAssignedMisId ? 'Currently Assigned - Click to lookup in MIS' : 'Click to lookup in MIS'}">
-                                ${s.mis_id}${isAssignedMisId ? ' ⭐' : ''}
+                                    style="font-weight:bold;" 
+                                    title="Click to lookup in MIS">
+                                ${s.mis_id}
                             </button>
                         </td>
-                        <td title="${sWeekdayTooltip}" style="white-space:normal; ${weekdayStyle}">${sWeekdayDisplay}</td>
+                        <td title="${sWeekdayTooltip}" style="white-space:normal;">${sWeekdayDisplay}</td>
                         <td style="${brandStyle}">
                             <strong>${s.mis_data.brand}</strong>
                             ${sLinkedBrand ? '<br><small style="color:#6c757d;">' + sLinkedBrand + '</small>' : ''}
                         </td>
-                        <td title="${sCategoryTooltip}" style="white-space:normal; ${categoryStyle}">${sCategoryDisplay}</td>
+                        <td title="${sCategoryTooltip}" style="white-space:normal;">${sCategoryDisplay}</td>
                         <td style="${discountStyle}"><strong>${sDiscount}%</strong></td>
                         <td style="${vendorStyle}">${sVendor}%</td>
-                        <td title="${sLocationsVertical}" style="${locationStyle}">${sLocations.substring(0, 20)}${sLocations.length > 20 ? '...' : ''}</td>
+                        <td title="${sLocationsVertical}">${sLocations.substring(0, 20)}${sLocations.length > 20 ? '...' : ''}</td>
                         <td>${sStartDate}</td>
                         <td style="${endDateStyle}" title="${endDateTooltip}">
                             <div id="end-date-display-${rowIdx}-${sIdx}">
@@ -19515,6 +19245,86 @@ async function runTierUpdate(btn) {
         }
     }
 
+    // v12.24.1: Blaze Ecom Sync to Tymber (Mission Control API)
+    async function syncToTymber(btn) {
+        const storeSelect = document.getElementById('ecom-sync-store');
+        const statusDiv = document.getElementById('ecom-sync-status');
+        const selectedStore = storeSelect.value;
+        
+        // Validate store selection
+        if (!selectedStore) {
+            statusDiv.innerHTML = '<span style="color: #dc3545;">⚠️ Please select a store first</span>';
+            return;
+        }
+        
+        // Get Blaze credentials from UI
+        const blazeEmail = document.getElementById('blaze-email').value.trim();
+        const blazePassword = document.getElementById('blaze-password').value.trim();
+        
+        if (!blazeEmail || !blazePassword) {
+            statusDiv.innerHTML = '<span style="color: #dc3545;">⚠️ Enter Blaze email/password above first</span>';
+            return;
+        }
+        
+        // Confirm action
+        if (!confirm(`Sync inventory to Tymber for ${selectedStore}?\n\nThis will update the ecommerce menu with current inventory data.`)) {
+            return;
+        }
+        
+        // Update UI to syncing state
+        btn.disabled = true;
+        storeSelect.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
+        statusDiv.innerHTML = '<span style="color: #0d6efd;">⏳ Authenticating...</span>';
+        
+        try {
+            const response = await fetch('/api/blaze/ecom-sync', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    store: selectedStore,
+                    email: blazeEmail,
+                    password: blazePassword
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                statusDiv.innerHTML = `<span style="color: #198754;">✅ ${data.message || 'Sync Complete'}</span>`;
+                console.log('[ECOM-SYNC] Success:', data);
+            } else {
+                // Differentiate error types for better UX
+                let errorMsg = data.error || 'Unknown error';
+                let errorColor = '#dc3545';
+                
+                if (errorMsg.includes('credentials') || errorMsg.includes('Authentication')) {
+                    errorMsg = '🔑 ' + errorMsg;
+                } else if (errorMsg.includes('UUID') || errorMsg.includes('not found')) {
+                    errorMsg = '📍 ' + errorMsg;
+                } else if (errorMsg.includes('permission')) {
+                    errorMsg = '🚫 ' + errorMsg;
+                }
+                
+                statusDiv.innerHTML = `<span style="color: ${errorColor};">❌ ${errorMsg}</span>`;
+                console.error('[ECOM-SYNC] Error:', data.error);
+            }
+        } catch (e) {
+            statusDiv.innerHTML = `<span style="color: #dc3545;">❌ Network Error: ${e.message}</span>`;
+            console.error('[ECOM-SYNC] Network Error:', e);
+        } finally {
+            btn.disabled = false;
+            storeSelect.disabled = false;
+            btn.innerHTML = originalHtml;
+            
+            // Reset status after 15 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '<span style="color: #6c757d;">Ready</span>';
+            }, 15000);
+        }
+    }
+
     // Initialize tax rates on page load (Restored)
     document.addEventListener('DOMContentLoaded', function() {
         loadTaxRates();
@@ -22999,38 +22809,10 @@ def api_mis_lookup_mis_id():
                         # Search for the MIS ID - collect ALL matching rows for multi-day detection
                         matching_rows = []
                         
-                        # v12.23.1: Improved search that handles multi-line and tagged MIS IDs
                         for idx, row in google_df.iterrows():
-                            sheet_mis_id_raw = str(row.get(id_col, '')).strip()
-                            
-                            # Skip empty cells
-                            if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
-                                continue
-                            
-                            # v12.23.1: Normalize the cell - handle both newlines and commas
-                            # Replace literal '\n' strings and actual newlines with commas
-                            normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
-                            
-                            # Split into parts and extract just the numeric IDs
-                            parts = [p.strip() for p in normalized.split(',') if p.strip()]
-                            
-                            found = False
-                            for part in parts:
-                                # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
-                                if ':' in part:
-                                    numeric_id = part.split(':')[-1].strip()
-                                else:
-                                    numeric_id = part.strip()
-                                
-                                # Remove any "(Estimated)" suffix
-                                numeric_id = numeric_id.replace('(Estimated)', '').strip()
-                                
-                                # Compare just the numbers
-                                if numeric_id == mis_id:
-                                    found = True
-                                    break
-                            
-                            if found:
+                            sheet_mis_id = str(row.get(id_col, '')).strip()
+                            # Handle multi-part IDs (W1: 123, W2: 456)
+                            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
                                 matching_rows.append(row)
                         
                         if matching_rows:
@@ -23166,19 +22948,6 @@ def api_mis_lookup_mis_id():
                             if len(matching_rows) > 1:
                                 print(f"[MIS LOOKUP] [EMOJI] Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
                             
-                        else:
-                            # v12.23.1: Debug when MIS ID not found
-                            print(f"[MIS LOOKUP] [EMOJI] MIS ID {mis_id} NOT FOUND in Google Sheet!")
-                            print(f"[MIS LOOKUP] Searched {len(google_df)} rows in combined DataFrame")
-                            # Sample some IDs for debugging
-                            sample_ids = []
-                            for idx, row in google_df.head(10).iterrows():
-                                sample_id = str(row.get(id_col, '')).strip()[:50]
-                                if sample_id:
-                                    sample_ids.append(sample_id)
-                            if sample_ids:
-                                print(f"[MIS LOOKUP] Sample IDs from sheet: {sample_ids[:5]}")
-                            
                     else:
                         print(f"[MIS LOOKUP] [EMOJI] Could not find MIS ID column in Google Sheet")
                 else:
@@ -23269,61 +23038,31 @@ def api_mis_validate_lookup():
         if google_df is not None and not google_df.empty:
             print(f"[V2-LOOKUP] [EMOJI] Searching Google Sheet for MIS ID {mis_id}")
             
-            # v12.23.2: Find ID column first
-            id_col = None
-            for col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
-                if col in google_df.columns:
-                    id_col = col
-                    break
-            
-            # v12.23.2: Search using improved logic that handles multi-line and tagged formats
+            # Search for MIS ID in sheet
             found_data = None
-            if id_col:
-                for idx, row in google_df.iterrows():
-                    sheet_mis_id_raw = str(row.get(id_col, '')).strip()
-                    
-                    # Skip empty cells
-                    if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
-                        continue
-                    
-                    # v12.23.2: Normalize the cell - handle both newlines and commas
-                    normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
-                    
-                    # Split into parts and extract just the numeric IDs
-                    parts = [p.strip() for p in normalized.split(',') if p.strip()]
-                    
-                    found = False
-                    for part in parts:
-                        # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
-                        if ':' in part:
-                            numeric_id = part.split(':')[-1].strip()
-                        else:
-                            numeric_id = part.strip()
-                        
-                        # Remove any "(Estimated)" suffix
-                        numeric_id = numeric_id.replace('(Estimated)', '').strip()
-                        
-                        # Compare just the numbers
-                        if numeric_id == mis_id:
-                            found = True
+            for idx, row in google_df.iterrows():
+                # Check multiple possible ID columns
+                for id_col in ['MIS ID', 'ID', 'Mis Id', 'MIS_ID', 'mis_id']:
+                    if id_col in google_df.columns:
+                        sheet_mis_id = str(row.get(id_col, '')).strip()
+                        if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
+                            # Found it!
+                            found_data = {
+                                'brand': str(row.get('Brand', '')).strip(),
+                                'linked_brand': str(row.get('Linked Brand', '')).strip(),
+                                'weekday': str(row.get('Weekday', '')).strip(),
+                                'categories': str(row.get('Categories', '')).strip(),
+                                'discount': str(row.get('Discount', '')).strip(),
+                                'vendor_contrib': str(row.get('Vendor %', '')).strip(),
+                                'locations': str(row.get('Locations', 'All Locations')).strip(),
+                                'rebate_type': str(row.get('Rebate Type', '')).strip(),
+                                'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                            }
+                            print(f"[V2-LOOKUP] [EMOJI] Found in Google Sheet!")
+                            print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
                             break
-                    
-                    if found:
-                        # Found it! Extract data
-                        found_data = {
-                            'brand': str(row.get('Brand', '')).strip(),
-                            'linked_brand': str(row.get('Linked Brand', '')).strip(),
-                            'weekday': str(row.get('Weekday', '')).strip(),
-                            'categories': str(row.get('Categories', '')).strip(),
-                            'discount': str(row.get('Discount', '')).strip(),
-                            'vendor_contrib': str(row.get('Vendor %', '')).strip(),
-                            'locations': str(row.get('Locations', 'All Locations')).strip(),
-                            'rebate_type': str(row.get('Rebate Type', '')).strip(),
-                            'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
-                        }
-                        print(f"[V2-LOOKUP] [EMOJI] Found in Google Sheet!")
-                        print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
-                        break
+                if found_data:
+                    break
             
             if found_data:
                 # Send automation message
@@ -23734,38 +23473,11 @@ def api_mis_compare_to_sheet():
                 'error': 'Could not find MIS ID column in Google Sheet'
             })
         
-        # Search for matching rows (v12.23.2: same improved logic as api_mis_lookup_mis_id)
+        # Search for matching rows (same logic as api_mis_lookup_mis_id)
         matching_rows = []
         for idx, row in google_df.iterrows():
-            sheet_mis_id_raw = str(row.get(id_col, '')).strip()
-            
-            # Skip empty cells
-            if not sheet_mis_id_raw or sheet_mis_id_raw.lower() in ['nan', 'none', '']:
-                continue
-            
-            # v12.23.2: Normalize the cell - handle both newlines and commas
-            normalized = sheet_mis_id_raw.replace('\\n', ',').replace('\n', ',')
-            
-            # Split into parts and extract just the numeric IDs
-            parts = [p.strip() for p in normalized.split(',') if p.strip()]
-            
-            found = False
-            for part in parts:
-                # Extract numeric ID from tagged format like "W1: 123" or "Part 1: 456"
-                if ':' in part:
-                    numeric_id = part.split(':')[-1].strip()
-                else:
-                    numeric_id = part.strip()
-                
-                # Remove any "(Estimated)" suffix
-                numeric_id = numeric_id.replace('(Estimated)', '').strip()
-                
-                # Compare just the numbers
-                if numeric_id == mis_id:
-                    found = True
-                    break
-            
-            if found:
+            sheet_mis_id = str(row.get(id_col, '')).strip()
+            if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
                 matching_rows.append(row)
         
         if not matching_rows:
@@ -30752,6 +30464,114 @@ def api_blaze_update_tags():
     else:
         return jsonify({'success': False, 'error': result['error']})
 
+
+# ============================================================================
+# v12.24.1: BLAZE ECOM SYNC TO TYMBER (Mission Control API)
+# ============================================================================
+@app.route('/api/blaze/ecom-sync', methods=['POST'])
+def api_blaze_ecom_sync() -> dict:
+    """
+    v12.24.1: Sync inventory to Tymber menu via Blaze Ecom Mission Control API.
+    
+    Request Body:
+        {"store": "DAVIS", "email": "...", "password": "..."}
+        (email/password optional if already in GLOBAL_DATA)
+    
+    Response:
+        {"success": true/false, "message": "...", "error": "..."}
+    
+    Requires: secrets/sync_keys.json with store UUIDs.
+    
+    Flow:
+        1. Get Blaze credentials (from request or GLOBAL_DATA)
+        2. Authenticate with Ecom API → get JWT token
+        3. Load store UUID from sync_keys.json
+        4. POST sync request with token + UUID
+    """
+    try:
+        data = request.get_json() or {}
+        store_name: str = data.get('store', '').strip()
+        
+        # Validate store name
+        if not store_name:
+            print("[ECOM-SYNC] ❌ No store name provided")
+            return jsonify({
+                'success': False,
+                'error': 'No store name provided. Please select a store.'
+            })
+        
+        print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+        print(f"[ECOM-SYNC] Starting sync for store: {store_name}")
+        
+        # Step 1: Get Blaze credentials
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        
+        # Fallback to GLOBAL_DATA if not in request
+        if not email or not password:
+            blaze_creds = GLOBAL_DATA.get('blaze', {}).get('credentials', {})
+            email = email or blaze_creds.get('email', '')
+            password = password or blaze_creds.get('password', '')
+        
+        if not email or not password:
+            print("[ECOM-SYNC] ❌ No Blaze credentials available")
+            return jsonify({
+                'success': False,
+                'error': 'Blaze credentials required. Please enter email/password in Blaze Config.'
+            })
+        
+        # Step 2: Load store UUID
+        store_data = load_sync_keys(store_name)
+        if store_data is None:
+            error_msg = f'No UUID found for {store_name}. Add it to secrets/sync_keys.json'
+            print(f"[ECOM-SYNC] ❌ {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            })
+        
+        store_uuid: str = store_data['store_uuid']
+        print(f"[ECOM-SYNC] Store UUID: {store_uuid[:8]}...{store_uuid[-4:]}")
+        
+        # Step 3: Authenticate with Ecom API
+        print(f"[ECOM-SYNC] Authenticating with Ecom API...")
+        token, auth_error = get_ecom_token(email, password)
+        
+        if token is None:
+            print(f"[ECOM-SYNC] ❌ Authentication failed: {auth_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Authentication failed: {auth_error}'
+            })
+        
+        # Step 4: Trigger the sync
+        print(f"[ECOM-SYNC] Triggering sync request...")
+        success, message = trigger_ecom_sync(store_uuid, token)
+        
+        if success:
+            print(f"[ECOM-SYNC] ✅ Sync complete for {store_name}")
+            print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+            return jsonify({
+                'success': True,
+                'message': f'{store_name} sync triggered successfully'
+            })
+        else:
+            print(f"[ECOM-SYNC] ❌ Sync failed: {message}")
+            print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+            return jsonify({
+                'success': False,
+                'error': message
+            })
+    
+    except Exception as e:
+        print(f"[ECOM-SYNC] ❌ Unexpected error: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Unexpected error: {str(e)}'
+        })
+
+
 # ============================================================================
 # INVENTORY API ROUTES
 # ============================================================================
@@ -31738,34 +31558,11 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
         // ========================================
         
         function compareMultiSelect(actual, expected, expectedKey) {{
-            // actual = array of selected values from MIS dropdown
-            // expected = comma-separated string of expected values from Google Sheet
+            // actual = array of selected values
+            // expected = comma-separated string of expected values
             
             const actualArr = Array.isArray(actual) ? actual : [];
             const expectedStr = (expected || '').toLowerCase().trim();
-            
-            // v12.23.10: Store name normalization (Sheet name → MIS dropdown name)
-            // This matches STORE_NAME_MAP in Python
-            const storeNameMap = {{
-                'beverly hills': 'beverly',
-                'fresno (palm)': 'fresno',
-                'fresno palm': 'fresno',
-                'fresno (shaw)': 'fresno shaw',
-                'davis': 'davis',
-                'dixon': 'dixon',
-                'el sobrante': 'el sobrante',
-                'hawthorne': 'hawthorne',
-                'koreatown': 'koreatown',
-                'laguna woods': 'laguna woods',
-                'oxnard': 'oxnard',
-                'riverside': 'riverside',
-                'west hollywood': 'west hollywood'
-            }};
-            
-            function normalizeStoreName(name) {{
-                const lower = (name || '').toLowerCase().trim();
-                return storeNameMap[lower] || lower;
-            }}
             
             // v12.22.7: Handle "All Locations" explicitly
             // In MIS, empty Store/Locations selection means "All Locations"
@@ -31812,19 +31609,18 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 return {{ status: 'empty', matched: [], missing: expectedArr, extra: [] }};
             }}
             
-            // v12.23.10: Normalize store names for comparison (for locations field)
-            const isLocations = expectedKey === 'locations';
-            const actualNorm = actualArr.map(s => isLocations ? normalizeStoreName(s) : s.toLowerCase());
-            const expectedNorm = expectedArr.map(s => isLocations ? normalizeStoreName(s) : s.toLowerCase());
+            // Normalize for comparison
+            const actualLower = actualArr.map(s => s.toLowerCase());
+            const expectedLower = expectedArr.map(s => s.toLowerCase());
             
             // Find matched and missing
             const matched = [];
             const missing = [];
             
             expectedArr.forEach((exp, idx) => {{
-                const expNorm = expectedNorm[idx];
-                const found = actualNorm.some(act => 
-                    act === expNorm || act.includes(expNorm) || expNorm.includes(act)
+                const expLower = expectedLower[idx];
+                const found = actualLower.some(act => 
+                    act === expLower || act.includes(expLower) || expLower.includes(act)
                 );
                 if (found) {{
                     matched.push(exp);
@@ -31834,10 +31630,10 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             }});
             
             // Find extra (selected but not expected)
-            const extra = actualArr.filter((act, idx) => {{
-                const actNorm = actualNorm[idx];
-                return !expectedNorm.some(exp => 
-                    exp === actNorm || exp.includes(actNorm) || actNorm.includes(exp)
+            const extra = actualArr.filter(act => {{
+                const actLower = act.toLowerCase();
+                return !expectedLower.some(exp => 
+                    exp === actLower || exp.includes(actLower) || actLower.includes(exp)
                 );
             }});
             
@@ -31877,28 +31673,6 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 if (!expectedNorm) return 'empty';  // No expected value
                 if (!actualNorm) return 'empty';   // No actual value
                 
-                return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
-            }}
-            
-            // v12.23.0: Handle date fields with normalization (01/01/2026 vs 1/1/2026)
-            if (expectedKey === 'start_date' || expectedKey === 'end_date') {{
-                function normalizeDate(d) {{
-                    if (!d) return '';
-                    // Handle MM/DD/YYYY or M/D/YYYY formats - normalize to M/D/YYYY
-                    const parts = String(d).split('/');
-                    if (parts.length === 3) {{
-                        const m = parseInt(parts[0], 10);
-                        const day = parseInt(parts[1], 10);
-                        const y = parts[2];
-                        return m + '/' + day + '/' + y;  // "1/1/2026" format (no leading zeros)
-                    }}
-                    return d;
-                }}
-                const actualVal = Array.isArray(actual) ? (actual[0] || '') : actual;
-                const actualNorm = normalizeDate(actualVal);
-                const expectedNorm = normalizeDate(expected);
-                if (!expectedNorm) return 'empty';
-                if (!actualNorm) return 'empty';
                 return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
             }}
             
@@ -32214,10 +31988,6 @@ def api_mis_automate_create_deal():
         sheet_data = data.get('sheet_data', {})
         section_type = data.get('section_type', 'unknown')
         
-        # v12.23.2: Full automation mode - fills ALL fields including multi-selects
-        full_automation = data.get('full_automation', True)  # Default to True for complete automation
-        print(f"[DEBUG] Full Automation Mode: {full_automation}")
-        
         def clean(val): return str(val).strip() if val else ""
 
         target_brand = clean(sheet_data.get('brand'))
@@ -32285,33 +32055,16 @@ def api_mis_automate_create_deal():
         ensure_mis_ready(driver)
 
         # =========================================================
-        # v12.23.4: ROBUST FIELD ENTRY WITH FORM READINESS CHECK
-        # Wait for ALL fields to be visible before starting automation
+        # ROBUST ATOMIC HELPERS (From ID Matcher)
         # =========================================================
-        
-        MAX_RETRIES = 3
-        FIELD_DELAY = 0.5  # v12.23.6: Reduced from 1.0 to 0.5 for speed
-        ELEMENT_WAIT = 5  # v12.23.6: Reduced from 10 to 5
         
         def log(msg, level="INFO"):
             print(f"[{level}] {msg}")
 
         def click_backdrop():
-            """Click modal backdrop to close any open dropdowns"""
             try: 
                 driver.find_element(By.CSS_SELECTOR, "h4.modal-title").click()
-                time.sleep(0.3)
             except: 
-                pass
-
-        def close_any_dropdown():
-            """Ensure no dropdown is open before proceeding"""
-            try:
-                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                time.sleep(0.2)
-                click_backdrop()
-                time.sleep(0.2)
-            except:
                 pass
 
         def build_xpath_contains(text):
@@ -32324,764 +32077,465 @@ def api_mis_automate_create_deal():
                 parts = text.split("'")
                 return "concat('" + "', \"'\", '".join(parts) + "')"
 
-        # =========================================================
-        # v12.23.4: FORM READINESS CHECK - Wait for all fields
-        # =========================================================
-        def wait_for_form_ready():
-            """
-            v12.23.6: Quick form readiness check - only verifies CORE fields exist.
-            Multi-select fields have unpredictable container IDs, so we skip them.
-            """
-            log("[FORM CHECK] Verifying core form fields...", "INFO")
-            
-            # Only check fields with predictable IDs - skip multi-selects
-            CORE_FIELDS = [
-                ('select2-brand_id-container', 'Brand'),
-                ('select2-linked_brand_id-container', 'Linked Brand'),
-                ('select2-daily_discount_type_id-container', 'Rebate Type'),
-                ('discount_rate', 'Discount'),
-                ('rebate_percent', 'Vendor %'),
-                ('date_start', 'Start Date'),
-                ('date_end', 'End Date'),
-            ]
-            
-            MAX_WAIT = 8  # 8 seconds max
-            MIN_REQUIRED = 5  # Need at least 5 of 7 core fields
-            
-            start_time = time.time()
-            
-            while time.time() - start_time < MAX_WAIT:
-                ready_count = 0
-                for field_id, field_name in CORE_FIELDS:
-                    try:
-                        el = driver.find_element(By.ID, field_id)
-                        if el and el.is_displayed():
-                            ready_count += 1
-                    except:
-                        pass
-                
-                if ready_count >= MIN_REQUIRED:
-                    elapsed = round(time.time() - start_time, 1)
-                    log(f"[FORM CHECK] ✅ {ready_count}/{len(CORE_FIELDS)} fields ready in {elapsed}s", "SUCCESS")
-                    time.sleep(1.0)  # Brief stabilization
-                    return True
-                
-                time.sleep(0.3)
-            
-            # Timeout - proceed anyway
-            log(f"[FORM CHECK] ⚠️ Timeout - found {ready_count}/{len(CORE_FIELDS)}, proceeding anyway", "WARN")
-            time.sleep(1.0)
-            return True  # Always return True to proceed
-
-        def wait_for_element(element_id, element_type='input', timeout=ELEMENT_WAIT):
-            """
-            Wait for a specific element to be present and interactable.
-            Returns the element if found, None otherwise.
-            """
-            try:
-                if element_type == 'select':
-                    # For Select2, wait for container
-                    container_id = f'select2-{element_id}-container'
-                    element = WebDriverWait(driver, timeout).until(
-                        EC.element_to_be_clickable((By.ID, container_id))
-                    )
-                    return element
-                else:
-                    # For inputs/checkboxes
-                    element = WebDriverWait(driver, timeout).until(
-                        EC.element_to_be_clickable((By.ID, element_id))
-                    )
-                    return element
-            except:
-                return None
-
-        def scroll_element_into_view(element):
-            """Scroll element into view and wait for it to settle"""
-            try:
-                driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
-                time.sleep(0.5)
-            except:
-                pass
-
-        # =========================================================
-        # ROBUST TEXT INPUT - FASTER VERSION
-        # =========================================================
-        def robust_text_input(input_id, value, field_name):
-            """
-            v12.23.11: Fill text input with date normalization for verification.
-            Handles MIS date format normalization (02/01/2026 → 2/1/2026).
-            """
+        def atomic_text_input(input_id, value, field_name):
+            """Fill a text input field by ID or name"""
             if value is None or str(value).strip() == '':
-                log(f"[{field_name}] Skipping (no value)", "SKIP")
+                log(f"Skipping {field_name} (no value)", "SKIP")
                 return True
             
-            value_str = str(value).strip()
-            log(f"[{field_name}] Entering: '{value_str}'", "INFO")
+            log(f"ATOMIC TEXT: {field_name} = {value}", "INFO")
             
-            def normalize_date(date_str):
-                """Normalize date by removing leading zeros: 02/01/2026 → 2/1/2026"""
-                if not date_str or '/' not in date_str:
-                    return date_str
+            try:
+                el = None
+                # Try by ID first
                 try:
-                    parts = date_str.split('/')
-                    if len(parts) == 3:
-                        month = str(int(parts[0]))  # Remove leading zero
-                        day = str(int(parts[1]))    # Remove leading zero
-                        year = parts[2]
-                        return f"{month}/{day}/{year}"
+                    el = driver.find_element(By.ID, input_id)
                 except:
                     pass
-                return date_str
-            
-            # Check if this is a date field
-            is_date_field = 'date' in field_name.lower() or input_id in ['date_start', 'date_end']
-            
-            for attempt in range(1, MAX_RETRIES + 1):
-                try:
-                    # Find element
-                    el = None
+                
+                # Try by NAME
+                if not el:
                     try:
-                        el = WebDriverWait(driver, ELEMENT_WAIT).until(
-                            EC.element_to_be_clickable((By.ID, input_id))
-                        )
+                        el = driver.find_element(By.NAME, input_id)
                     except:
-                        try:
-                            el = driver.find_element(By.NAME, input_id)
-                        except:
-                            pass
-                    
-                    if not el:
-                        log(f"[{field_name}] Element not found", "ERROR")
-                        return False
-                    
-                    # Scroll and click
-                    scroll_element_into_view(el)
-                    el.click()
-                    time.sleep(0.1)
-                    
-                    # Clear and enter
-                    el.send_keys(Keys.CONTROL + "a")
-                    el.send_keys(Keys.DELETE)
-                    el.send_keys(value_str)
-                    el.send_keys(Keys.TAB)
-                    time.sleep(0.2)
-                    
-                    # Verify
-                    actual_value = el.get_attribute('value') or ''
-                    
-                    # v12.23.11: Date normalization for comparison
-                    if is_date_field:
-                        value_check = normalize_date(value_str)
-                        actual_check = normalize_date(actual_value)
-                    else:
-                        value_check = value_str.replace('%', '').strip()
-                        actual_check = actual_value.replace('%', '').strip()
-                    
-                    if value_check == actual_check or actual_check.startswith(value_check):
-                        log(f"[{field_name}] ✅ '{actual_value}'", "SUCCESS")
-                        time.sleep(FIELD_DELAY)
-                        return True
-                    else:
-                        log(f"[{field_name}] ⚠️ Got '{actual_value}' (expected '{value_str}')", "WARN")
-                        if attempt < MAX_RETRIES:
-                            time.sleep(0.2)
-                        
-                except Exception as e:
-                    log(f"[{field_name}] Error: {e}", "ERROR")
-                    if attempt < MAX_RETRIES:
-                        time.sleep(0.2)
-            
-            log(f"[{field_name}] ❌ FAILED", "ERROR")
-            return False
+                        pass
+                
+                if not el:
+                    log(f"Could not find input for {field_name}", "ERROR")
+                    return False
+                
+                el.click()
+                time.sleep(0.1)
+                el.send_keys(Keys.CONTROL + "a")
+                el.send_keys(Keys.DELETE)
+                el.send_keys(str(value))
+                el.send_keys(Keys.TAB)
+                log(f"Filled {field_name}", "SUCCESS")
+                return True
+                
+            except Exception as e:
+                log(f"Error in atomic_text_input for {field_name}: {e}", "ERROR")
+                return False
 
-        # =========================================================
-        # ROBUST CHECKBOX - with element wait and verification
-        # =========================================================
-        def robust_checkbox(checkbox_id, should_enable, field_name):
-            """
-            v12.23.4: Toggle checkbox with element wait, retry and verification.
-            """
-            log(f"\n{'='*50}", "INFO")
-            log(f"[{field_name}] CHECKBOX: should_enable={should_enable}", "INFO")
+        def atomic_toggle(label_for_id, should_enable, field_name):
+            """Toggle a checkbox by its label's for attribute"""
+            log(f"ATOMIC TOGGLE: {field_name} = {should_enable}", "INFO")
             
-            for attempt in range(1, MAX_RETRIES + 1):
-                log(f"[{field_name}] Attempt {attempt}/{MAX_RETRIES}", "DEBUG")
+            try:
+                checkbox = None
+                try:
+                    checkbox = driver.find_element(By.ID, label_for_id)
+                except:
+                    pass
+                
+                if not checkbox:
+                    try:
+                        checkbox = driver.find_element(By.NAME, label_for_id)
+                    except:
+                        pass
+                
+                if not checkbox:
+                    log(f"Could not find checkbox for {field_name}", "ERROR")
+                    return False
+                
+                is_checked = checkbox.is_selected()
+                
+                if should_enable and not is_checked:
+                    checkbox.click()
+                    log(f"Enabled {field_name}", "SUCCESS")
+                elif not should_enable and is_checked:
+                    checkbox.click()
+                    log(f"Disabled {field_name}", "SUCCESS")
+                else:
+                    log(f"{field_name} already in desired state", "SKIP")
+                
+                return True
+                
+            except Exception as e:
+                log(f"Error in atomic_toggle for {field_name}: {e}", "ERROR")
+                return False
+
+        def atomic_single_select(label_text, value, field_name):
+            """
+            Fill a single-select dropdown using SIMULATED MOUSE CLICKS.
+            Handles BOTH searchable and non-searchable dropdowns (like Rebate Type).
+            """
+            if not value:
+                log(f"Skipping {field_name} (no value)", "SKIP")
+                return True
+            
+            log(f"ATOMIC SINGLE-SELECT: {field_name} = {value}", "INFO")
+            
+            FIELD_SELECT_MAP = {
+                'Brand': 'brand_id',
+                'Linked Brand': 'linked_brand_id',
+                'Rebate Type': 'daily_discount_type_id'
+            }
+            
+            select_id = FIELD_SELECT_MAP.get(field_name, field_name.lower().replace(' ', '_'))
+            
+            try:
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                time.sleep(0.1)
+                click_backdrop()
+                time.sleep(0.15)
+                
+                container = None
+                
+                # Method A: Find by select ID
+                try:
+                    container_css = f"select#{select_id} + .select2-container, .select2-container[aria-labelledby*='{select_id}']"
+                    container = driver.find_element(By.CSS_SELECTOR, container_css)
+                    log(f"  [{field_name}] Found container via select ID", "DEBUG")
+                except:
+                    pass
+                
+                # Method B: Find by label
+                if not container:
+                    try:
+                        xpath_value = build_xpath_contains(label_text)
+                        container_xpath = f"//label[contains(text(), {xpath_value})]/following::span[contains(@class, 'select2-container')][1]"
+                        container = driver.find_element(By.XPATH, container_xpath)
+                        log(f"  [{field_name}] Found container via label", "DEBUG")
+                    except:
+                        pass
+                
+                # Method C: Known IDs fallback
+                if not container:
+                    try:
+                        id_map = {
+                            'Brand': 'select2-brand_id-container',
+                            'Linked Brand': 'select2-linked_brand_id-container',
+                            'Rebate Type': 'select2-daily_discount_type_id-container'
+                        }
+                        if field_name in id_map:
+                            container = driver.find_element(By.ID, id_map[field_name])
+                            log(f"  [{field_name}] Found container via known ID", "DEBUG")
+                    except:
+                        pass
+                
+                if not container:
+                    log(f"  [{field_name}] Could not find Select2 container!", "ERROR")
+                    return False
+                
+                # Click to open dropdown
+                actions = ActionChains(driver)
+                actions.move_to_element(container)
+                actions.click()
+                actions.perform()
+                time.sleep(0.25)
+                
+                # Check if search input exists and is VISIBLE
+                search_input = None
+                search_is_visible = False
                 
                 try:
-                    # WAIT for element
-                    log(f"[{field_name}] Waiting for checkbox...", "DEBUG")
-                    checkbox = WebDriverWait(driver, ELEMENT_WAIT).until(
-                        EC.presence_of_element_located((By.ID, checkbox_id))
-                    )
-                    
-                    if not checkbox:
-                        checkbox = driver.find_element(By.NAME, checkbox_id)
-                    
-                    if not checkbox:
-                        log(f"[{field_name}] Could not find checkbox '{checkbox_id}'", "ERROR")
-                        return False
-                    
-                    # Scroll into view
-                    scroll_element_into_view(checkbox)
-                    
-                    # Check current state
-                    is_checked = checkbox.is_selected()
-                    log(f"[{field_name}] Current state: {'checked' if is_checked else 'unchecked'}", "DEBUG")
-                    
-                    # Toggle if needed
-                    if should_enable and not is_checked:
-                        log(f"[{field_name}] Clicking to enable...", "DEBUG")
-                        # Try clicking the label if checkbox isn't directly clickable
-                        try:
-                            label = driver.find_element(By.CSS_SELECTOR, f"label[for='{checkbox_id}']")
-                            label.click()
-                        except:
-                            checkbox.click()
-                        time.sleep(0.5)
-                    elif not should_enable and is_checked:
-                        log(f"[{field_name}] Clicking to disable...", "DEBUG")
-                        try:
-                            label = driver.find_element(By.CSS_SELECTOR, f"label[for='{checkbox_id}']")
-                            label.click()
-                        except:
-                            checkbox.click()
-                        time.sleep(0.5)
-                    else:
-                        log(f"[{field_name}] Already in desired state", "DEBUG")
-                    
-                    # VERIFY: Read back state
-                    time.sleep(0.3)
-                    actual_state = checkbox.is_selected()
-                    
-                    if actual_state == should_enable:
-                        log(f"[{field_name}] ✅ VERIFIED: {'enabled' if actual_state else 'disabled'}", "SUCCESS")
-                        time.sleep(FIELD_DELAY)
-                        return True
-                    else:
-                        log(f"[{field_name}] ⚠️ Mismatch: expected {should_enable}, got {actual_state}", "WARN")
-                        if attempt < MAX_RETRIES:
-                            log(f"[{field_name}] Will retry...", "INFO")
-                            time.sleep(0.5)
-                        
-                except Exception as e:
-                    log(f"[{field_name}] Error on attempt {attempt}: {e}", "ERROR")
-                    if attempt < MAX_RETRIES:
-                        time.sleep(0.5)
-            
-            log(f"[{field_name}] ❌ FAILED after {MAX_RETRIES} attempts", "ERROR")
-            return False
-
-        # =========================================================
-        # ROBUST SINGLE SELECT - with element wait and verification
-        # =========================================================
-        def robust_single_select(field_name, value, select_id):
-            """
-            v12.23.6: Fill single-select dropdown - FASTER VERSION.
-            Keeps verification but reduces wait times.
-            """
-            if not value or str(value).strip() == '':
-                log(f"[{field_name}] Skipping (no value)", "SKIP")
-                return True
-            
-            value_str = str(value).strip()
-            log(f"[{field_name}] Selecting: '{value_str}'", "INFO")
-            
-            container_id = f'select2-{select_id}-container'
-            
-            for attempt in range(1, MAX_RETRIES + 1):
+                    search_elements = driver.find_elements(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
+                    for elem in search_elements:
+                        if elem.is_displayed():
+                            search_input = elem
+                            search_is_visible = True
+                            break
+                except:
+                    pass
+                
+                if search_is_visible and search_input:
+                    actions = ActionChains(driver)
+                    actions.move_to_element(search_input)
+                    actions.click()
+                    actions.perform()
+                    time.sleep(0.1)
+                    search_input.send_keys(str(value))
+                    time.sleep(0.5)
+                
+                # Find and click the matching option
                 try:
-                    # Close any open dropdowns
-                    close_any_dropdown()
-                    time.sleep(0.2)
+                    option = None
+                    option_xpath_value = build_xpath_contains(str(value))
                     
-                    # Find the Select2 container
-                    container = None
+                    # Try exact text match
                     try:
-                        container = WebDriverWait(driver, 3).until(
-                            EC.presence_of_element_located((By.ID, container_id))
-                        )
+                        exact_xpath = f"//li[contains(@class, 'select2-results__option') and normalize-space(text())={option_xpath_value}]"
+                        option = WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, exact_xpath)))
                     except:
+                        pass
+                    
+                    # Try contains match
+                    if not option:
                         try:
-                            container = driver.find_element(By.CSS_SELECTOR, f"select#{select_id} + .select2-container")
+                            contains_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
+                            option = WebDriverWait(driver, 1.5).until(EC.element_to_be_clickable((By.XPATH, contains_xpath)))
                         except:
                             pass
                     
-                    if not container:
-                        log(f"[{field_name}] Container not found, retry {attempt}", "WARN")
-                        time.sleep(0.5)
-                        continue
-                    
-                    # Scroll into view
-                    scroll_element_into_view(container)
-                    time.sleep(0.2)
-                    
-                    # Click to open dropdown
-                    container.click()
-                    time.sleep(0.5)  # Reduced from 1.0
-                    
-                    # Find search input
-                    search_input = None
-                    try:
-                        search_inputs = driver.find_elements(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
-                        for inp in search_inputs:
-                            if inp.is_displayed():
-                                search_input = inp
-                                break
-                    except:
-                        pass
-                    
-                    # Type search value
-                    if search_input:
-                        search_input.click()
-                        time.sleep(0.1)
-                        search_input.clear()
-                        search_input.send_keys(value_str)
-                        time.sleep(0.5)  # Reduced from 1.0
-                    
-                    # Find and click option
-                    option = None
-                    try:
-                        options = driver.find_elements(By.CSS_SELECTOR, ".select2-results__option")
-                        for opt in options:
-                            opt_text = opt.text.strip()
-                            if opt_text.lower() == value_str.lower() or value_str.lower() in opt_text.lower():
-                                option = opt
-                                break
-                    except:
-                        pass
+                    # Special handling for Rebate Type
+                    if not option and field_name == 'Rebate Type':
+                        try:
+                            results_xpath = f"//ul[@id='select2-daily_discount_type_id-results']//li[contains(text(), {option_xpath_value})]"
+                            option = WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, results_xpath)))
+                        except:
+                            pass
                     
                     if option:
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", option)
-                        time.sleep(0.1)
-                        option.click()
+                        actions = ActionChains(driver)
+                        actions.move_to_element(option)
+                        actions.click()
+                        actions.perform()
+                        log(f"  [{field_name}] Selected '{value}'", "SUCCESS")
                     else:
-                        # Fallback: press Enter
-                        if search_input:
-                            search_input.send_keys(Keys.RETURN)
+                        # Fallback: keyboard navigation
+                        if search_input and search_is_visible:
+                            search_input.send_keys(Keys.ENTER)
                         else:
-                            ActionChains(driver).send_keys(Keys.RETURN).perform()
-                    
-                    time.sleep(0.3)  # Reduced from 0.8
-                    
-                    # Close dropdown
-                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                    time.sleep(0.2)
-                    click_backdrop()
-                    
-                    # VERIFY
-                    time.sleep(0.2)
-                    actual_value = ''
-                    try:
-                        verify_container = driver.find_element(By.ID, container_id)
-                        actual_value = verify_container.get_attribute('title') or verify_container.text or ''
-                    except:
-                        pass
-                    
-                    if value_str.lower() in actual_value.lower():
-                        log(f"[{field_name}] ✅ '{actual_value}'", "SUCCESS")
-                        time.sleep(FIELD_DELAY)
-                        return True
-                    else:
-                        log(f"[{field_name}] ⚠️ Got '{actual_value}', expected '{value_str}'", "WARN")
-                        if attempt < MAX_RETRIES:
-                            close_any_dropdown()
-                            time.sleep(0.3)
+                            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
+                            time.sleep(0.1)
+                            ActionChains(driver).send_keys(Keys.ENTER).perform()
+                        log(f"  [{field_name}] Selected '{value}' via keyboard", "SUCCESS")
                         
                 except Exception as e:
-                    log(f"[{field_name}] Error: {e}", "ERROR")
-                    close_any_dropdown()
-                    if attempt < MAX_RETRIES:
-                        time.sleep(0.3)
-            
-            log(f"[{field_name}] ❌ FAILED after {MAX_RETRIES} attempts", "ERROR")
-            return False
+                    log(f"  [{field_name}] Click failed, using ENTER: {e}", "WARN")
+                    ActionChains(driver).send_keys(Keys.ENTER).perform()
+                
+                time.sleep(0.1)
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                time.sleep(0.08)
+                click_backdrop()
+                
+                return True
+                
+            except Exception as e:
+                log(f"Error in atomic_single_select for {field_name}: {e}", "ERROR")
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                click_backdrop()
+                return False
 
-        # =========================================================
-        # ROBUST MULTI-SELECT - FAST VERSION with final verification
-        # =========================================================
-        def robust_multi_select(field_name, values, select_id):
-            """
-            v12.23.10: FAST multi-select - adds all values first, verifies once at end.
-            Only retries missing values. Much faster than per-value verification.
-            """
+        def atomic_multi_select(label_text, values, field_name):
+            """Fill a multi-select dropdown by CLICKING OPTIONS DIRECTLY."""
             if not values:
-                log(f"[{field_name}] Skipping (no values)", "SKIP")
+                log(f"Skipping {field_name} (no values)", "SKIP")
                 return True
             
-            # Convert string to list
+            # Convert string to list if needed
             if isinstance(values, str):
-                if values.lower() in ['all', 'all locations', 'all categories']:
-                    log(f"[{field_name}] Skipping ('All' - no selection needed)", "SKIP")
+                if 'all' in values.lower() and field_name != 'Weekday':
+                    log(f"Skipping {field_name} ('All' detected)", "SKIP")
                     return True
                 values = [v.strip() for v in values.split(',') if v.strip()]
             
             if not values:
-                log(f"[{field_name}] Skipping (empty list)", "SKIP")
+                log(f"Skipping {field_name} (empty list)", "SKIP")
                 return True
             
-            # Weekday name normalization
-            day_map = {
-                'mon': 'Monday', 'monday': 'Monday',
-                'tue': 'Tuesday', 'tuesday': 'Tuesday', 'tues': 'Tuesday',
-                'wed': 'Wednesday', 'wednesday': 'Wednesday',
-                'thu': 'Thursday', 'thursday': 'Thursday', 'thur': 'Thursday', 'thurs': 'Thursday',
-                'fri': 'Friday', 'friday': 'Friday',
-                'sat': 'Saturday', 'saturday': 'Saturday',
-                'sun': 'Sunday', 'sunday': 'Sunday'
+            log(f"ATOMIC MULTI-SELECT: {field_name} = {values}", "INFO")
+            
+            FIELD_SELECT_MAP = {
+                'Store': 'store_ids',
+                'Weekday': 'weekday_ids',
+                'Category': 'category_ids'
             }
             
-            # Location name normalization: Google Sheet names → MIS dropdown names
-            location_to_mis = {
-                'beverly hills': 'Beverly',
-                'beverly': 'Beverly',
-                'davis': 'Davis',
-                'dixon': 'Dixon',
-                'el sobrante': 'El Sobrante',
-                'fresno': 'Fresno',
-                'fresno (palm)': 'Fresno',
-                'fresno palm': 'Fresno',
-                'fresno (shaw)': 'Fresno Shaw',
-                'fresno shaw': 'Fresno Shaw',
-                'hawthorne': 'Hawthorne',
-                'koreatown': 'Koreatown',
-                'laguna woods': 'Laguna Woods',
-                'oxnard': 'Oxnard',
-                'riverside': 'Riverside',
-                'west hollywood': 'West Hollywood',
-                'weho': 'West Hollywood',
-            }
+            select_id = FIELD_SELECT_MAP.get(field_name, field_name.lower().replace(' ', '_'))
             
-            # Normalize all values upfront
-            normalized_values = []
-            for val in values:
-                val_clean = str(val).strip()
-                if not val_clean:
-                    continue
+            try:
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                time.sleep(0.1)
+                click_backdrop()
+                time.sleep(0.15)
                 
-                # Normalize weekday names
-                if field_name == 'Weekday':
-                    val_lower = val_clean.lower()
-                    if val_lower in day_map:
-                        val_clean = day_map[val_lower]
-                    elif len(val_lower) >= 3 and val_lower[:3] in day_map:
-                        val_clean = day_map[val_lower[:3]]
+                container = None
                 
-                # Normalize location names
-                if field_name in ['Store/Locations', 'Locations', 'Store']:
-                    val_lower = val_clean.lower().strip()
-                    if val_lower in location_to_mis:
-                        mapped = location_to_mis[val_lower]
-                        if mapped.lower() != val_clean.lower():
-                            log(f"[{field_name}] '{val_clean}' -> '{mapped}'", "DEBUG")
-                        val_clean = mapped
-                
-                normalized_values.append(val_clean)
-            
-            if not normalized_values:
-                return True
-            
-            log(f"[{field_name}] Adding {len(normalized_values)} values...", "INFO")
-            
-            def add_single_value(val_clean):
-                """Add a single value to the multi-select. Returns True if likely successful."""
                 try:
-                    # Close any existing dropdown
-                    ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                    time.sleep(0.15)
-                    
-                    # Find container
-                    container = None
+                    container_css = f"select#{select_id} + .select2-container, .select2-container[aria-labelledby*='{select_id}']"
+                    container = driver.find_element(By.CSS_SELECTOR, container_css)
+                except:
+                    pass
+                
+                if not container:
                     try:
-                        container = driver.find_element(By.CSS_SELECTOR, f"select#{select_id} + .select2-container")
-                    except:
-                        try:
-                            container = driver.find_element(By.CSS_SELECTOR, f".select2-container[aria-labelledby*='{select_id}']")
-                        except:
-                            return False
-                    
-                    if not container:
-                        return False
-                    
-                    # Scroll and click to open
-                    driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", container)
-                    time.sleep(0.15)
-                    
-                    try:
-                        selection_area = container.find_element(By.CSS_SELECTOR, ".select2-selection")
-                        selection_area.click()
-                    except:
-                        container.click()
-                    
-                    time.sleep(0.35)
-                    
-                    # Find search input
-                    search_input = None
-                    try:
-                        search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
-                    except:
-                        try:
-                            search_input = container.find_element(By.CSS_SELECTOR, ".select2-search__field")
-                        except:
-                            pass
-                    
-                    # Type search
-                    if search_input:
-                        search_input.clear()
-                        search_input.send_keys(val_clean)
-                        time.sleep(0.4)
-                    
-                    # Find and click option
-                    option = None
-                    try:
-                        options = driver.find_elements(By.CSS_SELECTOR, ".select2-results__option")
-                        val_lower = val_clean.lower()
-                        
-                        for opt in options:
-                            opt_text = opt.text.strip()
-                            if not opt_text or 'no results' in opt_text.lower():
-                                continue
-                            opt_lower = opt_text.lower()
-                            if opt_lower == val_lower or opt_lower.startswith(val_lower) or val_lower in opt_lower:
-                                option = opt
-                                break
+                        xpath_value = build_xpath_contains(label_text)
+                        container_xpath = f"//label[contains(text(), {xpath_value})]/following::span[contains(@class, 'select2-container')][1]"
+                        container = driver.find_element(By.XPATH, container_xpath)
                     except:
                         pass
-                    
-                    if option:
-                        try:
-                            option.click()
-                        except:
-                            driver.execute_script("arguments[0].click();", option)
-                        time.sleep(0.2)
-                        return True
-                    else:
-                        # Try Enter
-                        if search_input:
-                            search_input.send_keys(Keys.RETURN)
-                            time.sleep(0.2)
-                            return True
-                    
+                
+                if not container:
+                    log(f"  [{field_name}] Could not find Select2 container!", "ERROR")
                     return False
-                except:
-                    return False
-            
-            def get_selected_values():
-                """Get list of currently selected values from the multi-select."""
+                
+                # Weekday name normalization
+                day_map = {'mon':'Monday','tue':'Tuesday','wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday'}
+                
+                # FIX v12.18: Open dropdown ONCE before iterating values
+                # This prevents accidentally clicking an option when reopening dropdown each iteration
+                log(f"  [{field_name}] Opening dropdown once for all {len(values)} values...", "DEBUG")
+                
+                # Click the selection area specifically (not options) to open dropdown
                 try:
-                    container = driver.find_element(By.CSS_SELECTOR, f"select#{select_id} + .select2-container")
-                    pills = container.find_elements(By.CSS_SELECTOR, ".select2-selection__choice")
-                    selected = []
-                    for pill in pills:
-                        pill_text = pill.get_attribute('title') or pill.text or ''
-                        pill_text = pill_text.replace('×', '').strip()
-                        if pill_text:
-                            selected.append(pill_text.lower())
-                    return selected
+                    selection_area = container.find_element(By.CSS_SELECTOR, ".select2-selection")
+                    selection_area.click()
                 except:
-                    return []
-            
-            def is_value_selected(val_clean, selected_lower):
-                """Check if a value is in the selected list."""
-                val_lower = val_clean.lower()
-                for sel in selected_lower:
-                    if val_lower == sel or val_lower in sel or sel in val_lower:
-                        return True
-                return False
-            
-            # PHASE 1: Add all values quickly (no per-value verification)
-            for val in normalized_values:
-                add_single_value(val)
-            
-            # Close dropdown after adding all
-            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-            time.sleep(0.3)
-            
-            # PHASE 2: Final verification - check what's actually selected
-            selected = get_selected_values()
-            
-            # Find missing values
-            missing = []
-            for val in normalized_values:
-                if not is_value_selected(val, selected):
-                    missing.append(val)
-            
-            # PHASE 3: Retry missing values (if any)
-            if missing:
-                log(f"[{field_name}] Retrying {len(missing)} missing: {missing}", "DEBUG")
-                for val in missing:
-                    for attempt in range(2):  # 2 retry attempts
-                        if add_single_value(val):
-                            time.sleep(0.2)
-                            break
+                    # Fallback to container click
+                    actions = ActionChains(driver)
+                    actions.move_to_element(container)
+                    actions.click()
+                    actions.perform()
                 
-                # Close and re-verify
+                time.sleep(0.3)
+                
+                # Wait for dropdown to open and search field to be ready
+                search_input = None
+                try:
+                    search_input = WebDriverWait(driver, 2).until(
+                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
+                    )
+                    log(f"  [{field_name}] Dropdown open, search field ready", "DEBUG")
+                except:
+                    log(f"  [{field_name}] Warning: Could not find search field", "WARN")
+                
+                for val in values:
+                    val_clean = str(val).strip()
+                    if not val_clean:
+                        continue
+                    
+                    # Normalize weekday names
+                    if field_name == 'Weekday':
+                        val_lower = val_clean.lower()[:3]
+                        if val_lower in day_map:
+                            val_clean = day_map[val_lower]
+                    
+                    log(f"  [{field_name}] Adding '{val_clean}'...", "DEBUG")
+                    
+                    # Type to filter (dropdown already open, search field should be focused)
+                    if search_input:
+                        try:
+                            search_input.clear()
+                            search_input.send_keys(val_clean)
+                            time.sleep(0.4)
+                        except:
+                            # Re-acquire search field if stale
+                            try:
+                                search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
+                                search_input.clear()
+                                search_input.send_keys(val_clean)
+                                time.sleep(0.4)
+                            except:
+                                pass
+                    
+                    # Click option
+                    try:
+                        option_xpath_value = build_xpath_contains(val_clean)
+                        option_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
+                        option = WebDriverWait(driver, 1.5).until(EC.element_to_be_clickable((By.XPATH, option_xpath)))
+                        
+                        actions = ActionChains(driver)
+                        actions.move_to_element(option)
+                        actions.click()
+                        actions.perform()
+                        log(f"    -> Added '{val_clean}'", "SUCCESS")
+                    except:
+                        # Fallback: press Enter to select highlighted option
+                        ActionChains(driver).send_keys(Keys.ENTER).perform()
+                        log(f"    -> Added '{val_clean}' via ENTER", "SUCCESS")
+                    
+                    time.sleep(0.2)
+                    
+                    # Clear search for next value (dropdown stays open for multi-select)
+                    if search_input:
+                        try:
+                            search_input.clear()
+                            time.sleep(0.1)
+                        except:
+                            pass
+                
+                # Close dropdown after all values selected
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                time.sleep(0.2)
                 click_backdrop()
                 
-                # Final check
-                selected = get_selected_values()
-                still_missing = [v for v in normalized_values if not is_value_selected(v, selected)]
+                return True
                 
-                if still_missing:
-                    log(f"[{field_name}] ⚠️ {len(normalized_values) - len(still_missing)}/{len(normalized_values)} - Missing: {still_missing}", "WARN")
-                else:
-                    log(f"[{field_name}] ✅ {len(normalized_values)}/{len(normalized_values)} (after retry)", "SUCCESS")
-            else:
+            except Exception as e:
+                log(f"Error in atomic_multi_select for {field_name}: {e}", "ERROR")
+                ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 click_backdrop()
-                log(f"[{field_name}] ✅ {len(normalized_values)}/{len(normalized_values)} values", "SUCCESS")
-            
-            time.sleep(FIELD_DELAY)
-            return len(missing) < len(normalized_values)  # Success if at least some values added
+                return False
+
         # =========================================================
-        # v12.23.8: SMART FIELD ENTRY - Location mapping + better matching
+        # EXECUTION FLOW - v12.18 CHECKLIST BANNER APPROACH
+        # Only automate: Brand, Linked Brand, Rebate Type, Start Date, End Date
+        # Show checklist for all other fields
         # =========================================================
         warnings = []
         automated_fields = []
 
         # 1. Open Modal
-        print("\n" + "="*70)
-        print("[AUTOMATION] v12.23.12 FAST FIELD ENTRY - Starting...")
-        print("="*70)
-        print("\n[STEP 1] Opening 'Add New' modal...")
+        print("\n[ACTION] Clicking 'Add New' button...")
         try:
-            btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-add-dialog")))
+            btn = WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-add-dialog")))
             btn.click()
         except:
             print("[WARN] Standard button not found, trying text fallback...")
             driver.find_element(By.XPATH, "//button[contains(text(), 'Add New')]").click()
         
-        print("[WAIT] Waiting for modal to appear...")
-        time.sleep(3.0)  # Initial wait for modal animation
+        print("[WAIT] Waiting for modal animation...")
+        time.sleep(2.0)
+
+        # v12.18: ONLY AUTOMATE THESE 5 FIELDS
+        # =====================================
         
-        # 2. WAIT FOR FORM TO BE READY
-        print("\n[STEP 2] Checking form readiness...")
-        form_ready = wait_for_form_ready()
-        
-        if not form_ready:
-            print("[WARN] Form may not be fully ready - adding extra wait...")
-            time.sleep(2.0)
-        
-        # =========================================================
-        # FIELD-BY-FIELD AUTOMATION - Sequential with verification
-        # =========================================================
-        
-        # FIELD 1: BRAND (single-select)
-        print("\n[STEP 3] Processing BRAND field...")
+        # 2. BRAND (single-select) - AUTOMATE
         if target_brand:
-            if robust_single_select("Brand", target_brand, "brand_id"):
+            if atomic_single_select("Brand", target_brand, "Brand"):
                 automated_fields.append('Brand')
             else:
                 warnings.append('Could not fill Brand')
-        else:
-            print("[Brand] Skipping (no value provided)")
 
-        # FIELD 2: LINKED BRAND (single-select)
-        print("\n[STEP 4] Processing LINKED BRAND field...")
+        # 3. LINKED BRAND (single-select) - AUTOMATE
         if target_linked:
-            if robust_single_select("Linked Brand", target_linked, "linked_brand_id"):
+            if atomic_single_select("Linked Brand", target_linked, "Linked Brand"):
                 automated_fields.append('Linked Brand')
             else:
                 warnings.append('Could not fill Linked Brand')
-        else:
-            print("[Linked Brand] Skipping (no value provided)")
 
-        # FIELD 3: REBATE TYPE (single-select)
-        print("\n[STEP 5] Processing REBATE TYPE field...")
+        # 4. REBATE TYPE (single-select) - AUTOMATE
         if rebate_type:
-            if robust_single_select("Rebate Type", rebate_type, "daily_discount_type_id"):
+            if atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
                 automated_fields.append('Rebate Type')
             else:
                 warnings.append('Could not fill Rebate Type')
         else:
-            print("[Rebate Type] ⚠️ WARNING: Not determined from source data - requires manual selection!")
+            print("[WARNING] Rebate Type not determined - field will require manual selection!")
             warnings.append('Rebate Type not determined from source data')
 
-        # FIELD 4: DISCOUNT RATE (text input)
-        print("\n[STEP 6] Processing DISCOUNT field...")
+        # 5. DISCOUNT RATE (text input) - AUTOMATE
         if target_discount:
-            if robust_text_input("discount_rate", target_discount, "Discount"):
+            if atomic_text_input("discount_rate", target_discount, "Discount Rate"):
                 automated_fields.append('Discount')
             else:
                 warnings.append('Could not fill Discount Rate')
-        else:
-            print("[Discount] Skipping (no value provided)")
 
-        # FIELD 5: VENDOR REBATE % (text input)
-        print("\n[STEP 7] Processing VENDOR REBATE % field...")
+        # 6. VENDOR REBATE % (text input) - AUTOMATE
         if target_vendor:
-            if robust_text_input("rebate_percent", target_vendor, "Vendor Rebate"):
+            if atomic_text_input("rebate_percent", target_vendor, "Vendor Rebate"):
                 automated_fields.append('Vendor Rebate')
             else:
                 warnings.append('Could not fill Vendor Rebate')
-        else:
-            print("[Vendor Rebate] Skipping (no value provided)")
 
-        # FIELD 6: START DATE (text input)
-        print("\n[STEP 8] Processing START DATE field...")
+        # 7. START DATE (text input) - AUTOMATE
         if req_start:
-            if robust_text_input("date_start", req_start, "Start Date"):
+            if atomic_text_input("date_start", req_start, "Start Date"):
                 automated_fields.append('Start Date')
             else:
                 warnings.append('Could not fill Start Date')
-        else:
-            print("[Start Date] Skipping (no value provided)")
 
-        # FIELD 7: END DATE (text input)
-        print("\n[STEP 9] Processing END DATE field...")
+        # 8. END DATE (text input) - AUTOMATE
         if req_end:
-            if robust_text_input("date_end", req_end, "End Date"):
+            if atomic_text_input("date_end", req_end, "End Date"):
                 automated_fields.append('End Date')
             else:
                 warnings.append('Could not fill End Date')
-        else:
-            print("[End Date] Skipping (no value provided)")
 
-        # v12.23.4: FULL AUTOMATION MODE - Multi-select fields
-        # ================================================================
-        if full_automation:
-            print("\n" + "-"*50)
-            print("[AUTOMATION] Processing multi-select fields...")
-            print("-"*50)
-            
-            # FIELD 8: WEEKDAY (multi-select)
-            print("\n[STEP 10] Processing WEEKDAY field...")
-            if target_weekday:
-                if robust_multi_select("Weekday", target_weekday, "weekday_ids"):
-                    automated_fields.append('Weekday')
-                else:
-                    warnings.append('Could not fill Weekday')
-            else:
-                print("[Weekday] Skipping (no value provided)")
-            
-            # FIELD 9: STORE/LOCATIONS (multi-select)
-            print("\n[STEP 11] Processing STORE/LOCATIONS field...")
-            if target_locations and target_locations.lower() not in ['all locations', 'all', '']:
-                if robust_multi_select("Store/Locations", target_locations, "store_ids"):
-                    automated_fields.append('Store/Locations')
-                else:
-                    warnings.append('Could not fill Store/Locations')
-            else:
-                print("[Store/Locations] Skipping ('All Locations' - no selection needed)")
-            
-            # FIELD 10: CATEGORY (multi-select)
-            print("\n[STEP 12] Processing CATEGORY field...")
-            if target_category and target_category.lower() not in ['all categories', 'all', '']:
-                if robust_multi_select("Category", target_category, "category_ids"):
-                    automated_fields.append('Category')
-                else:
-                    warnings.append('Could not fill Category')
-            else:
-                print("[Category] Skipping ('All Categories' - no selection needed)")
-            
-            # FIELD 11: AFTER WHOLESALE (checkbox)
-            print("\n[STEP 13] Processing AFTER WHOLESALE checkbox...")
-            if robust_checkbox("rebate_wholesale_discount", after_wholesale, "After Wholesale"):
-                automated_fields.append('After Wholesale')
-            else:
-                warnings.append('Could not set After Wholesale checkbox')
-        else:
-            print("\n[AUTOMATION] Partial mode - Weekday, Store, Category, After Wholesale left for manual entry")
+        # v12.18: DO NOT automate these fields - show in checklist instead:
+        # - Weekday, Store/Locations, Category, After Wholesale
         
         # v12.18: Lookup linked brand from Settings tab if not provided
         if not target_linked and target_brand:
@@ -33092,22 +32546,14 @@ def api_mis_automate_create_deal():
             else:
                 print(f"[LINKED BRAND] Brand '{target_brand}' has no linked brand in Settings")
 
-        # =========================================================
-        # FINAL SUMMARY
-        # =========================================================
-        print("\n" + "="*70)
-        print("[AUTOMATION] v12.23.12 AUTOMATION COMPLETE")
-        print("="*70)
-        print(f"[RESULTS] {len(automated_fields)}/11 fields automated successfully:")
-        for field in automated_fields:
-            print(f"   ✅ {field}")
+        print("\n" + "="*60)
+        print("[AUTOMATION] v12.18 PARTIAL AUTOMATION COMPLETE")
+        print("="*60)
+        print(f"[AUTOMATED] {len(automated_fields)} fields: {', '.join(automated_fields)}")
+        print(f"[MANUAL] User must fill: Weekday, Store, Category, After Wholesale")
         if warnings:
-            print(f"\n[WARNINGS] {len(warnings)} issue(s):")
-            for warn in warnings:
-                print(f"   ⚠️ {warn}")
-        else:
-            print(f"\n[WARNINGS] None - all attempted fields completed!")
-        print("="*70 + "\n")
+            print(f"[WARNINGS] {len(warnings)} issue(s): {', '.join(warnings)}")
+        print("="*60 + "\n")
 
         # v12.18: INJECT CHECKLIST BANNER with expected values
         expected_data = {
