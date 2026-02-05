@@ -1,23 +1,124 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.24.8 ENHANCED COMPARISON + END DATE FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.25.2 AUDIT TAB BLAZE + MIS ID FIX
+# v12.25.2 CHANGELOG (AUDIT TAB BLAZE + MIS ID FIX):
+#   🔴 FIX: Blaze Discounts Not Showing in Audit Popup
+#     * ISSUE: Section 3 showed "No Blaze discounts" even when titles exist in Google Sheet
+#     * ROOT CAUSE: buildBlazeSection() only checked approvedMatches (requires re-approval)
+#       - User expectation: If Blaze title is IN the Google Sheet, it's already approved
+#     * THE FIX: Added check for deal.blaze_discount_title from Google Sheet
+#       - If title exists in sheet, look it up in blazeData.currentRows
+#       - Display full details (status, type, value, locations, dates) if found
+#       - If title in sheet but not found in Blaze data, still show it with "In Sheet Only" badge
+#     * PRIORITY ORDER: 
+#       1. blaze_discount_title from Google Sheet (already applied = approved)
+#       2. approvedMatches (newly approved in ID Matcher)
+#       3. deal.blaze_titles directly attached
+#       4. blazeMatches global
+#   🔴 FIX: Multiple MIS IDs Not Parsed in Audit Table
+#     * ISSUE: MIS ID column showed combined IDs as single string instead of separate buttons
+#     * ROOT CAUSE: renderAuditOverview() used deal.current_sheet_id directly
+#     * THE FIX: Now uses parseMultipleMisIdsForAudit() to split IDs
+#       - Creates separate button for each MIS ID
+#       - Each button triggers lookupMisId() with clean ID
+#   🔴 FIX: "STIIIZY MONTHLY+ WEEKLY DEAL PLANNER" Ignore Logic
+#     * Added to BOTH Audit Tab and ID Matcher Tab
+#     * parseMultipleMisIds() now filters out this note text
+#     * parseMultipleMisIdsForAudit() already had this logic
+#     * Only rows containing actual numeric IDs are shown as MIS ID buttons
+#   🟢 ENHANCED: Blaze Section Table Display
+#     * Shows "(from Sheet)" label for titles sourced from Google Sheet column
+#     * "In Sheet Only" badge for titles not found in current Blaze data
+#     * Row highlighting for sheet-sourced titles
+#
+# v12.25.1 CHANGELOG (SETUP TAB FIX):
+#   🔴 FIX: Initialize Button Not Working
+#     * ISSUE: Button clicked but nothing happened (no browser launch)
+#     * ROOT CAUSE: initializeAllSystems() used 'event.target' but 'event' was undefined
+#       - onclick="initializeAllSystems()" did NOT pass event parameter
+#       - JavaScript error: ReferenceError: event is not defined
+#     * THE FIX: 
+#       - Changed function signature: initializeAllSystems(btnElement)
+#       - Changed onclick: onclick="initializeAllSystems(this)"
+#       - Button element now properly captured for disable/enable logic
+#
+# v12.25.0 CHANGELOG (COMPREHENSIVE AUDIT TAB + SET-BASED MATCHING):
+#   ðŸŸ¢ NEW: Comprehensive Audit Tab (OWN SUB-NAV TAB - NOT nested in ID Matcher)
+#     * Located in MIS sub-nav, after "Up-Down Planning" button
+#     * Full Audit mode: All deals from selected Google Sheet tab
+#     * Custom Audit mode: Filter by Section (Weekly/Monthly/Sale), Weekday, Date
+#     * Weekend Toggle: Quick filter for Sat+Sun
+#     * Date Picker: For specific date filtering
+#   ðŸŸ¢ NEW: Sequential Audit Process
+#     * Start Audit: Confirmation popup with deal count
+#     * Progress tracking: "Deal 12 of 47" indicator
+#     * Mark buttons: Verified âœ… / Needs Attention âš ï¸ / Skip â­ï¸
+#     * Previous/Next navigation through deals
+#     * Exit Audit: Saves progress and exits
+#   ðŸŸ¢ NEW: Audit Popup with 3 Sections
+#     * Section 1: Google Sheet Data (full row from matchesData)
+#     * Section 2: Assigned MIS ID Entries (now supports MULTIPLE MIS IDs!)
+#     * Section 3: Blaze Discounts (if assigned)
+#     * Notes field per MIS entry
+#     * Multi-brand verification checklist
+#   ðŸŸ¢ NEW: State Persistence
+#     * Server-side state file in AUDIT_REPORTS folder
+#     * Browser localStorage backup
+#     * Resume incomplete audits on return
+#   ðŸŸ¢ NEW: Export Report
+#     * CSV export: Row, Section, Brand, Weekday, MIS ID, Status, Issues, Notes
+#   ðŸ”´ FIX: SET-BASED MATCHING (Order Independent)
+#     * ISSUE: "Dixon, Davis" vs "Davis, Dixon" marked as mismatch
+#     * THE FIX: Split by comma, trim, compare as JavaScript Sets
+#     * Logic: set(sheet_list) == set(csv_list) - order no longer matters
+#   ðŸ”´ FIX: NaN/Blank as Universal Match
+#     * Blank, empty, NaN, null, undefined in Locations/Categories = "All"
+#     * Treated as universal match (Include All)
+#   ðŸ”´ FIX: "All Except" Logic
+#     * "All Locations Except:" and "All Categories Except:" now properly compared
+#     * Exclusion lists compared as sets for order independence
+#   ðŸ”´ FIX: Weekly Deals + Specific Date Filter
+#     * ISSUE: Weekly deals excluded when using Specific Date filter
+#     * THE FIX: Weekly deals now included if their weekday matches selected weekday toggle
+#     * Weekly deals run every week - specific date only filters by weekday match
+#   ðŸ”´ FIX: Monthly Deals Weekday Column (Day-of-Month Format)
+#     * ISSUE: Monthly "weekday" column contains "10th", "15th" format, not actual weekdays
+#     * THE FIX: Parse day-of-month values, calculate actual weekday for tab month
+#     * NOTE: This column format may change - see parseDayOfMonthValues() for updates
+#   ðŸ”´ FIX: Multiple MIS IDs Support
+#     * Now parses and displays multiple MIS IDs (same as ID Matcher)
+#     * Ignores "STIIIZY MONTHLY + WEEKLY DEAL PLANNER" text (user notes, not IDs)
+#   ðŸ”´ FIX: Brand + Linked Brand Display
+#     * MIS table now shows "Brand / Linked" column
+#     * Compares both brand AND linked brand for matching
+#     * Cross-match support (sheet linked = MIS brand, etc.)
+#   ðŸŸ¢ REUSES: All existing ID Matcher functions
+#     * matchesData array for data source
+#     * showSuggestionTooltip() pattern for popup
+#     * lookupMisIdWithValidation() for MIS ID buttons
+#     * goToSheetRow() for Google Sheet navigation
+#
 # v12.24.8 CHANGELOG (ENHANCED COMPARISON + END DATE BUTTON FIX):
-#   🔴 FIX: End Date Buttons Now Show Correct Colors
-#     * ISSUE: End date buttons showed INFO color (light blue) instead of RED/GREEN/ORANGE
-#     * ROOT CAUSE: Empty inline style when getEndDateButtonColor() returned empty style
-#     * THE FIX: Added fallback style if empty: `style || 'background:#6c757d; ...'`
-#   🔴 FIX: Credential Loading Crash When No Profile Detected
+#   Ã°Å¸â€Â´ FIX: End Date Buttons Now Show Correct Colors
+#     * ISSUE: End date buttons showed GREY instead of RED/GREEN/ORANGE
+#     * ROOT CAUSE #1: Empty inline style when getEndDateButtonColor() returned empty
+#       - THE FIX: Added fallback style if empty: `style || 'background:#6c757d; ...'`
+#     * ROOT CAUSE #2: Wrong element ID for tab name lookup
+#       - Code used: document.getElementById('sheet-select') Ã¢â€ â€™ null
+#       - Correct ID: document.getElementById('mis-tab')
+#       - THE FIX: Changed to use 'mis-tab' which has the tab name like "February 2026"
+#   Ã°Å¸â€Â´ FIX: Credential Loading Crash When No Profile Detected
 #     * ISSUE: Setup tab didn't populate, credentials didn't load
 #     * ROOT CAUSE: BLAZE_CONFIG_FILE/TOKEN_FILE/CREDENTIALS_FILE could be None
 #       - Calling .exists() on None crashes with AttributeError
 #     * THE FIX: Added None guards in load_credentials_config() and authenticate_google_sheets()
-#   🟢 NEW: Multiple Assigned MIS IDs Support
+#   Ã°Å¸Å¸Â¢ NEW: Multiple Assigned MIS IDs Support
 #     * Google Sheet can have multiple MIS IDs (line-separated in cell)
 #     * Each ID rendered as its own row in Assigned section
 #     * Tag shown per row: "ASSIGNED (W1)", "ASSIGNED (W2)", etc.
-#   🟢 NEW: Enhanced Comparison Helpers
+#   Ã°Å¸Å¸Â¢ NEW: Enhanced Comparison Helpers
 #     * getWeekdayMatchStyle() - Multi-day aware, GREEN if MIS contains all sheet days
 #     * getCategoryMatchStyle() - Handles blank=All, "All Except", specific lists
 #     * getLocationMatchStyle() - Same logic as category
-#   🟢 NEW: All Comparable Fields Now Color-Coded
+#   Ã°Å¸Å¸Â¢ NEW: All Comparable Fields Now Color-Coded
 #     * Weekday: GREEN if MIS weekdays contain all Google Sheet weekdays
 #     * Brand: GREEN if exact/contains match
 #     * Category: GREEN if both All, or both have same specific list
@@ -26,38 +127,38 @@
 #     * Locations: GREEN if both All, or both have same specific list
 #
 # v12.24.7 CHANGELOG (FIX: ASSIGNED MIS ID TAG STRIPPING):
-#   🔴 FIX: Assigned MIS ID Now Strips Tag Prefixes for Lookup
+#   Ã°Å¸â€Â´ FIX: Assigned MIS ID Now Strips Tag Prefixes for Lookup
 #     * ISSUE: Assigned section showed "MIS ID not found in CSV" even when present
 #     * ROOT CAUSE: Google Sheet IDs have tags like "W1 12345", CSV has clean "12345"
 #       - Comparison: String(s.mis_id) === assignedMisId failed
 #       - "12345" !== "W1 12345"
 #     * THE FIX: Added cleanMisId() helper function
-#       - Strips tag prefixes: "W1 12345" → "12345"
+#       - Strips tag prefixes: "W1 12345" Ã¢â€ â€™ "12345"
 #       - Handles patterns: "W1", "M2", "S1", etc.
 #       - Falls back to last numeric sequence if no tag pattern
 #     * DISPLAY: Shows tag in header if present: "(Tag: W1)"
 #     * LOOKUP: Uses clean ID for suggestion matching & MIS automation
 #
 # v12.24.6 CHANGELOG (NEW: ASSIGNED SECTION + END DATE COLORS):
-#   🟢 NEW: Assigned MIS ID Section in Suggestions Popup
+#   Ã°Å¸Å¸Â¢ NEW: Assigned MIS ID Section in Suggestions Popup
 #     * Shows currently assigned MIS ID above suggestions list
 #     * Same datatable structure as suggestions for consistency
 #     * Green border/header to distinguish from suggestions
 #     * Full data display if ID found in CSV, minimal if not
 #     * "ASSIGNED" status badge + "Current" action badge
-#   🟢 NEW: End Date Button Color Coding
+#   Ã°Å¸Å¸Â¢ NEW: End Date Button Color Coding
 #     * Compares end date month to Google Sheet tab name month
 #     * RED: End date is in PAST month (expired - needs update!)
 #     * GREEN: End date is CURRENT month (correct)
 #     * ORANGE: End date is FUTURE month (already extended)
 #     * Applied to BOTH Assigned section and all Suggestions
 #     * Tooltip shows detailed status message
-#   🟢 NEW: Updated Color Legend
+#   Ã°Å¸Å¸Â¢ NEW: Updated Color Legend
 #     * Added End Date color legend (Past/Current/Future Month)
 #     * Separated from field match legend for clarity
 #
 # v12.24.5 CHANGELOG (FIX: JWT KEY EXTRACTION):
-#   🔴 FIX: Token Extraction Now Checks "jwt" Key FIRST
+#   Ã°Å¸â€Â´ FIX: Token Extraction Now Checks "jwt" Key FIRST
 #     * ISSUE: Auth 200 OK but token not found - server uses "jwt" key
 #     * ROOT CAUSE: Blaze Ecom API returns token as top-level "jwt" key
 #       - Response: {"jwt": "eyJ...", ...}
@@ -67,13 +168,13 @@
 #     * EXTRACTION ORDER NOW:
 #       1. Authorization header
 #       2. Access-Token header  
-#       3. response.json()['jwt']  ← NEW PRIORITY
+#       3. response.json()['jwt']  Ã¢â€ Â NEW PRIORITY
 #       4. data.attributes.token
 #       5. data.id / data.token / meta.token / token / access_token
-#     * RESULT: JWT successfully captured → sync can proceed
+#     * RESULT: JWT successfully captured Ã¢â€ â€™ sync can proceed
 #
 # v12.24.3 CHANGELOG (FIX: COMPREHENSIVE TOKEN EXTRACTION):
-#   🔴 FIX: Token Extraction Now Checks Headers FIRST + Multiple Body Paths
+#   Ã°Å¸â€Â´ FIX: Token Extraction Now Checks Headers FIRST + Multiple Body Paths
 #     * ISSUE: Still getting "Authentication failed" after json.dumps fix
 #     * ROOT CAUSE: Token location varies in JSON:API - may be in headers OR body
 #     * THE FIX: Comprehensive extraction in get_ecom_token():
@@ -96,7 +197,7 @@
 #     * 422 HANDLING: Added specific error for payload format rejection
 #
 # v12.24.2 CHANGELOG (FIX: JSON:API CONTENT-TYPE OVERRIDE):
-#   🔴 FIX: requests.post(json=) Was Overriding Content-Type Header
+#   Ã°Å¸â€Â´ FIX: requests.post(json=) Was Overriding Content-Type Header
 #     * ISSUE: 401 "Invalid Blaze credentials" despite correct payload
 #     * ROOT CAUSE: Using `json=payload` in requests.post() auto-sets
 #       Content-Type to "application/json", OVERRIDING our explicit
@@ -105,10 +206,10 @@
 #       - get_ecom_token(): Line ~2183 - data=json.dumps(payload)
 #       - trigger_ecom_sync(): Line ~2288 - data=json.dumps(payload)
 #     * ADDED: Extra debug logging for Content-Type verification
-#     * RESULT: Correct Content-Type preserved → API accepts credentials
+#     * RESULT: Correct Content-Type preserved Ã¢â€ â€™ API accepts credentials
 #
 # v12.24.1 CHANGELOG (FIX: ECOM SYNC - MISSION CONTROL API):
-#   🟢 FIX: Corrected API Integration for Blaze Ecom Sync
+#   Ã°Å¸Å¸Â¢ FIX: Corrected API Integration for Blaze Ecom Sync
 #     * ISSUE: v12.24.0 used wrong endpoint (api.blaze.me/api/v1/sync - 404)
 #     * ROOT CAUSE: Tymber sync uses Ecom Mission Control API, not Retail API
 #     * THE FIX: Implemented correct 3-step flow:
@@ -116,8 +217,8 @@
 #       2. Get JWT token from response
 #       3. Sync: POST https://ecom-api.blaze.me/api/v1/store/sync-requests
 #     * NEW FUNCTIONS:
-#       - get_ecom_token(email, password) → JWT token
-#       - trigger_ecom_sync(store_uuid, token) → sync result
+#       - get_ecom_token(email, password) Ã¢â€ â€™ JWT token
+#       - trigger_ecom_sync(store_uuid, token) Ã¢â€ â€™ sync result
 #     * HEADERS REQUIRED:
 #       - X-Store: [STORE_UUID]
 #       - Authorization: Bearer [JWT_TOKEN]
@@ -125,20 +226,20 @@
 #     * PAYLOAD: {"data":{"type":"store_sync_requests","attributes":{"request_type":"on_demand"}}}
 #     * sync_keys.json NOW USES store_uuid (not api_key/api_secret)
 #     * UI: Now requires Blaze email/password from Blaze Config section
-#     * STATUS: Enhanced error messages (🔑 auth, 📍 UUID, 🚫 permission)
+#     * STATUS: Enhanced error messages (Ã°Å¸â€â€˜ auth, Ã°Å¸â€œÂ UUID, Ã°Å¸Å¡Â« permission)
 #
 # v12.24.0 CHANGELOG (NEW: BLAZE ECOM SYNC TO TYMBER):
-#   🟢 NEW: Blaze Ecom Sync Feature
+#   Ã°Å¸Å¸Â¢ NEW: Blaze Ecom Sync Feature
 #     * UI: Added store dropdown (12 locations) + "SYNC TO TYMBER" button in Setup tab
 #     * BACKEND: New /api/blaze/ecom-sync endpoint for store-specific sync
 #     * SECURITY: API keys stored in secrets/sync_keys.json (not in code)
 #     * STORES: DAVIS, DIXON, NAPA, SANTA ROSA, OAKLAND, SAN FRANCISCO,
 #               LOS ANGELES, SAN DIEGO, SAN JOSE, SACRAMENTO, FRESNO, LONG BEACH
 #     * HELPER: load_sync_keys() function with graceful error handling
-#     * STATUS: Real-time feedback (Ready → Syncing... → Sync Complete/Failed)
+#     * STATUS: Real-time feedback (Ready Ã¢â€ â€™ Syncing... Ã¢â€ â€™ Sync Complete/Failed)
 #
 # v12.22.8 CHANGELOG (FIX: SINGLE-SELECT SELECT2 DROPDOWNS IN CHECKLIST):
-#   ðŸ”´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
 #     * ISSUE: These fields always showed "(empty)" and never turned green
 #       - Checklist showed Brand as "(empty)" even when filled
 #       - Linked Brand never validated correctly
@@ -163,28 +264,28 @@
 #     * CALL SITE UPDATE (line ~31066):
 #       actual = getSelect2Value(fieldId, isMulti);  // Now passes isMulti flag
 #     * AFFECTED FIELDS (now working):
-#       - Brand (brand_id) â†’ select2-brand_id-container âœ…
-#       - Linked Brand (linked_brand_id) â†’ select2-linked_brand_id-container âœ…
-#       - Rebate Type (daily_discount_type_id) â†’ select2-daily_discount_type_id-container âœ…
+#       - Brand (brand_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-brand_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Linked Brand (linked_brand_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-linked_brand_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Rebate Type (daily_discount_type_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-daily_discount_type_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #     * RESULT:
-#       - All 11 checklist fields now properly monitored âœ…
-#       - Brand/Linked Brand/Rebate Type turn green when correct âœ…
-#       - Real-time validation works for all field types âœ…
+#       - All 11 checklist fields now properly monitored ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Brand/Linked Brand/Rebate Type turn green when correct ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Real-time validation works for all field types ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.7 CHANGELOG (FIX: PHASE 1 MIS ID BUTTONS + CHECKLIST VALIDATION):
-#   ðŸ”´ FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
 #     * ISSUE: MIS ID buttons in Phase 1 didn't pass row data to validation
 #       - CREATE_PART1, CREATE_PART2, PATCH buttons had no data-row attribute
 #       - Clicking them triggered backend Google Sheet search (inefficient)
 #       - Validation didn't use the split's actual data
 #     * THE FIX: Pass `split` data to renderClickableMisId() for all action types
-#       - Line 9144: CREATE_PART1 â†’ renderClickableMisId(..., split)
-#       - Line 9156: CREATE_PART2 â†’ renderClickableMisId(..., split)
-#       - Line 9174: PATCH â†’ renderClickableMisId(..., split)
+#       - Line 9144: CREATE_PART1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
+#       - Line 9156: CREATE_PART2 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
+#       - Line 9174: PATCH ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
 #       - GAP already passed split.interrupting_deal (unchanged)
-#     * RESULT: Phase 1 MIS ID buttons now have validation data attached âœ…
+#     * RESULT: Phase 1 MIS ID buttons now have validation data attached ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
-#   ðŸ”´ FIX 2: Checklist "All Locations" and "All Categories" Validation
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 2: Checklist "All Locations" and "All Categories" Validation
 #     * ISSUE: Checklist showed false mismatch errors
 #       - Expected: "All Locations" (from Google Sheet)
 #       - Actual: Empty in MIS (which MEANS "All Locations")
@@ -197,21 +298,21 @@
 #       - categories: "all categories", "all", starts with "all categories"
 #       - Empty MIS selection = correct when "All" is expected
 #     * RESULT:
-#       - "All Locations" expected + empty MIS = âœ… Correct
-#       - "All Categories" expected + empty MIS = âœ… Correct
-#       - No more false "1 field(s) don't match" errors âœ…
+#       - "All Locations" expected + empty MIS = ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Correct
+#       - "All Categories" expected + empty MIS = ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Correct
+#       - No more false "1 field(s) don't match" errors ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
-#   ðŸ”´ FIX 3: Rebate Type False Positive (was actually Issue 2)
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 3: Rebate Type False Positive (was actually Issue 2)
 #     * ISSUE: "1 field(s) don't match" appeared even with correct Rebate Type
 #     * ROOT CAUSE: The mismatch was from Stores/Categories, not Rebate Type
 #       - Checklist summary just showed count, didn't specify which field
 #       - User assumed Rebate Type was the problem
-#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this âœ…
+#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.6 CHANGELOG (FIX: MIS ID BUTTON VALIDATOR MODE SWITCHING):
-#   ðŸ”´ FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
 #     * ISSUE: Checklist appeared but validation ran in "manual mode"
-#       - inject_checklist_banner() was called âœ“ (checklist showed)
+#       - inject_checklist_banner() was called ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ (checklist showed)
 #       - BUT persistent validator (inject_mis_validation) was ALSO running
 #       - That validator was in "manual mode" from previous injection
 #       - Result: "Manual mode - skipping Phase 2 validation" in console
@@ -220,31 +321,31 @@
 #       - Once injected, it monitors for modal open/close
 #       - New checklist injection didn't notify the existing validator
 #     * THE FIX: Call BOTH functions
-#       - inject_checklist_banner() â†’ visual checklist panel
-#       - inject_mis_validation(expected_data) â†’ sends message to switch mode
+#       - inject_checklist_banner() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ visual checklist panel
+#       - inject_mis_validation(expected_data) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sends message to switch mode
 #       - V2 architecture: If validator already active, just sends message
 #       - Message tells validator to switch from 'manual' to 'automation'
 #     * IMPLEMENTATION (line ~22380):
 #       inject_checklist_banner(driver, expected_data, mode='compare')  # Visual
 #       inject_mis_validation(driver, expected_data=expected_data)      # Mode switch
 #     * CONSOLE OUTPUT (expected after fix):
-#       [V2] âœ… Validator already active, sending message instead of re-injecting
-#       [V2] âœ… Switched to AUTOMATION mode
+#       [V2] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Validator already active, sending message instead of re-injecting
+#       [V2] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Switched to AUTOMATION mode
 #       [MIS-VALIDATION] Validation mode: automation  (NOT manual!)
 #     * RESULT:
-#       - Checklist panel appears âœ…
-#       - Validator runs in automation mode âœ…
-#       - Phase 2 validation (all fields including After Wholesale) âœ…
+#       - Checklist panel appears ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Validator runs in automation mode ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Phase 2 validation (all fields including After Wholesale) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.5 CHANGELOG (FIX: MIS ID BUTTON VALIDATION + CHECKLIST):
-#   ðŸ”´ FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
 #     * ISSUE: MIS ID button click had broken validation
 #       - After Wholesale toggle not being validated
 #       - Checklist popup not appearing
 #       - Banner said "Check Deal Entry Checklist" but checklist didn't exist
 #     * ROOT CAUSE: Two separate validation systems
-#       - MIS ID button used: inject_mis_validation() â†’ summary banner only
-#       - Compare to Google Sheet used: inject_checklist_banner() â†’ full checklist
+#       - MIS ID button used: inject_mis_validation() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ summary banner only
+#       - Compare to Google Sheet used: inject_checklist_banner() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ full checklist
 #       - inject_mis_validation() NEVER called inject_checklist_banner()
 #     * THE FIX: Unified validation system (Option B)
 #       - MIS ID button now calls inject_checklist_banner() directly
@@ -259,26 +360,26 @@
 #       [MIS LOOKUP] Injecting checklist banner with row data
 #       [MIS LOOKUP] Expected: Brand=Stiiizy, Weekday=Monday
 #       [MIS LOOKUP] After Wholesale: True
-#       [MIS LOOKUP] âœ… Checklist banner injected for MIS ID 12345
+#       [MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Checklist banner injected for MIS ID 12345
 #     * RESULT:
-#       - MIS ID button shows same checklist popup as Compare to Google Sheet âœ…
-#       - After Wholesale toggle now validated properly âœ…
-#       - All field mismatches visible in checklist panel âœ…
-#       - Single unified validation system (no duplication) âœ…
+#       - MIS ID button shows same checklist popup as Compare to Google Sheet ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - After Wholesale toggle now validated properly ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - All field mismatches visible in checklist panel ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Single unified validation system (no duplication) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.4 CHANGELOG (FIX: WEEKLY DEALS USE COLUMN A FOR WEEKDAY):
-#   ðŸ”´ FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
 #     * ISSUE: Weekly deals incorrectly used Column K ('Weekday/ Day of Month')
 #       - Column A header: "Weekday" (correct for Weekly)
 #       - Column K header: "Weekday/ Day of Month" (correct for Monthly/Sale)
 #       - get_col() checked Column K FIRST, so Weekly used wrong column
 #     * ROOT CAUSE: Column priority in get_col() calls
 #       - Old: get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')
-#       - Column K checked first â†’ always used if data exists
-#       - All sections used same priority â†’ Weekly got wrong column
+#       - Column K checked first ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ always used if data exists
+#       - All sections used same priority ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Weekly got wrong column
 #     * THE FIX: Section-aware column selection
-#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') â†’ Column A first
-#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) â†’ Column K first
+#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Column A first
+#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Column K first
 #     * LOCATIONS FIXED (10 total):
 #       - Line ~4048: detect_multi_day_groups()
 #       - Line ~4167: enhanced_match_mis_ids()
@@ -295,14 +396,14 @@
 #           weekday = get_col(row, ['Weekday', 'Day of Week'], '')
 #       else:
 #           weekday = get_col(row, ['Weekday/ Day of Month', ...], '')
-#     * RESULT: Weekly deals now correctly read from Column A âœ…
-#       - Monthly deals still use Column K (ordinals like "1st, 10th") âœ…
-#       - Sale deals still use Column K or Column C as appropriate âœ…
+#     * RESULT: Weekly deals now correctly read from Column A ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Monthly deals still use Column K (ordinals like "1st, 10th") ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Sale deals still use Column K or Column C as appropriate ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.3 CHANGELOG (FIX: SUGGESTIONS POPUP END DATE AUTOMATION):
-#   ðŸ”´ FIX: End Date Update Button in MIS ID Suggestions Popup
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: End Date Update Button in MIS ID Suggestions Popup
 #     * ISSUE: End Date "Update" button in Suggestions popup fails
-#       - User clicks date â†’ adjusts with dropdowns â†’ clicks Update
+#       - User clicks date ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ adjusts with dropdowns ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ clicks Update
 #       - Automation fails to find MIS ID in datatable
 #       - Phase 1 End Date button works fine (different code path)
 #     * ROOT CAUSE: Wrong API endpoint
@@ -312,7 +413,7 @@
 #       - Changed from: `/api/mis/update-end-date`
 #       - Changed to: `/api/mis/automate-end-date`
 #       - Added proper loading overlay (matches Phase 1 style)
-#       - Fixed date format: MM/DD/YY â†’ MM/DD/YYYY (full year)
+#       - Fixed date format: MM/DD/YY ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MM/DD/YYYY (full year)
 #       - Added googleRow from matchesData for better context
 #     * IMPLEMENTATION (line ~12156):
 #       - Gets date values from dropdown selectors (unchanged)
@@ -322,18 +423,18 @@
 #       - Updates display on success
 #     * CONSOLE OUTPUT:
 #       [UPDATE-END-DATE] Starting with date: 01/31/2026 MIS ID: 12345
-#     * RESULT: Suggestions popup End Date button now works âœ…
+#     * RESULT: Suggestions popup End Date button now works ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.2 CHANGELOG (FIX: CONTINUE ROW REBATE TYPE):
-#   ðŸ”´ FIX: Rebate Type Not Populating for Continue Row Create Button
-#     * ISSUE: Continue row in Up-Down Planning Phase 1 â†’ Create â†’ Pre-Flight
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Rebate Type Not Populating for Continue Row Create Button
+#     * ISSUE: Continue row in Up-Down Planning Phase 1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Create ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Pre-Flight
 #       - All fields populate correctly EXCEPT Rebate Type (empty)
 #       - GAP row works fine (has Rebate Type)
 #     * ROOT CAUSE (Backend): splits_required structure missing rebate fields
 #       - Lines ~26817-26855: splits_required object built for each split
 #       - Only `interrupting_deal` nested object had retail/wholesale/after_wholesale
 #       - Main split (weekly deal) was MISSING these fields
-#       - Continue rows use main split data â†’ no rebate type available
+#       - Continue rows use main split data ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ no rebate type available
 #     * ROOT CAUSE (Frontend): Strict equality check
 #       - Code: `if (sourceData.wholesale === 'TRUE')` 
 #       - Failed if value was 'true', true (boolean), or other formats
@@ -350,10 +451,10 @@
 #       - if (wholesaleVal === 'TRUE') rebateType = 'Wholesale';
 #     * CONSOLE OUTPUT (after fix):
 #       [AUTOMATE] Rebate Type: Wholesale (W: TRUE -> TRUE, R: FALSE -> FALSE)
-#     * RESULT: Continue row Create button now populates Rebate Type âœ…
+#     * RESULT: Continue row Create button now populates Rebate Type ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.1 CHANGELOG (ENHANCEMENT: WEEKLY DEAL DATE AUTO-FILL):
-#   ðŸŸ¢ ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
 #     * FEATURE: Automatically set Start/End dates for Weekly deals
 #       - Start Date: 1st day of the month
 #       - End Date: Last day of the month (handles 28/29/30/31 correctly)
@@ -381,10 +482,10 @@
 #         Start Date: 01/01/2026 (1st of month)
 #         End Date: 01/31/2026 (last day of month)
 #     * NON-WEEKLY DEALS: Unchanged behavior (parses from date_raw field)
-#     * RESULT: Weekly deals auto-fill with full month date range âœ…
+#     * RESULT: Weekly deals auto-fill with full month date range ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #
 # v12.22.0 CHANGELOG (CRITICAL FIX: MULTI-DAY DEAL WEEKDAY COLLECTION):
-#   ðŸ”´ CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
 #     * ISSUE: Pre-Flight popup only shows ONE weekday for multi-day deals
 #       - Google Sheet has a multi-day group (3 rows, same deal):
 #         Row 45: Monday    - Highatus, 40% off (GROUP HEADER)
@@ -393,7 +494,7 @@
 #       - User clicks Create on any row in group
 #       - Pre-Flight popup opens with Weekday field
 #       - Expected: "Monday, Wednesday, Friday" (ALL weekdays selected)
-#       - Actual: Only shows weekday of clicked row (e.g., "Monday") âŒ
+#       - Actual: Only shows weekday of clicked row (e.g., "Monday") ÃƒÂ¢Ã‚ÂÃ…â€™
 #     * ROOT CAUSE: useUnifiedPreFlightForIDMatcher() at line ~12128
 #       - Code: `const weekday = match.weekday || '';`
 #       - Only reads single row's weekday, ignores group membership
@@ -419,11 +520,11 @@
 #       [MULTI-DAY-FIX] Group detected! group_id: 9a3d328682f4
 #       [MULTI-DAY-FIX] All weekdays in group: ["Monday", "Wednesday", "Friday"]
 #       [MULTI-DAY-FIX] Combined weekday string: Monday, Wednesday, Friday
-#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals âœ…
-#       - Click Create on header row â†’ Shows all weekdays âœ…
-#       - Click Create on member row â†’ Shows all weekdays âœ…
-#       - Single-day deals â†’ Shows single weekday (unchanged) âœ…
-#       - openUnifiedPreFlight() already handles comma-separated weekdays âœ…
+#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Click Create on header row ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows all weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Click Create on member row ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows all weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Single-day deals ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows single weekday (unchanged) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - openUnifiedPreFlight() already handles comma-separated weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
 #   - TECHNICAL NOTES:
 #     * match.multi_day_group structure:
 #       { group_id: "9a3d328682f4", weekdays: ["Monday", "Wednesday", "Friday"], is_first: true }
@@ -433,19 +534,19 @@
 #     * No changes needed to openUnifiedPreFlight() - it's already ready!
 #
 # v12.21.4.2 CHANGELOG (CRITICAL FIX: LINKED BRAND AUTO-FILL):
-#   Ã°Å¸â€Â´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
 #     * ISSUE: Linked Brand dropdown shows empty, not auto-selected
 #       - User clicks Create from ID Matcher
 #       - Google Sheet has: Brand="Highatus", Linked Brand="Cannabiotix"
 #       - Pre-Flight popup opens:
-#         * Brand dropdown: empty Ã¢ÂÅ’
-#         * Linked Brand dropdown: empty Ã¢ÂÅ’
+#         * Brand dropdown: empty ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#         * Linked Brand dropdown: empty ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #       - Console shows: "brandOptions: Array(0)" (empty!)
 #     * ROOT CAUSE: brandOptions uses splitPlanningData.brand_list
 #       - splitPlanningData is ONLY populated for Up-Down Planning tab
 #       - When coming from ID Matcher, splitPlanningData is empty
 #       - Result: brandOptions = [] (no brands to select from!)
-#       - Code tries to select "Cannabiotix" in empty dropdown Ã¢â€ â€™ fails Ã¢ÂÅ’
+#       - Code tries to select "Cannabiotix" in empty dropdown ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ fails ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #     * THE FIX: Build brandOptions from settingsCache.brandLinkedMap
 #       - settingsCache.brandLinkedMap is populated by loadSettingsDropdownData()
 #       - Contains: {highatus: "Cannabiotix", raw: "Cookies", ...}
@@ -483,19 +584,19 @@
 #     * CONSOLE OUTPUT (after fix):
 #       [PRE-FLIGHT] Brand options from Settings: 45 brands
 #       [LINKED-BRAND-DROPDOWN] data.linked_brand: Cannabiotix
-#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  Ã¢â€ Â NOW HAS OPTIONS!
-#       [LINKED-BRAND-DROPDOWN] Ã¢Å“â€¦ SELECTED: "Cannabiotix" (matches...)
-#     * RESULT: Brand and Linked Brand dropdowns now populated Ã¢Å“â€¦
-#       - Works for ID Matcher Create button Ã¢Å“â€¦
-#       - Works for Up-Down Planning Create button Ã¢Å“â€¦
-#       - Works for Suggestions popup Create button Ã¢Å“â€¦
-#       - Linked brand auto-selected correctly Ã¢Å“â€¦
+#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Ãƒâ€šÃ‚Â NOW HAS OPTIONS!
+#       [LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SELECTED: "Cannabiotix" (matches...)
+#     * RESULT: Brand and Linked Brand dropdowns now populated ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Works for ID Matcher Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Works for Up-Down Planning Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Works for Suggestions popup Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Linked brand auto-selected correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - USER IMPACT:
-#     * Linked Brand dropdown now has options Ã¢Å“â€¦
-#     * Linked Brand auto-fills from Google Sheet Ã¢Å“â€¦
-#     * Brand dropdown also populated from Settings Ã¢Å“â€¦
-#     * Works consistently across all Create button locations Ã¢Å“â€¦
-#     * No more empty dropdowns in Pre-Flight popup Ã¢Å“â€¦
+#     * Linked Brand dropdown now has options ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Linked Brand auto-fills from Google Sheet ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Brand dropdown also populated from Settings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Works consistently across all Create button locations ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * No more empty dropdowns in Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - TECHNICAL NOTES:
 #     * getBrandOptionsFromSettings() helper function added
 #     * Extracts brands from settingsCache.brandLinkedMap (both keys and values)
@@ -506,7 +607,7 @@
 #     * Falls back to splitPlanningData.brand_list if settings not loaded
 #     * Debug logging: "[PRE-FLIGHT] Brand options from Settings: X brands"
 # v12.21.4.1 CHANGELOG (DEBUG: ENHANCED EXCEPTION LOGGING):
-#   Ã°Å¸â€Â DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
 #     * ISSUE REPORTED: "All Locations Except: Davis, Dixon" only excludes Davis
 #     * SYMPTOM: Second exception (Dixon) not being excluded
 #     * DIAGNOSTIC ADDITIONS:
@@ -521,11 +622,11 @@
 #          - Shows each store being checked
 #          - Shows which exception it matches (if any)
 #          - Example output:
-#            Ã¢ÂÅ’ EXCLUDING: "Davis" (matches exception "Davis")
-#            Ã¢ÂÅ’ EXCLUDING: "Dixon" (matches exception "Dixon")
-#            Ã¢Å“â€¦ KEEPING: "Beverly Hills"
+#            ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Davis" (matches exception "Davis")
+#            ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Dixon" (matches exception "Dixon")
+#            ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "Beverly Hills"
 #       5. Summary logging:
-#          "12 total Ã¢â€ â€™ 2 excluded Ã¢â€ â€™ 10 remaining"
+#          "12 total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 2 excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 10 remaining"
 #     * EXPECTED CONSOLE OUTPUT:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Input String: "All Locations Except: Davis, Dixon"
@@ -533,30 +634,30 @@
 #         Master List: [12 stores]
 #         Exceptions Raw: ["Davis", "Dixon"]
 #         Exceptions Expanded: ["Davis", "Dixon"]
-#         Ã¢ÂÅ’ EXCLUDING: "Davis" (matches exception "Davis")
-#         Ã¢Å“â€¦ KEEPING: "Beverly Hills"
-#         Ã¢ÂÅ’ EXCLUDING: "Dixon" (matches exception "Dixon")
-#         Ã¢Å“â€¦ KEEPING: "El Sobrante"
+#         ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Davis" (matches exception "Davis")
+#         ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "Beverly Hills"
+#         ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Dixon" (matches exception "Dixon")
+#         ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "El Sobrante"
 #         ... (continues for all stores)
 #         Final Result: [10 stores]
-#         Summary: 12 total Ã¢â€ â€™ 2 excluded Ã¢â€ â€™ 10 remaining
+#         Summary: 12 total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 2 excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 10 remaining
 #     * PURPOSE: Identify where comma-separated parsing is failing
 #     * ACTION: User should check console logs and report what they see
 # v12.21.4 CHANGELOG (CRITICAL FIXES: STORE MAPPING + ALL LOCATIONS EXCEPT):
-#   Ã°Å¸â€Â´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
 #     * ISSUE: Settings tab stores don't match MIS dropdown names
-#       - Settings tab: "Fresno (Palm)" Ã¢ÂÅ’
-#       - MIS dropdown: "Fresno" Ã¢Å“â€¦
+#       - Settings tab: "Fresno (Palm)" ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - MIS dropdown: "Fresno" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #       - Result: Automation fails to select stores
 #     * ROOT CAUSE: resolve_store_selection() returned names directly without mapping
 #       - User selects "Fresno (Palm)" in Pre-Flight popup
 #       - Function returns ["Fresno (Palm)"] 
 #       - atomic_multi_select tries to find "Fresno (Palm)" in MIS
-#       - MIS only has "Fresno" Ã¢â€ â€™ selection fails Ã¢ÂÅ’
+#       - MIS only has "Fresno" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ selection fails ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #     * THE FIX: Apply STORE_MAPPING before automation
 #       - resolve_store_selection() now applies STORE_MAPPING
-#       - "Fresno (Palm)" Ã¢â€ â€™ "Fresno" Ã¢Å“â€¦
-#       - "Beverly" Ã¢â€ â€™ "Beverly Hills" Ã¢Å“â€¦
+#       - "Fresno (Palm)" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Fresno" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - "Beverly" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Beverly Hills" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #       - Specific stores AND exceptions both mapped
 #     * STORE_MAPPING Dictionary (lines 1627-1642, 1668-1683):
 #       {
@@ -578,28 +679,28 @@
 #     * IMPLEMENTATION:
 #       - Case 3 (Specific Stores): Apply mapping to each store
 #         mapped = STORE_MAPPING.get(store, store)
-#         Logs: "Store mapping: 'Fresno (Palm)' Ã¢â€ â€™ 'Fresno'"
+#         Logs: "Store mapping: 'Fresno (Palm)' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 'Fresno'"
 #       - Case 2 (All Except): Apply mapping to exceptions list
 #         mapped_exceptions = [STORE_MAPPING.get(exc, exc) for exc in exceptions]
-#     * RESULT: Automation now works with Settings tab store names Ã¢Å“â€¦
+#     * RESULT: Automation now works with Settings tab store names ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #       - User sees: "Fresno (Palm)" in Pre-Flight dropdown
 #       - Backend sends: "Fresno" to MIS automation
-#       - MIS finds: "Fresno" in dropdown Ã¢Å“â€¦
-#   Ã°Å¸â€Â´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
+#       - MIS finds: "Fresno" in dropdown ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
 #     * ISSUE: Pre-Flight popup doesn't handle "All Locations Except:" correctly
 #       - Google Sheet: "All Locations Except: Davis, Hawthorne"
 #       - Expected: Auto-select 10 stores (all except Davis, Hawthorne)
-#       - Actual: Only selected Davis and Hawthorne (backwards!) Ã¢ÂÅ’
+#       - Actual: Only selected Davis and Hawthorne (backwards!) ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #     * ROOT CAUSE: expandLocationCodes() had broken logic
-#       - Line 9229: return exceptions.map(...) Ã¢ÂÅ’
+#       - Line 9229: return exceptions.map(...) ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #       - This returned ONLY the exceptions, not the remaining stores
 #       - Should return: Master List MINUS exceptions
 #     * THE FIX: Implement proper subtraction logic
 #       Step 1: Start with Master List (all 12 stores from Settings tab)
 #       Step 2: Extract exceptions ("Davis, Hawthorne")
-#       Step 3: Expand exception codes ("DV" Ã¢â€ â€™ "Davis")
+#       Step 3: Expand exception codes ("DV" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Davis")
 #       Step 4: Subtract exceptions from master list
-#       Result: Return 10 stores (all except Davis, Hawthorne) Ã¢Å“â€¦
+#       Result: Return 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #     * IMPLEMENTATION (line ~9219):
 #       const masterList = settingsCache.stores || [12 default stores];
 #       const exceptions = exceptionsRaw.map(code => 
@@ -608,22 +709,22 @@
 #       const result = masterList.filter(store => 
 #           !exceptions.some(exc => exc.toLowerCase() === store.toLowerCase())
 #       );
-#       return result;  // Ã¢Å“â€¦ All stores EXCEPT exceptions
+#       return result;  // ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ All stores EXCEPT exceptions
 #     * CONSOLE LOGGING:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Master List: [Dixon, Davis, Beverly Hills, ...]
 #         Exceptions Raw: ["Davis", "Hawthorne"]
 #         Exceptions Expanded: ["Davis", "Hawthorne"]
 #         Result (Master - Exceptions): [Dixon, Beverly Hills, El Sobrante, ...]
-#     * RESULT: Pre-Flight popup now auto-selects correct stores Ã¢Å“â€¦
+#     * RESULT: Pre-Flight popup now auto-selects correct stores ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #       - Input: "All Locations Except: Davis, Hawthorne"
-#       - Auto-selected: 10 stores (all except Davis, Hawthorne) Ã¢Å“â€¦
+#       - Auto-selected: 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - USER IMPACT:
-#     * Store automation now works correctly Ã¢Å“â€¦
-#     * No more "Could not fill Store" warnings Ã¢Å“â€¦
-#     * "All Locations Except:" logic works in Pre-Flight popup Ã¢Å“â€¦
-#     * Settings tab controls store names (single source of truth) Ã¢Å“â€¦
-#     * Mapping handles special characters, parentheses, etc. Ã¢Å“â€¦
+#     * Store automation now works correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * No more "Could not fill Store" warnings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * "All Locations Except:" logic works in Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Settings tab controls store names (single source of truth) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Mapping handles special characters, parentheses, etc. ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - TECHNICAL NOTES:
 #     * STORE_MAPPING defined twice (lines 1627 and 1668) - duplicate, safe
 #     * Mapping applied in resolve_store_selection() (backend automation)
@@ -632,7 +733,7 @@
 #     * Fallback: If store not in mapping, uses original name
 #     * Debug logging shows mapping transformations and subtraction results
 # v12.21.3 CHANGELOG (FINAL FIXES FOR PHASE 3):
-#   Ã°Å¸â€Â´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
 #     * ISSUE: Rebate Type dropdown in Pre-Flight popup not auto-filling
 #     * ROOT CAUSE: Google Sheet columns named "Wholesale?" and "Retail?" (with ?)
 #       - Code was checking for 'Wholesale' and 'Retail' (without ?)
@@ -641,13 +742,13 @@
 #       - raw_row_data?.['Retail?'] (primary check)
 #       - raw_row_data?.['Retail'] (fallback)
 #       - Added console logging: [REBATE-TYPE-DEBUG] for debugging
-#     * RESULT: Rebate Type now auto-fills correctly Ã¢Å“â€¦
-#   Ã°Å¸â€Â´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
+#     * RESULT: Rebate Type now auto-fills correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
 #     * ISSUE: Hardcoded store list showing wrong locations
 #       - Showed: San Jose, Santa Cruz, Fresno, DTSJ, Campbell, etc.
 #       - Should show: Dixon, Davis, Beverly Hills, El Sobrante, etc.
 #     * ROOT CAUSE: Pre-Flight popup used hardcoded array instead of Settings tab
-#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] Ã¢ÂÅ’
+#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #       - Should use: settingsCache.stores (loaded from Settings tab)
 #     * FIX: Use Settings tab stores like brands/categories
 #       - const storeOptions = settingsCache.stores || fallback
@@ -656,8 +757,8 @@
 #     * FIX: Ensure settings loaded before popup opens
 #       - Added await loadSettingsDropdownData() in automateCreateDeal
 #       - Adapter function already had this (useUnifiedPreFlightForIDMatcher)
-#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab Ã¢Å“â€¦
-#   Ã°Å¸â€Â´ ENHANCEMENT: Compare Checklist Visibility Improvements
+#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ ENHANCEMENT: Compare Checklist Visibility Improvements
 #     * ISSUE: Checklist sometimes not visible after Compare
 #     * IMPROVEMENTS:
 #       - Increased setTimeout from 500ms to 800ms (more reliable)
@@ -665,19 +766,19 @@
 #       - Enhanced console logging with DEBUG details
 #       - Added search for all checklist elements if main banner not found
 #       - Logs banner display/opacity status for debugging
-#     * RESULT: More reliable checklist visibility + better debugging Ã¢Å“â€¦
+#     * RESULT: More reliable checklist visibility + better debugging ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - TECHNICAL DETAILS:
 #     * Column name checks now resilient to ? punctuation
 #     * Settings loading ensures fresh data from Google Sheet
 #     * Store list dynamically updates when Settings tab changes
 #     * Checklist injection verified with comprehensive logging
 #   - USER IMPACT:
-#     * Rebate Type auto-fills correctly from Google Sheet Ã¢Å“â€¦
-#     * Store locations match Settings tab exactly Ã¢Å“â€¦
-#     * Compare checklist more reliably visible Ã¢Å“â€¦
-#     * Better console debugging for troubleshooting Ã¢Å“â€¦
+#     * Rebate Type auto-fills correctly from Google Sheet ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Store locations match Settings tab exactly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Compare checklist more reliably visible ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Better console debugging for troubleshooting ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 # v12.21.2 CHANGELOG (ADDITIONAL CRITICAL FIXES):
-#   Ã°Å¸â€Â´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
 #     * ISSUE: Clicking Create in Suggestions Popup caused error:
 #       "TypeError: (match.discount || "").replace is not a function"
 #     * ROOT CAUSE: match.discount was a number, not a string
@@ -686,8 +787,8 @@
 #     * FIX: Convert to string before .replace() operation
 #       - const discount = String(match.discount || '').replace('%', '');
 #       - const vendorContrib = String(match.vendor_contrib || '').replace('%', '');
-#     * RESULT: Create button in Suggestions Popup now works Ã¢Å“â€¦
-#   Ã°Å¸â€Â´ CRITICAL FIX 4: Compare Button Checklist Visibility
+#     * RESULT: Create button in Suggestions Popup now works ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 4: Compare Button Checklist Visibility
 #     * ISSUE: Compare button validates correctly but checklist popup not visible
 #     * SYMPTOM: Console shows "Found MIS ID" but no visual checklist sidebar
 #     * ROOT CAUSE: Timing issue between backend injection and frontend display
@@ -700,34 +801,34 @@
 #       - Forces visibility: display='block', opacity='1'
 #       - Scrolls into view if off-screen
 #       - Triggers runValidation() to update field states
-#     * RESULT: Compare button now shows checklist popup Ã¢Å“â€¦
+#     * RESULT: Compare button now shows checklist popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - TECHNICAL DETAILS:
 #     * String() wrapper safely handles null, undefined, numbers, strings
 #     * setTimeout(500ms) allows backend Selenium injection time to complete
 #     * scrollIntoView with smooth behavior for better UX
 #     * runValidation() refresh ensures field icons update correctly
 #   - USER IMPACT:
-#     * Create in Suggestions Popup Ã¢â€ â€™ Now works (no more TypeError) Ã¢Å“â€¦
-#     * Compare to Google Sheet Ã¢â€ â€™ Checklist popup now visible Ã¢Å“â€¦
-#     * Consistent validation experience across all workflows Ã¢Å“â€¦
+#     * Create in Suggestions Popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now works (no more TypeError) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Compare to Google Sheet ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist popup now visible ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Consistent validation experience across all workflows ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 # v12.21.1 CHANGELOG (CRITICAL BUGFIXES):
-#   Ã°Å¸â€Â´ CRITICAL FIX 1: ID Matcher Create Button Unification
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 1: ID Matcher Create Button Unification
 #     * ISSUE: ID Matcher was using old white "Create New Deal in MIS" popup
 #     * Up-Down Planning was using new dark "Pre-Flight Confirmation" popup
 #     * INCONSISTENT USER EXPERIENCE - Two different UIs for same action
 #     * FIX: Created `useUnifiedPreFlightForIDMatcher()` adapter function
 #       - Converts ID Matcher data format to Pre-Flight data format
 #       - Calls `openUnifiedPreFlight()` (same as Up-Down Planning)
-#       - BOTH tabs now use identical dark blue Pre-Flight popup Ã¢Å“â€¦
+#       - BOTH tabs now use identical dark blue Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #     * RESULT: Consistent UX across all Create workflows
-#   Ã°Å¸â€Â´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
 #     * ISSUE: Backend returns mode='comparison', frontend checks mode='automation'
 #     * ISSUE: Backend doesn't return expected_data in JSON
-#     * RESULT: Frontend never activates automation mode, stays in manual Ã¢ÂÅ’
+#     * RESULT: Frontend never activates automation mode, stays in manual ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #     * Console showed: "Found MIS ID 973" then "MIS ID not found" (contradictory!)
 #     * FIX: Backend now returns:
-#       - mode: 'automation' (matches frontend check) Ã¢Å“â€¦
-#       - expected_data: {...} (frontend needs this) Ã¢Å“â€¦
+#       - mode: 'automation' (matches frontend check) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - expected_data: {...} (frontend needs this) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #     * RESULT: Compare button correctly activates checklist validation
 #   - TECHNICAL DETAILS:
 #     * ID Matcher adapter extracts: brand, linked_brand, weekday, categories, 
@@ -737,21 +838,21 @@
 #     * Compare endpoint injection still works (v12.19 feature preserved)
 #     * Compare endpoint now returns data for frontend validation activation
 #   - USER IMPACT:
-#     * ID Matcher Create Ã¢â€ â€™ Now shows dark Pre-Flight popup (consistent) Ã¢Å“â€¦
-#     * Compare button Ã¢â€ â€™ Now correctly finds matches and activates checklist Ã¢Å“â€¦
-#     * No more "MIS ID not found" false warnings Ã¢Å“â€¦
+#     * ID Matcher Create ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now shows dark Pre-Flight popup (consistent) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Compare button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now correctly finds matches and activates checklist ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * No more "MIS ID not found" false warnings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 # v12.21 CHANGELOG (PHASE 3: SMART PRE-FLIGHT & DATA INTEGRITY):
-#   Ã¢Å“â€¦ SMART LOCATION EXPANSION:
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SMART LOCATION EXPANSION:
 #     * JavaScript now auto-expands location codes to full store names
-#     * Mapping: "DV"Ã¢â€ â€™"Davis", "MOD"Ã¢â€ â€™"Modesto", "SJ"Ã¢â€ â€™"San Jose", etc.
+#     * Mapping: "DV"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"Davis", "MOD"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"Modesto", "SJ"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"San Jose", etc.
 #     * Pre-Flight popup automatically checks correct Store checkboxes
 #     * No more manual checkbox selection for known codes
 #     * Handles "All Locations" and "All Locations Except" patterns
-#   Ã¢Å“â€¦ SMART REBATE TYPE DETECTION:
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SMART REBATE TYPE DETECTION:
 #     * Detects "Rebate After Wholesale" vs plain "Retail"/"Wholesale"
-#     * Logic: If rebate_type="Retail" AND after_wholesale=True Ã¢â€ â€™ "Rebate After Wholesale"
+#     * Logic: If rebate_type="Retail" AND after_wholesale=True ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Rebate After Wholesale"
 #     * Provides clearer semantic meaning to users
-#   Ã¢Å“â€¦ ORIGINAL VALUE TRACKING:
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ORIGINAL VALUE TRACKING:
 #     * Added 9 hidden input fields to track original Google Sheet values:
 #       - pf-original-discount
 #       - pf-original-vendor
@@ -764,8 +865,8 @@
 #       - pf-original-after-wholesale
 #     * Enables "Modified" status detection in future validation
 #     * Checklist can show Yellow Warning when user edits values
-#   Ã¢Å“â€¦ FUNCTION RENAME:
-#     * showPreFlightPopup() Ã¢â€ â€™ openUnifiedPreFlight()
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ FUNCTION RENAME:
+#     * showPreFlightPopup() ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ openUnifiedPreFlight()
 #     * Signifies architectural shift to unified, intelligent popup
 #     * Maintains all v12.20 date dropdown functionality
 #   - ARCHITECTURE IMPROVEMENTS:
@@ -779,16 +880,16 @@
 #     * Data integrity preserved (original values tracked)
 #     * Future checklist can warn: "You changed Discount from 20% to 25%"
 #   - TESTING PRIORITY:
-#     * Location codes expand correctly (DV Ã¢â€ â€™ Davis checkbox selected)
+#     * Location codes expand correctly (DV ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Davis checkbox selected)
 #     * Rebate After Wholesale detected and displayed
 #     * Hidden fields populated with original values
 #     * Store checkboxes auto-selected based on smart expansion
 # v12.20 CHANGELOG (PHASE 2: FRONTEND UNIFICATION):
-#   Ã¢Å“â€¦ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
 #     * Compare endpoint now calls inject_checklist_banner with mode='compare'
 #     * Checklist banner supports dual modes (create/compare)
 #     * Alert banner simplified to show only status + metadata
-#   Ã¢Å“â€¦ TASK 4 COMPLETED (Frontend Refactor):
+#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ TASK 4 COMPLETED (Frontend Refactor):
 #     * UNIFIED CREATE WORKFLOW:
 #       - Both Up-Down Planning AND ID Matcher now use /api/mis/automate-create-deal
 #       - Pre-Flight Popup date inputs converted to dropdowns (Month/Day/Year)
@@ -798,7 +899,7 @@
 #       - Start/End Date now use dropdown selectors instead of text inputs
 #       - Month: Jan-Dec dropdown
 #       - Day: 1-31 dropdown (auto-populated)
-#       - Year: Current year Ã‚Â±2 years
+#       - Year: Current year ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years
 #       - Auto-initialization from data.start_date/end_date (MM/DD/YY format)
 #     * ID MATCHER CREATE BUTTON:
 #       - Now reads all form values (Weekday, Category, Locations, etc.)
@@ -813,8 +914,8 @@
 #   - REMOVED ENDPOINTS:
 #     * /api/mis/create-deal (legacy ID Matcher endpoint) - no longer called
 #   - TESTING PRIORITY:
-#     * Up-Down Planning Create button Ã¢â€ â€™ Pre-Flight popup Ã¢â€ â€™ Checklist appears
-#     * ID Matcher Create button Ã¢â€ â€™ Pre-Flight popup Ã¢â€ â€™ Checklist appears
+#     * Up-Down Planning Create button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pre-Flight popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist appears
+#     * ID Matcher Create button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pre-Flight popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist appears
 #     * Date dropdowns populate correctly from Google Sheet dates
 #     * All field validations work consistently
 # v12.19 CHANGELOG (PHASE 1: BACKEND API WIRING):
@@ -2184,6 +2285,10 @@ def format_location_set(stores, original_weekly_locations=""):
 MIS_REPORTS_DIR = REPORTS_DIR / 'MIS_CSV_REPORTS'
 MIS_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
+# v12.25.0: Audit Reports Directory (for audit state files and exports)
+AUDIT_REPORTS_DIR = REPORTS_DIR / 'AUDIT_REPORTS'
+AUDIT_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
 # Blaze Exports Directory (for Blaze-generated inventory reports)
 BLAZE_REPORTS_DIR = REPORTS_DIR / 'BLAZE_CSV_REPORTS'
 INVENTORY_DIR = BLAZE_REPORTS_DIR / 'INVENTORY'
@@ -2217,7 +2322,7 @@ def load_sync_keys(store_name: str) -> dict | None:
     """
     try:
         if not SYNC_KEYS_FILE.exists():
-            print(f"[ECOM-SYNC] ⚠️ Sync keys file not found: {SYNC_KEYS_FILE}")
+            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â Sync keys file not found: {SYNC_KEYS_FILE}")
             return None
         
         with open(SYNC_KEYS_FILE, 'r') as f:
@@ -2227,24 +2332,24 @@ def load_sync_keys(store_name: str) -> dict | None:
         store_upper = store_name.upper().strip()
         
         if store_upper not in all_keys:
-            print(f"[ECOM-SYNC] ⚠️ No UUID found for store: {store_name}")
+            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â No UUID found for store: {store_name}")
             return None
         
         store_data = all_keys[store_upper]
         
         # Validate required field
         if 'store_uuid' not in store_data:
-            print(f"[ECOM-SYNC] ⚠️ Missing store_uuid for store: {store_name}")
+            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â Missing store_uuid for store: {store_name}")
             return None
         
-        print(f"[ECOM-SYNC] ✅ Loaded UUID for store: {store_name}")
+        print(f"[ECOM-SYNC] Ã¢Å“â€¦ Loaded UUID for store: {store_name}")
         return store_data
     
     except json.JSONDecodeError as e:
-        print(f"[ECOM-SYNC] ❌ Invalid JSON in sync_keys.json: {e}")
+        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Invalid JSON in sync_keys.json: {e}")
         return None
     except Exception as e:
-        print(f"[ECOM-SYNC] ❌ Error loading sync keys: {e}")
+        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Error loading sync keys: {e}")
         return None
 
 
@@ -2292,7 +2397,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                 }
             }
         }
-        print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+        print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
         print(f"[ECOM-AUTH] Authenticating as: {email}")
         print(f"[ECOM-AUTH] Endpoint: {login_url}")
         print(f"[ECOM-AUTH] Content-Type: {headers['Content-Type']}")
@@ -2317,14 +2422,14 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
             auth_header = response.headers.get('Authorization')
             if auth_header:
                 token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
-                print(f"[ECOM-AUTH] ✅ Token found in Authorization header")
+                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in Authorization header")
             
             # Check Access-Token header (alternate pattern)
             if not token:
                 access_token = response.headers.get('Access-Token')
                 if access_token:
                     token = access_token
-                    print(f"[ECOM-AUTH] ✅ Token found in Access-Token header")
+                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in Access-Token header")
             
             # ===== METHOD 2: Check Response Body (multiple paths) =====
             if not token and response.text:
@@ -2335,7 +2440,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                     # PRIORITY: Check for "jwt" key (Blaze Ecom specific)
                     if 'jwt' in response_data:
                         token = response_data['jwt']
-                        print(f"[ECOM-AUTH] ✅ Token found in: jwt key")
+                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in: jwt key")
                     
                     # Path 1: data.attributes.token
                     if not token and 'data' in response_data:
@@ -2344,7 +2449,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                             if 'attributes' in data and isinstance(data['attributes'], dict):
                                 token = data['attributes'].get('token')
                                 if token:
-                                    print(f"[ECOM-AUTH] ✅ Token found in data.attributes.token")
+                                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.attributes.token")
                             
                             # Path 2: data.id (some APIs return token as ID)
                             if not token and 'id' in data:
@@ -2352,73 +2457,73 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                                 # Token IDs are typically long strings
                                 if isinstance(potential_token, str) and len(potential_token) > 20:
                                     token = potential_token
-                                    print(f"[ECOM-AUTH] ✅ Token found in data.id")
+                                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.id")
                             
                             # Path 3: data.token
                             if not token and 'token' in data:
                                 token = data['token']
-                                print(f"[ECOM-AUTH] ✅ Token found in data.token")
+                                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.token")
                     
                     # Path 4: meta.token
                     if not token and 'meta' in response_data:
                         meta = response_data['meta']
                         if isinstance(meta, dict) and 'token' in meta:
                             token = meta['token']
-                            print(f"[ECOM-AUTH] ✅ Token found in meta.token")
+                            print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in meta.token")
                     
                     # Path 5: top-level token
                     if not token and 'token' in response_data:
                         token = response_data['token']
-                        print(f"[ECOM-AUTH] ✅ Token found at top level")
+                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found at top level")
                     
                     # Path 6: access_token (OAuth style)
                     if not token and 'access_token' in response_data:
                         token = response_data['access_token']
-                        print(f"[ECOM-AUTH] ✅ Token found in access_token")
+                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in access_token")
                         
                 except json.JSONDecodeError as e:
-                    print(f"[ECOM-AUTH] ⚠️ Could not parse JSON response: {e}")
+                    print(f"[ECOM-AUTH] Ã¢Å¡Â Ã¯Â¸Â Could not parse JSON response: {e}")
             
             if token:
-                print(f"[ECOM-AUTH] ✅ Token acquired (length: {len(token)})")
-                print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token acquired (length: {len(token)})")
+                print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
                 return token, None
             else:
-                print(f"[ECOM-AUTH] ⚠️ 200 OK but no token found anywhere!")
-                print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+                print(f"[ECOM-AUTH] Ã¢Å¡Â Ã¯Â¸Â 200 OK but no token found anywhere!")
+                print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
                 return None, "Authentication succeeded but no token in response"
         
         elif response.status_code == 401:
-            print(f"[ECOM-AUTH] ❌ Invalid credentials (401)")
+            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Invalid credentials (401)")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return None, "Invalid Blaze credentials"
         
         elif response.status_code == 403:
-            print(f"[ECOM-AUTH] ❌ Access forbidden")
-            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Access forbidden")
+            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return None, "Access forbidden - check account permissions"
         
         elif response.status_code == 422:
-            print(f"[ECOM-AUTH] ❌ Unprocessable Entity (422) - payload format issue")
+            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Unprocessable Entity (422) - payload format issue")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return None, "Payload format rejected by API"
         
         else:
             error_text = response.text[:300] if response.text else 'No response body'
-            print(f"[ECOM-AUTH] ❌ Auth failed: {response.status_code} - {error_text}")
-            print(f"[ECOM-AUTH] ═══════════════════════════════════════")
+            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Auth failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return None, f"Auth failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-AUTH] ❌ Request timed out")
+        print("[ECOM-AUTH] Ã¢ÂÅ’ Request timed out")
         return None, "Authentication timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-AUTH] ❌ Connection error: {e}")
+        print(f"[ECOM-AUTH] Ã¢ÂÅ’ Connection error: {e}")
         return None, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-AUTH] ❌ Unexpected error: {e}")
+        print(f"[ECOM-AUTH] Ã¢ÂÅ’ Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return None, f"Auth error: {str(e)}"
@@ -2473,38 +2578,38 @@ def trigger_ecom_sync(store_uuid: str, token: str) -> tuple[bool, str]:
         
         if response.status_code in [200, 201, 202]:
             response_data = response.json() if response.text else {}
-            print(f"[ECOM-SYNC] ✅ Sync triggered successfully")
+            print(f"[ECOM-SYNC] Ã¢Å“â€¦ Sync triggered successfully")
             return True, "Sync request accepted"
         
         elif response.status_code == 401:
-            print(f"[ECOM-SYNC] ❌ Token expired or invalid")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Token expired or invalid")
             return False, "Token expired - try again"
         
         elif response.status_code == 403:
-            print(f"[ECOM-SYNC] ❌ Forbidden - no permission for this store")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Forbidden - no permission for this store")
             return False, "No permission for this store"
         
         elif response.status_code == 404:
-            print(f"[ECOM-SYNC] ❌ Store not found")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Store not found")
             return False, "Store UUID not found"
         
         elif response.status_code == 429:
-            print(f"[ECOM-SYNC] ❌ Rate limited")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Rate limited")
             return False, "Rate limited - wait before retrying"
         
         else:
             error_text = response.text[:300] if response.text else 'No details'
-            print(f"[ECOM-SYNC] ❌ Sync failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Sync failed: {response.status_code} - {error_text}")
             return False, f"Sync failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-SYNC] ❌ Request timed out")
+        print("[ECOM-SYNC] Ã¢ÂÅ’ Request timed out")
         return False, "Sync request timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-SYNC] ❌ Connection error: {e}")
+        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Connection error: {e}")
         return False, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-SYNC] ❌ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Unexpected error: {e}")
         return False, f"Sync error: {str(e)}"
 
 # Default Tax Rates (Hardcoded - can be overridden via tax_config.json)
@@ -7541,6 +7646,7 @@ HTML_TEMPLATE = r"""
             <button class="sub-nav-btn" onclick="switchMISTab('id-match', this)">ID Matcher - Google Sheet > MIS CSV</button>
             <button class="sub-nav-btn" onclick="switchMISTab('cleanup-audit', this)" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">&#x1F9F9; Cleanup Audit</button>
             <button class="sub-nav-btn" onclick="switchMISTab('split-audit', this)" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">&#x2702; Up-Down Planning</button>
+            <button class="sub-nav-btn" onclick="switchMISTab('comp-audit', this)" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none;"><i class="bi bi-clipboard-check"></i> Comprehensive Audit</button>
             <button class="sub-nav-btn" onclick="switchMISTab('conflict', this)">Conflict Audit - Active</button>
             <button id="reinject-validation-btn" onclick="reinjectValidation()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Re-inject validation code into MIS browser tab after page refresh">&#x1F504; Re-inject Validation</button>
         </div>
@@ -7692,7 +7798,7 @@ HTML_TEMPLATE = r"""
 
 
                 <div class="d-grid gap-2">
-                    <button class="btn btn-success btn-lg fw-bold" onclick="initializeAllSystems()">
+                    <button class="btn btn-success btn-lg fw-bold" onclick="initializeAllSystems(this)">
                         <i class="bi bi-play-circle-fill"></i> Initialize Browser & Login to Both Systems
                     </button>
                     <div id="init-status" class="text-center mt-2"></div>
@@ -8042,6 +8148,178 @@ HTML_TEMPLATE = r"""
                                     <!-- Final verification results will be injected here -->
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- v12.25.0: COMPREHENSIVE AUDIT -->
+                <!-- ============================================ -->
+                <div id="comp-audit-section" class="sub-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 style="color: #1a1a1a; font-weight: bold;">
+                            <i class="bi bi-clipboard-check" style="color: #11998e;"></i> Comprehensive Audit
+                        </h2>
+                        <span id="comp-audit-stats" class="badge bg-secondary fs-6">Ready</span>
+                    </div>
+
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-clipboard-check"></i> 
+                        <strong>Comprehensive Audit:</strong> Systematic verification of Google Sheet deals against MIS CSV and Blaze discounts.
+                        <br><small class="text-muted">Sequential audit workflow with progress tracking, notes, and export capability.</small>
+                    </div>
+                    
+                    <!-- Audit Controls -->
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-light">
+                            <strong><i class="bi bi-sliders"></i> Audit Configuration</strong>
+                        </div>
+                        <div class="card-body">
+                            <!-- Audit Mode Toggle -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Audit Mode</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="auditMode" id="auditModeFull" value="full" checked onchange="toggleAuditMode()">
+                                        <label class="btn btn-outline-primary" for="auditModeFull">Full Audit</label>
+                                        <input type="radio" class="btn-check" name="auditMode" id="auditModeCustom" value="custom" onchange="toggleAuditMode()">
+                                        <label class="btn btn-outline-primary" for="auditModeCustom">Custom Audit</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Audit Options (hidden by default) -->
+                            <div id="customAuditOptions" style="display:none;">
+                                <hr>
+                                <div class="row mb-3">
+                                    <!-- Section Filter -->
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Sections</label>
+                                        <div class="d-flex gap-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="auditSectionWeekly" value="weekly" checked>
+                                                <label class="form-check-label" for="auditSectionWeekly">Weekly</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="auditSectionMonthly" value="monthly" checked>
+                                                <label class="form-check-label" for="auditSectionMonthly">Monthly</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="auditSectionSale" value="sale" checked>
+                                                <label class="form-check-label" for="auditSectionSale">Sale</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Weekday Filter -->
+                                    <div class="col-md-5">
+                                        <label class="form-label fw-bold">Weekdays</label>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekMon" value="mon">
+                                                <label class="form-check-label" for="auditWeekMon">Mon</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekTue" value="tue">
+                                                <label class="form-check-label" for="auditWeekTue">Tue</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekWed" value="wed">
+                                                <label class="form-check-label" for="auditWeekWed">Wed</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekThu" value="thu">
+                                                <label class="form-check-label" for="auditWeekThu">Thu</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekFri" value="fri">
+                                                <label class="form-check-label" for="auditWeekFri">Fri</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekSat" value="sat">
+                                                <label class="form-check-label" for="auditWeekSat">Sat</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input audit-weekday-check" type="checkbox" id="auditWeekSun" value="sun">
+                                                <label class="form-check-label" for="auditWeekSun">Sun</label>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-outline-secondary btn-sm mt-2" onclick="toggleWeekendAudit()">
+                                            <i class="bi bi-calendar-weekend"></i> Weekend Toggle
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Date Picker -->
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Specific Date</label>
+                                        <input type="date" id="auditSpecificDate" class="form-control">
+                                        <small class="text-muted">Filter deals active on this date</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Load/Start Buttons -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" onclick="loadAuditDeals()">
+                                <i class="bi bi-arrow-repeat"></i> Load Deals
+                            </button>
+                            <button id="startAuditBtn" class="btn btn-success" onclick="startSequentialAudit()" disabled>
+                                <i class="bi bi-play-fill"></i> Start Audit
+                            </button>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span id="auditDealCount" class="badge bg-secondary fs-6">No deals loaded</span>
+                            <button id="exportAuditBtn" class="btn btn-outline-info btn-sm" onclick="exportAuditReport()" disabled>
+                                <i class="bi bi-download"></i> Export Report
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Audit Overview/Deal Table -->
+                    <div id="auditOverviewContainer" style="display:none;">
+                        <!-- Summary Counts -->
+                        <div class="row mb-3" id="auditSummaryCounts">
+                            <!-- Will be populated by JS -->
+                        </div>
+                        
+                        <!-- Scrollable Deal Table -->
+                        <div class="scrollable-table-container" style="max-height:600px; overflow-y:auto;">
+                            <table class="table table-sm table-hover table-bordered" id="auditDealsTable" style="font-size:0.85em;">
+                                <thead class="sticky-top" style="background:#e9ecef; color:#212529;">
+                                    <tr>
+                                        <th>Row</th>
+                                        <th>Brand</th>
+                                        <th style="color:#6c757d;">Linked</th>
+                                        <th>Weekday</th>
+                                        <th>Notes</th>
+                                        <th>Deal Info</th>
+                                        <th>Discount</th>
+                                        <th>Vendor %</th>
+                                        <th>Locations</th>
+                                        <th>Categories</th>
+                                        <th>Status</th>
+                                        <th>MIS ID</th>
+                                        <th>Audit Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditDealsTableBody">
+                                    <!-- Populated by loadAuditDeals() -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Initial placeholder -->
+                    <div id="auditPlaceholder">
+                        <div class="text-center p-4 border rounded bg-light">
+                            <i class="bi bi-clipboard-check" style="font-size: 3em; color: #6c757d;"></i>
+                            <h5 class="mt-3">Ready to Audit</h5>
+                            <p class="text-muted mb-0">Click "Load Deals" to populate the audit table from ID Matcher data.</p>
+                            <small class="text-muted">Make sure you've run the ID Matcher first to load deal data.</small>
                         </div>
                     </div>
                 </div>
@@ -10176,7 +10454,7 @@ HTML_TEMPLATE = r"""
                 if (!locationStr) return [];
                 
                 // Handle "All Locations Except:" logic
-                // Example: "All Locations Except: Davis, Hawthorne" Ã¢â€ â€™ Returns 10 stores (all except Davis, Hawthorne)
+                // Example: "All Locations Except: Davis, Hawthorne" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Returns 10 stores (all except Davis, Hawthorne)
                 if (locationStr.toLowerCase().includes('all locations')) {
                     if (locationStr.toLowerCase().includes('except')) {
                         // v12.21.4: FIXED - Return all stores EXCEPT the listed ones
@@ -10200,7 +10478,7 @@ HTML_TEMPLATE = r"""
                                 .map(s => s.trim())
                                 .filter(s => s.length > 0);  // Remove empty strings
                             
-                            // Step 3: Expand exception codes (e.g., "DV" Ã¢â€ â€™ "Davis")
+                            // Step 3: Expand exception codes (e.g., "DV" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Davis")
                             const exceptions = exceptionsRaw.map(code => 
                                 locationCodeMap[code.toLowerCase()] || code
                             );
@@ -10219,24 +10497,24 @@ HTML_TEMPLATE = r"""
                                     const excLower = exc.toLowerCase();
                                     const matches = excLower === storeLower;
                                     if (matches) {
-                                        console.log(`  Ã¢ÂÅ’ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                        console.log(`  ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "${store}" (matches exception "${exc}")`);
                                     }
                                     return matches;
                                 });
                                 
                                 if (!isExcluded) {
-                                    console.log(`  Ã¢Å“â€¦ KEEPING: "${store}"`);
+                                    console.log(`  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "${store}"`);
                                 }
                                 
                                 return !isExcluded;
                             });
                             
                             console.log('  Final Result (Master - Exceptions):', result);
-                            console.log(`  Summary: ${masterList.length} total Ã¢â€ â€™ ${exceptions.length} excluded Ã¢â€ â€™ ${result.length} remaining`);
+                            console.log(`  Summary: ${masterList.length} total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ${exceptions.length} excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ${result.length} remaining`);
                             return result;
                         }
                     }
-                    // Just "All Locations" with no exceptions Ã¢â€ â€™ return empty array (auto-selects all)
+                    // Just "All Locations" with no exceptions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ return empty array (auto-selects all)
                     console.log('[SMART-LOCATION] All Locations (no exceptions) - returning empty array');
                     return [];
                 }
@@ -10248,7 +10526,7 @@ HTML_TEMPLATE = r"""
                     return locationCodeMap[codeLower] || code; // Use mapping or original if not found
                 });
                 
-                console.log('[SMART-LOCATION] Expanded:', locationStr, 'Ã¢â€ â€™', expanded);
+                console.log('[SMART-LOCATION] Expanded:', locationStr, 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', expanded);
                 return expanded;
             }
             
@@ -10371,7 +10649,7 @@ HTML_TEMPLATE = r"""
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
                     if (sel) {
-                        console.log(`[LINKED-BRAND-DROPDOWN] Ã¢Å“â€¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                        console.log(`[LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
                     }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
@@ -10432,7 +10710,7 @@ HTML_TEMPLATE = r"""
             
             document.body.appendChild(popup);
             
-            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current Ã‚Â±2 years)
+            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years)
             const currentYear = new Date().getFullYear();
             const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
             
@@ -12244,8 +12522,8 @@ HTML_TEMPLATE = r"""
             };
             
             // v12.1: Get tab name for month/year parsing
-            const currentTabName = document.getElementById('sheet-select') ? 
-                document.getElementById('sheet-select').options[document.getElementById('sheet-select').selectedIndex]?.text || '' : '';
+            // v12.24.8: Fixed element ID from 'sheet-select' to 'mis-tab'
+            const currentTabName = document.getElementById('mis-tab')?.value || '';
             
             // v12.1: Parse month/year from tab name (e.g., "January 2026")
             const parseTabMonthYear = (tabName) => {
@@ -12594,7 +12872,7 @@ HTML_TEMPLATE = r"""
             // --- v12.24.8: ASSIGNED MIS ID SECTION (supports multiple IDs, proper comparison) ---
             const assignedMisIdRaw = match.current_sheet_id ? String(match.current_sheet_id).trim() : '';
             
-            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" → "12345")
+            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" Ã¢â€ â€™ "12345")
             const cleanMisId = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -12608,7 +12886,7 @@ HTML_TEMPLATE = r"""
                 return str;
             };
             
-            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" → "W1")
+            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" Ã¢â€ â€™ "W1")
             const extractTag = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -12617,9 +12895,24 @@ HTML_TEMPLATE = r"""
             };
             
             // v12.24.8: Parse multiple MIS IDs from cell (line-separated or tag-detected)
+            // v12.25.2: Added STIIIZY ignore logic
             const parseMultipleMisIds = (rawValue) => {
                 if (!rawValue) return [];
                 const str = String(rawValue).trim();
+                
+                // v12.25.2: Ignore known notes/non-ID text
+                const ignorePhrases = [
+                    'stiiizy monthly + weekly deal planner',
+                    'stiiizy monthly+ weekly deal planner',
+                    'stiiizy monthly and weekly deal planner',
+                    'deal planner'
+                ];
+                const lowerStr = str.toLowerCase();
+                // Check if entire string is just a note to ignore
+                if (ignorePhrases.some(phrase => lowerStr === phrase || lowerStr.includes(phrase) && !/\d/.test(str))) {
+                    return [];
+                }
+                
                 // Split by newlines first
                 let parts = str.split(/\n|\r\n|\r/).map(p => p.trim()).filter(p => p);
                 // If only one part, check if it contains multiple tagged IDs (space-separated tags)
@@ -12630,7 +12923,14 @@ HTML_TEMPLATE = r"""
                         parts = multiTagMatch;
                     }
                 }
-                return parts;
+                
+                // v12.25.2: Filter out parts that are just notes (no digits)
+                return parts.filter(p => {
+                    const lower = p.toLowerCase();
+                    if (ignorePhrases.some(phrase => lower.includes(phrase))) return false;
+                    if (!/\d/.test(p)) return false;
+                    return true;
+                });
             };
             
             // v12.24.8: Enhanced comparison helpers
@@ -12666,76 +12966,93 @@ HTML_TEMPLATE = r"""
             };
             
             // v12.24.8: Category comparison - handles "All", blank=All, specific lists, "All Except"
+            // v12.25.0: Category comparison - SET-BASED (order independent) with NaN/blank = All
             const getCategoryMatchStyle = (sheetCategory, misCategory) => {
                 const sheetCat = String(sheetCategory || '').toLowerCase().trim();
                 const misCat = String(misCategory || '').toLowerCase().trim();
                 
-                // Normalize "all" values
+                // v12.25.0: Treat blank/empty/NaN as "All" (universal match)
                 const isSheetAll = !sheetCat || sheetCat === 'all' || sheetCat === '-' || 
-                                   sheetCat === 'all categories' || sheetCat.includes('all categories');
+                                   sheetCat === 'all categories' || sheetCat.includes('all categories') ||
+                                   sheetCat === 'nan' || sheetCat === 'null' || sheetCat === 'undefined';
                 const isMisAll = !misCat || misCat === 'all' || misCat === '-' || 
-                                 misCat === 'n/a' || misCat === 'nan' || misCat === 'all categories';
+                                 misCat === 'n/a' || misCat === 'nan' || misCat === 'all categories' ||
+                                 misCat === 'null' || misCat === 'undefined';
                 
                 // Check for "All Except" pattern
                 const sheetExceptMatch = sheetCat.match(/all\s*(?:categories\s*)?except[:\s]*(.+)/i);
                 const misExceptMatch = misCat.match(/all\s*(?:categories\s*)?except[:\s]*(.+)/i);
                 
-                // Both are "All"
+                // Both are "All" - GREEN
                 if (isSheetAll && isMisAll) return 'background:#d4edda; color:#155724;';
                 
-                // Sheet is "All Except X" - MIS should list everything except X
+                // Sheet is "All Except X" - compare exclusions as sets
                 if (sheetExceptMatch) {
-                    // For "All Except", we'd need to compare what's excluded
-                    // Simplified: if both have "except" and same exceptions, match
                     if (misExceptMatch) {
-                        const sheetExcepts = sheetExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).sort();
-                        const misExcepts = misExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).sort();
-                        return JSON.stringify(sheetExcepts) === JSON.stringify(misExcepts) 
-                            ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                        const sheetExcepts = new Set(sheetExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                        const misExcepts = new Set(misExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                        // Set equality check
+                        const setsEqual = sheetExcepts.size === misExcepts.size && 
+                                         [...sheetExcepts].every(x => misExcepts.has(x));
+                        return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
                     }
                     return 'background:#fff3cd; color:#856404;';
                 }
                 
-                // One is All, other is specific - mismatch
+                // One is All, other is specific - YELLOW (mismatch)
                 if (isSheetAll !== isMisAll) return 'background:#fff3cd; color:#856404;';
                 
-                // Both are specific lists - compare
-                const sheetCats = sheetCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
-                const misCats = misCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
-                return JSON.stringify(sheetCats) === JSON.stringify(misCats) 
-                    ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                // v12.25.0: Both are specific lists - SET-BASED comparison (order independent)
+                const sheetSet = new Set(sheetCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                const misSet = new Set(misCat.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                
+                // Set equality: same size and all elements match
+                const setsEqual = sheetSet.size === misSet.size && [...sheetSet].every(x => misSet.has(x));
+                return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
             };
             
-            // v12.24.8: Location comparison - same logic as category
+            // v12.25.0: Location comparison - SET-BASED (order independent) with NaN/blank = All
             const getLocationMatchStyle = (sheetLocations, misLocations) => {
                 const sheetLoc = String(sheetLocations || '').toLowerCase().trim();
                 const misLoc = String(misLocations || '').toLowerCase().trim();
                 
-                // Normalize "all" values
+                // v12.25.0: Treat blank/empty/NaN as "All" (universal match)
                 const isSheetAll = !sheetLoc || sheetLoc === 'all' || sheetLoc === '-' || 
-                                   sheetLoc === 'all locations' || sheetLoc.includes('all locations');
+                                   sheetLoc === 'all locations' || sheetLoc.includes('all locations') ||
+                                   sheetLoc === 'nan' || sheetLoc === 'null' || sheetLoc === 'undefined';
                 const isMisAll = !misLoc || misLoc === 'all' || misLoc === '-' || 
-                                 misLoc === 'n/a' || misLoc === 'nan' || misLoc === 'all locations';
+                                 misLoc === 'n/a' || misLoc === 'nan' || misLoc === 'all locations' ||
+                                 misLoc === 'null' || misLoc === 'undefined';
                 
                 // Check for "All Except" pattern
                 const sheetExceptMatch = sheetLoc.match(/all\s*(?:locations\s*)?except[:\s]*(.+)/i);
+                const misExceptMatch = misLoc.match(/all\s*(?:locations\s*)?except[:\s]*(.+)/i);
                 
-                // Both are "All"
+                // Both are "All" - GREEN
                 if (isSheetAll && isMisAll) return 'background:#d4edda; color:#155724;';
                 
-                // Sheet is "All Except X"
+                // Sheet is "All Except X" - compare exclusions as sets
                 if (sheetExceptMatch) {
-                    return 'background:#fff3cd; color:#856404;'; // Simplified - would need full location list to verify
+                    if (misExceptMatch) {
+                        const sheetExcepts = new Set(sheetExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                        const misExcepts = new Set(misExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                        const setsEqual = sheetExcepts.size === misExcepts.size && 
+                                         [...sheetExcepts].every(x => misExcepts.has(x));
+                        return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                    }
+                    return 'background:#fff3cd; color:#856404;';
                 }
                 
-                // One is All, other is specific - mismatch
+                // One is All, other is specific - YELLOW (mismatch)
                 if (isSheetAll !== isMisAll) return 'background:#fff3cd; color:#856404;';
                 
-                // Both are specific lists - compare
-                const sheetLocs = sheetLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
-                const misLocs = misLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s).sort();
-                return JSON.stringify(sheetLocs) === JSON.stringify(misLocs) 
-                    ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                // v12.25.0: Both are specific lists - SET-BASED comparison (order independent)
+                const sheetSet = new Set(sheetLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                const misSet = new Set(misLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
+                
+                // Set equality: same size and all elements match
+                const setsEqual = sheetSet.size === misSet.size && [...sheetSet].every(x => misSet.has(x));
+                return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
             };
             
             // v12.24.8: Parse multiple assigned MIS IDs
@@ -12745,7 +13062,7 @@ HTML_TEMPLATE = r"""
                 html += `
                     <div style="margin-bottom:20px;">
                         <h6 style="color:#198754; margin-bottom:10px; border-bottom:2px solid #198754; padding-bottom:5px;">
-                            ✅ Currently Assigned in Google Sheet
+                            Ã¢Å“â€¦ Currently Assigned in Google Sheet
                             ${assignedMisIds.length > 1 ? '<small style="color:#6c757d; font-weight:normal;"> (' + assignedMisIds.length + ' IDs)</small>' : ''}
                         </h6>
                         <div style="overflow-x:auto;">
@@ -12853,7 +13170,7 @@ HTML_TEMPLATE = r"""
                                             <select id="end-day-assigned-${aIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                             <select id="end-year-assigned-${aIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                             <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate('assigned', ${aIdx}, '${cleanId}')">Update</button>
-                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">✕</button>
+                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">Ã¢Å“â€¢</button>
                                         </div>
                                     </div>
                                 </td>
@@ -12992,7 +13309,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠️ Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â Ã¯Â¸Â Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -13010,7 +13327,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">⚠️ Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â Ã¯Â¸Â Needs Linked Brand</span>';
                     }
                 }
                 
@@ -13064,7 +13381,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">✕</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">Ã¢Å“â€¢</button>
                                 </div>
                             </div>
                         </td>
@@ -13288,7 +13605,7 @@ HTML_TEMPLATE = r"""
                     // Update the display in the Suggestions popup
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">âœ… ${newEndDate}</span>`;
+                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${newEndDate}</span>`;
                     }
                     
                     // Hide the editor
@@ -13297,7 +13614,7 @@ HTML_TEMPLATE = r"""
                         editorEl.style.display = 'none';
                     }
                     
-                    alert('âœ… End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                 } else {
                     alert('Error updating end date: ' + (data.error || 'Unknown error'));
                 }
@@ -13311,7 +13628,7 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        // v12.21: Adapter function for ID Matcher Ã¢â€ â€™ Unified Pre-Flight
+        // v12.21: Adapter function for ID Matcher ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Unified Pre-Flight
         async function useUnifiedPreFlightForIDMatcher(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) {
@@ -13462,7 +13779,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
             
-            console.log('[ID-MATCHER Ã¢â€ â€™ PRE-FLIGHT] Converted data:', preFlightData);
+            console.log('[ID-MATCHER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ PRE-FLIGHT] Converted data:', preFlightData);
             
             // Call unified Pre-Flight popup
             openUnifiedPreFlight(preFlightData, match.google_row, match.section_type || 'weekly', null, null);
@@ -15860,8 +16177,8 @@ function handleMISCSV(input) {
             }
         }
 
-        async function initializeAllSystems() {
-            const btn = event.target;
+        async function initializeAllSystems(btnElement) {
+            const btn = btnElement;
             btn.disabled = true;
             btn.textContent = 'Initializing...';
             
@@ -16570,6 +16887,1527 @@ async function runAudit() {
             btn.innerHTML = originalText;
         }
     }
+
+// ============================================
+// v12.25.0: COMPREHENSIVE AUDIT TAB
+// ============================================
+
+// Global state for comprehensive audit
+let comprehensiveAuditState = {
+    deals: [],           // Filtered deals to audit
+    currentIndex: 0,     // Current position in sequential audit
+    results: {},         // { rowNumber: { status, notes, auditedAt } }
+    settings: {
+        mode: 'full',    // 'full' or 'custom'
+        sections: ['weekly', 'monthly', 'sale'],
+        weekdays: [],
+        specificDate: null
+    },
+    auditId: null,
+    tabName: '',
+    startedAt: null,
+    inProgress: false
+};
+
+// Toggle audit mode (Full vs Custom)
+function toggleAuditMode() {
+    const mode = document.querySelector('input[name="auditMode"]:checked').value;
+    const customOptions = document.getElementById('customAuditOptions');
+    
+    comprehensiveAuditState.settings.mode = mode;
+    customOptions.style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+// Toggle weekend (Sat+Sun) checkboxes
+function toggleWeekendAudit() {
+    const satCheck = document.getElementById('auditWeekSat');
+    const sunCheck = document.getElementById('auditWeekSun');
+    const weekendOn = !(satCheck.checked && sunCheck.checked);
+    satCheck.checked = weekendOn;
+    sunCheck.checked = weekendOn;
+}
+
+// Get selected sections from checkboxes
+function getSelectedAuditSections() {
+    const sections = [];
+    if (document.getElementById('auditSectionWeekly').checked) sections.push('weekly');
+    if (document.getElementById('auditSectionMonthly').checked) sections.push('monthly');
+    if (document.getElementById('auditSectionSale').checked) sections.push('sale');
+    return sections;
+}
+
+// Get selected weekdays from checkboxes
+function getSelectedAuditWeekdays() {
+    const weekdays = [];
+    document.querySelectorAll('.audit-weekday-check:checked').forEach(cb => {
+        weekdays.push(cb.value);
+    });
+    return weekdays;
+}
+
+// Check if a date falls on selected weekdays
+function dateMatchesWeekdays(dateStr, selectedWeekdays) {
+    if (!dateStr || selectedWeekdays.length === 0) return true;
+    
+    // Parse date
+    const parsed = parseDateString(dateStr);
+    if (!parsed) return true;
+    
+    const date = new Date(parsed.year, parsed.month, parsed.day);
+    const dayIndex = date.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    return selectedWeekdays.includes(dayNames[dayIndex]);
+}
+
+// Parse date string to {year, month, day}
+function parseDateString(dateStr) {
+    if (!dateStr || dateStr === '-' || dateStr === 'N/A') return null;
+    // Try YYYY-MM-DD
+    let m = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return { year: parseInt(m[1]), month: parseInt(m[2]) - 1, day: parseInt(m[3]) };
+    // Try MM/DD/YYYY
+    m = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return { year: parseInt(m[3]), month: parseInt(m[1]) - 1, day: parseInt(m[2]) };
+    // Try MM/DD/YY
+    m = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if (m) return { year: 2000 + parseInt(m[3]), month: parseInt(m[1]) - 1, day: parseInt(m[2]) };
+    return null;
+}
+
+// Check if deal matches weekday filter (applies to all section types)
+// v12.25.0: Weekly deals + Specific Date fix
+// Weekly deals should be included if:
+// 1. Weekly section toggle is ON
+// 2. AND deal weekday matches selected weekday toggle (if any)
+// NOTE: Weekly deals run every week, so specific date only filters by weekday match
+function dealMatchesWeekdayFilter(match, selectedWeekdays) {
+    if (selectedWeekdays.length === 0) return true; // No filter = all pass
+    
+    const section = (match.section || '').toLowerCase();
+    
+    // Weekly deals: Check weekday field directly
+    if (section.includes('weekly')) {
+        const dealWeekday = (match.weekday || '').toLowerCase().substring(0, 3);
+        return selectedWeekdays.includes(dealWeekday);
+    }
+    
+    // Monthly/Sale deals: The "weekday" column contains day-of-month values like "10th" or "10th, 15th"
+    // We need to calculate what weekday those dates fall on for the current tab month
+    // NOTE (FUTURE CHANGE): This column format may change - all logic referencing this will need updating
+    if (section.includes('monthly') || section.includes('sale')) {
+        const weekdayCol = match.weekday || '';
+        
+        // If it's already a weekday name (Thu, Mon, etc), use it directly
+        const weekdayNames = ['mon','tue','wed','thu','fri','sat','sun'];
+        const lowerWeekday = weekdayCol.toLowerCase();
+        if (weekdayNames.some(d => lowerWeekday.includes(d))) {
+            const dealWeekday = lowerWeekday.substring(0, 3);
+            return selectedWeekdays.includes(dealWeekday);
+        }
+        
+        // Parse day-of-month values like "10th", "15th", "10th, 15th"
+        const dayNumbers = parseDayOfMonthValues(weekdayCol);
+        if (dayNumbers.length > 0) {
+            // Get current tab's month/year context
+            const tabName = document.getElementById('mis-tab')?.value || '';
+            const monthYear = parseTabNameToMonthYear(tabName);
+            
+            if (monthYear) {
+                // Check if any of the day-of-month dates fall on a selected weekday
+                for (const dayNum of dayNumbers) {
+                    const dateObj = new Date(monthYear.year, monthYear.month, dayNum);
+                    const dayIndex = dateObj.getDay();
+                    const dayName = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][dayIndex];
+                    if (selectedWeekdays.includes(dayName)) {
+                        return true;
+                    }
+                }
+                return false; // None of the dates matched selected weekdays
+            }
+        }
+        
+        // Fallback: if has start_date, check if that date matches
+        if (match.start_date) {
+            return dateMatchesWeekdays(match.start_date, selectedWeekdays);
+        }
+    }
+    
+    return true;
+}
+
+// v12.25.0: Parse day-of-month values from "10th", "15th", "10th, 15th" format
+// NOTE (FUTURE CHANGE): This column format may change - update this function when it does
+function parseDayOfMonthValues(str) {
+    if (!str) return [];
+    const dayNumbers = [];
+    // Match patterns like "10th", "15th", "1st", "2nd", "3rd", "21st", etc.
+    const matches = String(str).match(/(\d{1,2})(?:st|nd|rd|th)?/gi);
+    if (matches) {
+        matches.forEach(m => {
+            const num = parseInt(m.replace(/\D/g, ''), 10);
+            if (num >= 1 && num <= 31) {
+                dayNumbers.push(num);
+            }
+        });
+    }
+    return dayNumbers;
+}
+
+// v12.25.0: Parse tab name like "February 2026" to {month: 1, year: 2026}
+function parseTabNameToMonthYear(tabName) {
+    if (!tabName) return null;
+    const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+    const lower = tabName.toLowerCase();
+    
+    let monthIndex = -1;
+    for (let i = 0; i < months.length; i++) {
+        if (lower.includes(months[i])) {
+            monthIndex = i;
+            break;
+        }
+    }
+    
+    const yearMatch = tabName.match(/\d{4}/);
+    const year = yearMatch ? parseInt(yearMatch[0], 10) : new Date().getFullYear();
+    
+    if (monthIndex >= 0) {
+        return { month: monthIndex, year: year };
+    }
+    return null;
+}
+
+// v12.25.0: Check if deal matches specific date filter
+// Weekly deals: Include if the selected date's weekday matches the deal's weekday
+// Monthly/Sale deals: Include if the date falls within the deal's date range OR matches day-of-month
+function dealMatchesDateFilter(match, specificDate) {
+    if (!specificDate) return true;
+    
+    const filterDate = new Date(specificDate);
+    const section = (match.section || '').toLowerCase();
+    
+    // For Weekly deals: Check if the specific date falls on the deal's weekday
+    if (section.includes('weekly')) {
+        const dayIndex = filterDate.getDay();
+        const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const dealWeekday = (match.weekday || '').toLowerCase().substring(0, 3);
+        return dealWeekday === dayNames[dayIndex];
+    }
+    
+    // For Monthly/Sale deals: Check both date range AND day-of-month column
+    if (section.includes('monthly') || section.includes('sale')) {
+        // First check: Does the specific date match a day-of-month value in the weekday column?
+        const weekdayCol = match.weekday || '';
+        const dayNumbers = parseDayOfMonthValues(weekdayCol);
+        const filterDayOfMonth = filterDate.getDate();
+        
+        if (dayNumbers.length > 0 && dayNumbers.includes(filterDayOfMonth)) {
+            return true;
+        }
+        
+        // Second check: Does the date fall within the deal's date range?
+        if (match.start_date && match.end_date) {
+            const start = parseDateString(match.start_date);
+            const end = parseDateString(match.end_date);
+            if (start && end) {
+                const startDate = new Date(start.year, start.month, start.day);
+                const endDate = new Date(end.year, end.month, end.day);
+                return filterDate >= startDate && filterDate <= endDate;
+            }
+        }
+    }
+    
+    return true;
+}
+
+// Load deals for audit from matchesData
+function loadAuditDeals() {
+    // Check if matchesData has been populated
+    if (!matchesData || matchesData.length === 0) {
+        alert('No deals loaded. Please run the ID Matcher first to load deals.');
+        return;
+    }
+    
+    const mode = document.querySelector('input[name="auditMode"]:checked').value;
+    const sections = mode === 'custom' ? getSelectedAuditSections() : ['weekly', 'monthly', 'sale'];
+    const weekdays = mode === 'custom' ? getSelectedAuditWeekdays() : [];
+    const specificDate = mode === 'custom' ? document.getElementById('auditSpecificDate').value : null;
+    
+    // Update state
+    comprehensiveAuditState.settings = { mode, sections, weekdays, specificDate };
+    comprehensiveAuditState.tabName = document.getElementById('mis-tab')?.value || 'Unknown';
+    
+    // Filter deals based on settings
+    let filteredDeals = matchesData.filter(match => {
+        // Section filter
+        const dealSection = (match.section || '').toLowerCase();
+        const matchesSection = sections.some(s => dealSection.includes(s));
+        if (!matchesSection) return false;
+        
+        // Weekday filter (Custom mode only)
+        if (mode === 'custom' && weekdays.length > 0) {
+            if (!dealMatchesWeekdayFilter(match, weekdays)) return false;
+        }
+        
+        // Date filter (Custom mode only)
+        if (mode === 'custom' && specificDate) {
+            if (!dealMatchesDateFilter(match, specificDate)) return false;
+        }
+        
+        return true;
+    });
+    
+    // Store filtered deals with their original indices
+    comprehensiveAuditState.deals = filteredDeals.map((deal, idx) => ({
+        ...deal,
+        originalIndex: matchesData.indexOf(deal),
+        auditIndex: idx
+    }));
+    
+    // Reset audit state
+    comprehensiveAuditState.currentIndex = 0;
+    comprehensiveAuditState.results = {};
+    comprehensiveAuditState.inProgress = false;
+    
+    // Update UI
+    renderAuditOverview();
+    
+    // Enable buttons
+    document.getElementById('startAuditBtn').disabled = filteredDeals.length === 0;
+    document.getElementById('exportAuditBtn').disabled = true;
+    document.getElementById('auditDealCount').textContent = `${filteredDeals.length} deals loaded`;
+    document.getElementById('auditDealCount').className = filteredDeals.length > 0 ? 'badge bg-success fs-6' : 'badge bg-warning fs-6';
+    
+    // Hide placeholder, show overview
+    document.getElementById('auditPlaceholder').style.display = 'none';
+    document.getElementById('auditOverviewContainer').style.display = 'block';
+    
+    // Try to load any saved audit state
+    loadAuditStateFromServer();
+}
+
+// Render the audit overview table
+function renderAuditOverview() {
+    const deals = comprehensiveAuditState.deals;
+    const results = comprehensiveAuditState.results;
+    
+    // Count by section
+    const counts = { weekly: 0, monthly: 0, sale: 0, total: deals.length };
+    deals.forEach(d => {
+        const section = (d.section || '').toLowerCase();
+        if (section.includes('weekly')) counts.weekly++;
+        else if (section.includes('monthly')) counts.monthly++;
+        else if (section.includes('sale')) counts.sale++;
+    });
+    
+    // Summary counts
+    const summaryHtml = `
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body py-2">
+                    <h5 class="card-title mb-0 text-primary">${counts.weekly}</h5>
+                    <small class="text-muted">Weekly</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body py-2">
+                    <h5 class="card-title mb-0 text-success">${counts.monthly}</h5>
+                    <small class="text-muted">Monthly</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body py-2">
+                    <h5 class="card-title mb-0 text-warning">${counts.sale}</h5>
+                    <small class="text-muted">Sale</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-dark">
+                <div class="card-body py-2">
+                    <h5 class="card-title mb-0">${counts.total}</h5>
+                    <small class="text-muted">Total</small>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('auditSummaryCounts').innerHTML = summaryHtml;
+    
+    // Table rows
+    let tableHtml = '';
+    deals.forEach((deal, idx) => {
+        const result = results[deal.google_row] || {};
+        const auditStatusBadge = getAuditStatusBadge(result.status);
+        const section = (deal.section || '').toLowerCase();
+        const sectionBadge = section.includes('weekly') ? '<span class="badge bg-primary">W</span>' :
+                            section.includes('monthly') ? '<span class="badge bg-success">M</span>' :
+                            section.includes('sale') ? '<span class="badge bg-warning text-dark">S</span>' : '';
+        
+        // Multi-brand indicator
+        let brandDisplay = deal.brand || '-';
+        if (deal.is_multi_brand) {
+            brandDisplay = `<span class="badge bg-info text-dark me-1">${deal.multi_brand_index + 1}/${deal.multi_brand_total}</span> ${brandDisplay}`;
+        }
+        
+        // Linked brand
+        const linkedDisplay = deal.linked_brand ? `<small class="text-muted">${deal.linked_brand}</small>` : '-';
+        
+        // Discount display
+        let discountDisplay = '-';
+        if (deal.discount !== null && deal.discount !== undefined && deal.discount !== '') {
+            discountDisplay = `${deal.discount}%`;
+        }
+        
+        // Vendor display
+        let vendorDisplay = '-';
+        if (deal.vendor_contrib !== null && deal.vendor_contrib !== undefined && deal.vendor_contrib !== '') {
+            vendorDisplay = `${deal.vendor_contrib}%`;
+        }
+        
+        // MIS ID display - v12.25.1: Parse multiple IDs properly
+        let misIdDisplay = '<span class="text-muted">No ID</span>';
+        if (deal.current_sheet_id) {
+            const parsedIds = parseMultipleMisIdsForAudit(deal.current_sheet_id);
+            if (parsedIds.length > 0) {
+                // Create a button for each MIS ID
+                misIdDisplay = parsedIds.map(rawId => {
+                    const cleanId = cleanMisIdForAudit(rawId);
+                    return `<button class="btn btn-outline-secondary btn-sm py-0 px-1 me-1 mb-1" onclick="lookupMisId('${cleanId}')" style="font-size:0.75em;">${rawId}</button>`;
+                }).join('');
+            }
+        }
+        
+        // Confidence badge
+        const statusClass = deal.status === 'HIGH' ? 'status-high' : deal.status === 'MEDIUM' ? 'status-medium' : 'status-low';
+        
+        tableHtml += `
+            <tr data-audit-idx="${idx}" data-row="${deal.google_row}">
+                <td><button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="openSheetRow(${deal.google_row})">${deal.google_row}</button></td>
+                <td>${brandDisplay}</td>
+                <td>${linkedDisplay}</td>
+                <td>${deal.weekday || '-'}</td>
+                <td title="${deal.special_notes || ''}">${(deal.special_notes || '-').substring(0, 15)}${(deal.special_notes || '').length > 15 ? '...' : ''}</td>
+                <td title="${deal.deal_info || ''}">${(deal.deal_info || '-').substring(0, 15)}${(deal.deal_info || '').length > 15 ? '...' : ''}</td>
+                <td>${discountDisplay}</td>
+                <td>${vendorDisplay}</td>
+                <td title="${deal.locations || ''}">${(deal.locations || '-').substring(0, 15)}${(deal.locations || '').length > 15 ? '...' : ''}</td>
+                <td title="${deal.categories || ''}">${(deal.categories || '-').substring(0, 15)}${(deal.categories || '').length > 15 ? '...' : ''}</td>
+                <td><span class="badge ${statusClass}">${deal.status || '-'}</span></td>
+                <td>${misIdDisplay}</td>
+                <td>${auditStatusBadge}</td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm py-0" onclick="showAuditPopup(${idx})" title="Audit this deal">
+                        <i class="bi bi-clipboard-check"></i> Audit
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    document.getElementById('auditDealsTableBody').innerHTML = tableHtml || '<tr><td colspan="14" class="text-center text-muted">No deals match the current filters</td></tr>';
+}
+
+// Get badge for audit status
+function getAuditStatusBadge(status) {
+    if (!status) return '<span class="badge bg-secondary">Pending</span>';
+    if (status === 'verified') return '<span class="badge bg-success">âœ“ Verified</span>';
+    if (status === 'attention') return '<span class="badge bg-warning text-dark">âš  Attention</span>';
+    if (status === 'skipped') return '<span class="badge bg-secondary">â­ Skipped</span>';
+    return `<span class="badge bg-secondary">${status}</span>`;
+}
+
+// Start sequential audit
+function startSequentialAudit() {
+    const deals = comprehensiveAuditState.deals;
+    if (deals.length === 0) {
+        alert('No deals to audit.');
+        return;
+    }
+    
+    // Confirmation popup
+    const confirmMsg = `${deals.length} deals to audit - Ready?`;
+    if (!confirm(confirmMsg)) return;
+    
+    comprehensiveAuditState.inProgress = true;
+    comprehensiveAuditState.startedAt = new Date().toISOString();
+    comprehensiveAuditState.auditId = 'audit_' + Date.now();
+    
+    // Find first unaudited deal
+    let startIdx = 0;
+    for (let i = 0; i < deals.length; i++) {
+        if (!comprehensiveAuditState.results[deals[i].google_row]) {
+            startIdx = i;
+            break;
+        }
+    }
+    
+    comprehensiveAuditState.currentIndex = startIdx;
+    showAuditPopup(startIdx);
+}
+
+// Show audit popup for a specific deal
+function showAuditPopup(auditIdx) {
+    const deals = comprehensiveAuditState.deals;
+    if (auditIdx < 0 || auditIdx >= deals.length) return;
+    
+    comprehensiveAuditState.currentIndex = auditIdx;
+    const deal = deals[auditIdx];
+    const results = comprehensiveAuditState.results;
+    const existingResult = results[deal.google_row] || {};
+    
+    // Remove existing popup
+    const existingPopup = document.getElementById('comprehensive-audit-popup-overlay');
+    if (existingPopup) existingPopup.remove();
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'comprehensive-audit-popup-overlay';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); z-index: 9998;
+        display: flex; justify-content: center; align-items: center;
+    `;
+    overlay.onclick = function(e) {
+        if (e.target === overlay) {
+            if (confirm('Exit audit? Progress will be saved.')) {
+                saveAuditProgress();
+                overlay.remove();
+            }
+        }
+    };
+    
+    // Modal sizing
+    const screenWidth = window.innerWidth;
+    const modalWidth = Math.min(1600, screenWidth - 40);
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        background: #fff; padding: 0; border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        width: ${modalWidth}px; max-width: 98%; max-height: 90vh;
+        overflow-y: auto; z-index: 9999; position: relative;
+    `;
+    
+    // Build popup content
+    let html = buildAuditPopupContent(deal, auditIdx, existingResult);
+    
+    modal.innerHTML = html;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+}
+
+// Build the content for audit popup (3 sections)
+function buildAuditPopupContent(deal, auditIdx, existingResult) {
+    const deals = comprehensiveAuditState.deals;
+    const totalDeals = deals.length;
+    const progress = Math.round(((auditIdx + 1) / totalDeals) * 100);
+    
+    // Section badge
+    const section = (deal.section || '').toLowerCase();
+    const sectionBadge = section.includes('weekly') ? '<span class="badge bg-primary me-2">Weekly</span>' :
+                        section.includes('monthly') ? '<span class="badge bg-success me-2">Monthly</span>' :
+                        section.includes('sale') ? '<span class="badge bg-warning text-dark me-2">Sale</span>' : '';
+    
+    // v12.25.0: Fixed column widths for alignment between tables
+    const colWidths = {
+        row: '60px',
+        weekday: '80px',
+        brand: '140px',
+        category: '120px',
+        discount: '70px',
+        vendor: '70px',
+        locations: '120px',
+        dealInfo: '130px',
+        notes: '100px',
+        start: '90px',
+        end: '90px',
+        action: '60px'
+    };
+    
+    let html = `
+        <!-- HEADER with navigation -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 30px; border-radius: 8px 8px 0 0;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div style="flex: 1;"></div>
+                <div style="flex: 2; text-align: center;">
+                    <h3 class="mb-1" style="font-weight: bold;">
+                        <i class="bi bi-clipboard-check"></i> Audit: ${deal.brand || 'Unknown Brand'}
+                    </h3>
+                    <div>${sectionBadge}<small>Row ${deal.google_row} | Deal ${auditIdx + 1} of ${totalDeals}</small></div>
+                </div>
+                <div style="flex: 1; display: flex; justify-content: flex-end; gap: 10px; align-items: center;">
+                    <div class="progress" style="width: 120px; height: 8px;">
+                        <div class="progress-bar bg-success" style="width: ${progress}%"></div>
+                    </div>
+                    <span>${progress}%</span>
+                    <button class="btn btn-outline-light btn-sm" onclick="exitAuditPopup()">
+                        <i class="bi bi-x-lg"></i> Exit
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div style="padding: 20px;">
+    `;
+    
+    // SECTION 1: Google Sheet Data - aligned columns
+    html += `
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white">
+                <strong><i class="bi bi-file-earmark-spreadsheet"></i> Section 1: Google Sheet Data</strong>
+            </div>
+            <div class="card-body p-2">
+                <div style="overflow-x: auto;">
+                    <table class="table table-sm table-bordered mb-0" style="font-size: 0.85em; table-layout: fixed;">
+                        <thead style="background:#e9ecef; color:#212529;">
+                            <tr>
+                                <th style="width:${colWidths.row};">Row</th>
+                                <th style="width:${colWidths.weekday};">Weekday</th>
+                                <th style="width:${colWidths.brand};">Brand / Linked</th>
+                                <th style="width:${colWidths.category};">Category</th>
+                                <th style="width:${colWidths.discount};">Discount</th>
+                                <th style="width:${colWidths.vendor};">Vendor</th>
+                                <th style="width:${colWidths.locations};">Locations</th>
+                                <th style="width:${colWidths.dealInfo};">Deal Info</th>
+                                <th style="width:${colWidths.notes};">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #e7f1ff;">
+                                <td><button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openSheetRow(${deal.google_row})">${deal.google_row}</button></td>
+                                <td><strong>${deal.weekday || '-'}</strong></td>
+                                <td><strong>${deal.brand || '-'}</strong>${deal.linked_brand ? '<br><small class="text-muted">' + deal.linked_brand + '</small>' : ''}</td>
+                                <td title="${deal.categories || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.categories || '-'}</td>
+                                <td><strong>${deal.discount !== null && deal.discount !== '' ? deal.discount + '%' : '-'}</strong></td>
+                                <td>${deal.vendor_contrib !== null && deal.vendor_contrib !== '' ? deal.vendor_contrib + '%' : '-'}</td>
+                                <td title="${deal.locations || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.locations || '-'}</td>
+                                <td title="${deal.deal_info || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.deal_info || '-'}</td>
+                                <td title="${deal.special_notes || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.special_notes || '-'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // SECTION 2: Assigned MIS ID Entries
+    html += buildMISSection(deal, colWidths);
+    
+    // SECTION 3: Blaze Discounts (if assigned)
+    html += buildBlazeSection(deal);
+    
+    // Multi-brand checklist (if applicable)
+    if (deal.is_multi_brand) {
+        html += buildMultiBrandChecklist(deal);
+    }
+    
+    // Audit Actions and Notes - v12.25.0: Fixed button colors
+    html += `
+        <div class="card mt-3 border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <strong><i class="bi bi-pencil-square"></i> Audit Actions</strong>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Notes</label>
+                        <textarea id="auditNotes" class="form-control" rows="3" placeholder="Add notes about this deal...">${existingResult.notes || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Mark As</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn" style="background-color:#28a745; color:white; border-color:#28a745;" onclick="markAuditDeal(${auditIdx}, 'verified')">
+                                <i class="bi bi-check-circle"></i> Verified
+                            </button>
+                            <button class="btn" style="background-color:#fd7e14; color:white; border-color:#fd7e14;" onclick="markAuditDeal(${auditIdx}, 'attention')">
+                                <i class="bi bi-exclamation-triangle"></i> Needs Attention
+                            </button>
+                            <button class="btn" style="background-color:#6c757d; color:#212529; border-color:#6c757d;" onclick="markAuditDeal(${auditIdx}, 'skipped')">
+                                <i class="bi bi-skip-forward"></i> Skip
+                            </button>
+                        </div>
+                        <hr>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary" onclick="navigateAudit(-1)" ${auditIdx === 0 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-left"></i> Previous
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="navigateAudit(1)" ${auditIdx === totalDeals - 1 ? 'disabled' : ''}>
+                                Next <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    html += `</div>`; // Close padding div
+    
+    return html;
+}
+
+// Build MIS section of audit popup
+function buildMISSection(deal, colWidths) {
+    const assignedIdRaw = deal.current_sheet_id ? String(deal.current_sheet_id).trim() : '';
+    const suggestions = deal.suggestions || [];
+    
+    // v12.25.0: Parse multiple MIS IDs (same logic as ID Matcher)
+    // Filter out "STIIIZY MONTHLY + WEEKLY DEAL PLANNER" as it's a note, not an MIS ID
+    const assignedIds = parseMultipleMisIdsForAudit(assignedIdRaw);
+    const hasAssignedIds = assignedIds.length > 0;
+    
+    let html = `
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white d-flex justify-content-between">
+                <strong><i class="bi bi-database"></i> Section 2: Assigned MIS ID Entries</strong>
+                ${hasAssignedIds ? `<span class="badge bg-light text-dark">Assigned: ${assignedIds.join(', ')}</span>` : '<span class="badge bg-danger">NO MIS ID ASSIGNED</span>'}
+            </div>
+            <div class="card-body p-2">
+    `;
+    
+    if (!hasAssignedIds) {
+        html += `
+            <div class="alert alert-warning mb-0">
+                <i class="bi bi-exclamation-triangle"></i> <strong>WARNING:</strong> No MIS ID is assigned to this deal in Google Sheet.
+            </div>
+        `;
+    } else {
+        // v12.25.0: Process each assigned MIS ID
+        let foundMatches = [];
+        let notFoundIds = [];
+        
+        assignedIds.forEach(rawId => {
+            const cleanId = cleanMisIdForAudit(rawId);
+            const matchingSuggestion = suggestions.find(s => String(s.mis_id) === cleanId);
+            if (matchingSuggestion) {
+                foundMatches.push({ rawId, cleanId, suggestion: matchingSuggestion });
+            } else {
+                notFoundIds.push({ rawId, cleanId });
+            }
+        });
+        
+        // Show found matches
+        if (foundMatches.length > 0) {
+            const matchingSuggestions = foundMatches.map(m => m.suggestion);
+            html += renderMISSuggestionTable(matchingSuggestions, deal, true, colWidths);
+        }
+        
+        // Show not found IDs
+        if (notFoundIds.length > 0) {
+            html += `
+                <div class="alert alert-danger mb-2">
+                    <i class="bi bi-x-circle"></i> <strong>MIS ID(s) NOT FOUND IN CSV:</strong> ${notFoundIds.map(n => n.rawId).join(', ')}
+                </div>
+            `;
+        }
+        
+        // Show other suggestions if available (exclude already-matched IDs)
+        const matchedCleanIds = foundMatches.map(m => m.cleanId);
+        const otherSuggestions = suggestions.filter(s => !matchedCleanIds.includes(String(s.mis_id)));
+        if (otherSuggestions.length > 0) {
+            html += `
+                <details class="mt-2">
+                    <summary class="text-muted" style="cursor: pointer;">
+                        <i class="bi bi-list"></i> Other suggestions (${otherSuggestions.length})
+                    </summary>
+                    <div class="mt-2">
+                        ${renderMISSuggestionTable(otherSuggestions, deal, false, colWidths)}
+                    </div>
+                </details>
+            `;
+        }
+    }
+    
+    html += `</div></div>`;
+    return html;
+}
+
+// v12.25.0: Parse multiple MIS IDs from raw value, filtering out notes
+// Ignores "STIIIZY MONTHLY + WEEKLY DEAL PLANNER" and similar non-ID text
+function parseMultipleMisIdsForAudit(rawValue) {
+    if (!rawValue) return [];
+    const str = String(rawValue).trim();
+    
+    // Filter out known notes/non-ID text (case insensitive)
+    const ignorePhrases = [
+        'stiiizy monthly + weekly deal planner',
+        'stiiizy monthly+ weekly deal planner',
+        'stiiizy monthly and weekly deal planner',
+        'deal planner',
+        'monthly + weekly',
+        'monthly+ weekly'
+    ];
+    
+    // Check if entire string is just a note to ignore
+    const lowerStr = str.toLowerCase();
+    if (ignorePhrases.some(phrase => lowerStr === phrase)) {
+        return [];
+    }
+    
+    // Split by newlines and/or commas
+    let parts = str.split(/[\n\r,]+/).map(p => p.trim()).filter(p => p);
+    
+    // If only one part, check if it contains multiple tagged IDs (space-separated tags like "W1 12345 W2 67890")
+    if (parts.length === 1 && !parts[0].match(/^\d+$/)) {
+        // Try to find multiple tagged IDs
+        const multiTagMatch = str.match(/([A-Za-z]+\d*\s+\d+)/g);
+        if (multiTagMatch && multiTagMatch.length > 1) {
+            parts = multiTagMatch;
+        } else {
+            // Try splitting by spaces for simple numeric IDs
+            const spaceParts = str.split(/\s+/).map(p => p.trim()).filter(p => p && /\d/.test(p));
+            if (spaceParts.length > 1) {
+                // Check if these look like IDs (numbers or tagged numbers)
+                const allLookLikeIds = spaceParts.every(p => /^([A-Za-z]*\d*\s*)?\d+$/.test(p));
+                if (allLookLikeIds) {
+                    parts = spaceParts;
+                }
+            }
+        }
+    }
+    
+    // Filter out ignore phrases and non-numeric entries
+    return parts.filter(p => {
+        const lower = p.toLowerCase();
+        // Skip if matches ignore phrase
+        if (ignorePhrases.some(phrase => lower.includes(phrase))) {
+            return false;
+        }
+        // Skip standalone text that doesn't contain digits
+        if (!/\d/.test(p)) {
+            return false;
+        }
+        return true;
+    });
+}
+
+// Clean MIS ID by stripping tag prefixes (reuse from showSuggestionTooltip pattern)
+function cleanMisIdForAudit(rawId) {
+    if (!rawId) return '';
+    const str = String(rawId).trim();
+    const tagMatch = str.match(/^([A-Za-z]+\d*)\s+(\d+)$/);
+    if (tagMatch) return tagMatch[2];
+    const numMatch = str.match(/(\d+)\s*$/);
+    if (numMatch) return numMatch[1];
+    return str;
+}
+
+// Render MIS suggestion table
+function renderMISSuggestionTable(suggestions, deal, isAssigned, colWidths) {
+    const currentTabName = document.getElementById('mis-tab')?.value || '';
+    
+    // v12.25.0: Include linked brand for comparison
+    const sheetBrand = deal.brand || '';
+    const sheetLinkedBrand = deal.linked_brand || '';
+    const combinedSheetBrand = sheetLinkedBrand ? `${sheetBrand} / ${sheetLinkedBrand}` : sheetBrand;
+    
+    // Use provided colWidths or defaults
+    const widths = colWidths || {
+        row: '60px', weekday: '80px', brand: '140px', category: '120px',
+        discount: '70px', vendor: '70px', locations: '120px',
+        dealInfo: '130px', notes: '100px', start: '90px', end: '90px', action: '60px'
+    };
+    
+    let html = `
+        <div style="overflow-x: auto;">
+            <table class="table table-sm table-bordered mb-0" style="font-size: 0.85em; table-layout: fixed; ${isAssigned ? 'border: 2px solid #198754;' : ''}">
+                <thead style="background: ${isAssigned ? '#d4edda' : '#e9ecef'}; color:#212529;">
+                    <tr>
+                        <th style="width:${widths.row};">MIS ID</th>
+                        <th style="width:${widths.weekday};">Weekday</th>
+                        <th style="width:${widths.brand};">Brand / Linked</th>
+                        <th style="width:${widths.category};">Category</th>
+                        <th style="width:${widths.discount};">Discount</th>
+                        <th style="width:${widths.vendor};">Vendor</th>
+                        <th style="width:${widths.locations};">Locations</th>
+                        <th style="width:${widths.start};">Start</th>
+                        <th style="width:${widths.end};">End</th>
+                        <th style="width:${widths.action};">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    suggestions.forEach(s => {
+        const data = s.mis_data || {};
+        const endDateColor = getEndDateColorForAudit(data.end_date, currentTabName);
+        
+        // v12.25.0: Combine MIS Brand + Linked Brand for display
+        const misBrand = data.brand || '';
+        const misLinkedBrand = data.linked_brand && data.linked_brand !== 'N/A' ? data.linked_brand : '';
+        const combinedMisBrand = misLinkedBrand ? `${misBrand}<br><small class="text-muted">${misLinkedBrand}</small>` : misBrand || '-';
+        
+        // Compare both brand AND linked brand
+        const brandStyle = getBrandAndLinkedStyleForAudit(sheetBrand, sheetLinkedBrand, misBrand, misLinkedBrand);
+        
+        html += `
+            <tr>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2" 
+                            onclick="lookupMisIdWithValidation(this, '${s.mis_id}')"
+                            title="Click to lookup in MIS">${s.mis_id}</button>
+                </td>
+                <td style="${getWeekdayStyleForAudit(deal.weekday, data.weekdays)}">${data.weekdays || '-'}</td>
+                <td style="${brandStyle}">${combinedMisBrand}</td>
+                <td style="${getCategoryStyleForAudit(deal.categories, data.category)}" title="${data.category || ''}" class="text-truncate">${data.category || '-'}</td>
+                <td style="${getMatchStyleForAudit(deal.discount, data.discount, true)}">${data.discount !== null ? data.discount + '%' : '-'}</td>
+                <td style="${getMatchStyleForAudit(deal.vendor_contrib, data.vendor_contribution, true)}">${data.vendor_contribution !== null ? data.vendor_contribution + '%' : '-'}</td>
+                <td style="${getLocationStyleForAudit(deal.locations, data.locations)}" title="${data.locations || ''}" class="text-truncate">${data.locations || '-'}</td>
+                <td>${data.start_date || '-'}</td>
+                <td>
+                    <button class="btn btn-sm py-0 px-2" style="${endDateColor.style}" title="${endDateColor.tooltip}">
+                        ${data.end_date || '-'}
+                    </button>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info py-0 px-1" onclick="showMoreInfoForAudit('${s.mis_id}', ${JSON.stringify(data).replace(/"/g, '&quot;')})" title="View all MIS fields">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+// v12.25.0: Compare brand AND linked brand together
+function getBrandAndLinkedStyleForAudit(sheetBrand, sheetLinked, misBrand, misLinked) {
+    const sb = String(sheetBrand || '').toLowerCase().trim();
+    const sl = String(sheetLinked || '').toLowerCase().trim();
+    const mb = String(misBrand || '').toLowerCase().trim();
+    const ml = String(misLinked || '').toLowerCase().trim();
+    
+    // Check various match scenarios:
+    // 1. Sheet brand matches MIS brand (direct match)
+    // 2. Sheet linked matches MIS brand (linked brand used as primary in MIS)
+    // 3. Sheet brand matches MIS linked (inverse linked match)
+    // 4. Sheet linked matches MIS linked (linked brands match)
+    // 5. Fuzzy match (contains check)
+    
+    let brandMatch = sb === mb || sb.includes(mb) || mb.includes(sb);
+    let linkedMatch = (sl && ml) ? (sl === ml || sl.includes(ml) || ml.includes(sl)) : true;
+    let crossMatch1 = sl && mb && (sl === mb || sl.includes(mb) || mb.includes(sl));
+    let crossMatch2 = sb && ml && (sb === ml || sb.includes(ml) || ml.includes(sb));
+    
+    // GREEN: Direct brand match or cross-match found
+    if (brandMatch || crossMatch1 || crossMatch2) {
+        return 'background:#d4edda; color:#155724;';
+    }
+    
+    // YELLOW: Missing data on one side
+    if (!sb || !mb) {
+        return 'background:#fff3cd; color:#856404;';
+    }
+    
+    // RED: Mismatch
+    return 'background:#f8d7da; color:#721c24;';
+}
+
+// Get end date color (reuse logic from showSuggestionTooltip)
+function getEndDateColorForAudit(endDateStr, tabName) {
+    const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+    const parts = tabName.toLowerCase().trim().split(/\s+/);
+    let tabMonth = -1, tabYear = -1;
+    for (const p of parts) {
+        const mIdx = months.indexOf(p);
+        if (mIdx >= 0) tabMonth = mIdx;
+        if (/^\d{4}$/.test(p)) tabYear = parseInt(p);
+    }
+    
+    if (tabMonth < 0 || tabYear < 0) {
+        return { style: 'background:#6c757d; border-color:#6c757d; color:white;', tooltip: 'Cannot parse tab name' };
+    }
+    
+    const parsed = parseDateString(endDateStr);
+    if (!parsed) {
+        return { style: 'background:#6c757d; border-color:#6c757d; color:white;', tooltip: 'Invalid date' };
+    }
+    
+    const tabYM = tabYear * 12 + tabMonth;
+    const endYM = parsed.year * 12 + parsed.month;
+    
+    if (endYM < tabYM) {
+        return { style: 'background:#dc3545; border-color:#dc3545; color:white;', tooltip: 'EXPIRED - needs update' };
+    } else if (endYM === tabYM) {
+        return { style: 'background:#28a745; border-color:#28a745; color:white;', tooltip: 'Current month' };
+    } else {
+        return { style: 'background:#fd7e14; border-color:#fd7e14; color:white;', tooltip: 'Future month' };
+    }
+}
+
+// Comparison style helpers (simplified versions)
+function getMatchStyleForAudit(src, tgt, isNumeric = false) {
+    if (!src && !tgt) return '';
+    if (!src || !tgt) return 'background:#fff3cd; color:#856404;';
+    
+    let matches = false;
+    if (isNumeric) {
+        const s = parseFloat(String(src).replace(/[%$,]/g, '')) || 0;
+        const t = parseFloat(String(tgt).replace(/[%$,]/g, '')) || 0;
+        matches = Math.abs(s - t) < 0.01;
+    } else {
+        matches = String(src).toLowerCase().trim() === String(tgt).toLowerCase().trim();
+    }
+    return matches ? 'background:#d4edda; color:#155724;' : 'background:#f8d7da; color:#721c24;';
+}
+
+function getBrandStyleForAudit(srcBrand, tgtBrand) {
+    if (!srcBrand || !tgtBrand) return 'background:#fff3cd; color:#856404;';
+    const s = String(srcBrand).toLowerCase().trim();
+    const t = String(tgtBrand).toLowerCase().trim();
+    if (s === t || s.includes(t) || t.includes(s)) return 'background:#d4edda; color:#155724;';
+    return 'background:#f8d7da; color:#721c24;';
+}
+
+function getWeekdayStyleForAudit(srcWeekday, tgtWeekdays) {
+    if (!srcWeekday || !tgtWeekdays) return 'background:#fff3cd; color:#856404;';
+    const src = srcWeekday.toLowerCase().substring(0, 3);
+    const tgt = tgtWeekdays.toLowerCase();
+    if (tgt.includes(src)) return 'background:#d4edda; color:#155724;';
+    return 'background:#f8d7da; color:#721c24;';
+}
+
+// v12.25.0: SET-BASED category comparison (order independent) + NaN/blank = All
+function getCategoryStyleForAudit(srcCat, tgtCat) {
+    const s = String(srcCat || '').toLowerCase().trim();
+    const t = String(tgtCat || '').toLowerCase().trim();
+    
+    // Treat blank/NaN as "All"
+    const srcAll = !s || s === 'all' || s === '-' || s.includes('all categories') || s === 'nan' || s === 'null';
+    const tgtAll = !t || t === 'all' || t === '-' || t === 'n/a' || t === 'nan' || t === 'null';
+    
+    // Both All = GREEN
+    if (srcAll && tgtAll) return 'background:#d4edda; color:#155724;';
+    
+    // One All, one specific = YELLOW
+    if (srcAll !== tgtAll) return 'background:#fff3cd; color:#856404;';
+    
+    // Both specific - SET comparison (order independent)
+    const srcSet = new Set(s.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
+    const tgtSet = new Set(t.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
+    const setsEqual = srcSet.size === tgtSet.size && [...srcSet].every(x => tgtSet.has(x));
+    return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+}
+
+// v12.25.0: SET-BASED location comparison (order independent) + NaN/blank = All
+function getLocationStyleForAudit(srcLoc, tgtLoc) {
+    const s = String(srcLoc || '').toLowerCase().trim();
+    const t = String(tgtLoc || '').toLowerCase().trim();
+    
+    // Treat blank/NaN as "All"
+    const srcAll = !s || s === 'all' || s === '-' || s.includes('all locations') || s === 'nan' || s === 'null';
+    const tgtAll = !t || t === 'all' || t === '-' || t === 'n/a' || t === 'nan' || t === 'null';
+    
+    // Both All = GREEN
+    if (srcAll && tgtAll) return 'background:#d4edda; color:#155724;';
+    
+    // One All, one specific = YELLOW
+    if (srcAll !== tgtAll) return 'background:#fff3cd; color:#856404;';
+    
+    // Both specific - SET comparison (order independent)
+    const srcSet = new Set(s.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
+    const tgtSet = new Set(t.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
+    const setsEqual = srcSet.size === tgtSet.size && [...srcSet].every(x => tgtSet.has(x));
+    return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+}
+
+// Build Blaze section (Section 3)
+function buildBlazeSection(deal) {
+    // v12.25.1: Check multiple sources for Blaze data
+    // PRIORITY ORDER:
+    // 1. blaze_discount_title from Google Sheet (already applied = already approved)
+    // 2. approvedMatches (where Blaze titles are stored when approved in ID Matcher)
+    // 3. deal.blaze_titles directly attached
+    // 4. blazeMatches global
+    
+    let blazeTitles = [];
+    
+    // v12.25.1: FIRST check Google Sheet column "Blaze Discount Title"
+    // If this has a value, the discount was already applied to the sheet = already approved
+    const sheetBlazeTitle = (deal.blaze_discount_title || '').trim();
+    if (sheetBlazeTitle && blazeData && blazeData.currentRows && blazeData.currentRows.length > 0) {
+        // Parse multiple titles (may be comma or newline separated)
+        const sheetTitles = sheetBlazeTitle.split(/[,\n]+/).map(t => t.trim()).filter(t => t);
+        
+        sheetTitles.forEach(titleToFind => {
+            // Search for this title in Blaze data
+            const matchingBlaze = blazeData.currentRows.find(row => {
+                const blazeName = (row.Name || '').trim().toLowerCase();
+                const searchTitle = titleToFind.toLowerCase();
+                // Exact match or contains (for partial title matching)
+                return blazeName === searchTitle || blazeName.includes(searchTitle) || searchTitle.includes(blazeName);
+            });
+            
+            if (matchingBlaze) {
+                // Found in Blaze data - add full details
+                blazeTitles.push({
+                    id: matchingBlaze.Id || matchingBlaze.id || '-',
+                    name: matchingBlaze.Name || titleToFind,
+                    active: (matchingBlaze.Status || '').toLowerCase() === 'active',
+                    type: matchingBlaze['Discount Value Type'] || '-',
+                    value: matchingBlaze['Discount Value'] || '-',
+                    locations: matchingBlaze.Locations || '-',
+                    start_date: matchingBlaze['Start Date'] || '-',
+                    end_date: matchingBlaze['End Date'] || '-',
+                    source: 'sheet'  // Mark as from Google Sheet
+                });
+            } else {
+                // Title in sheet but not found in Blaze data - still show it
+                blazeTitles.push({
+                    id: '-',
+                    name: titleToFind,
+                    active: null,  // Unknown
+                    type: '-',
+                    value: '-',
+                    locations: '-',
+                    start_date: '-',
+                    end_date: '-',
+                    source: 'sheet_only'  // Only in sheet, not found in Blaze
+                });
+            }
+        });
+    }
+    
+    // If no sheet titles found, try approvedMatches (primary source for newly approved)
+    if (blazeTitles.length === 0) {
+        const approvedData = approvedMatches[deal.google_row];
+        if (approvedData && approvedData.blaze_titles && approvedData.blaze_titles.length > 0) {
+            blazeTitles = approvedData.blaze_titles;
+        }
+    }
+    
+    // Also check if deal has blaze_titles directly attached
+    if (blazeTitles.length === 0 && deal.blaze_titles && deal.blaze_titles.length > 0) {
+        blazeTitles = deal.blaze_titles;
+    }
+    
+    // Check blazeMatches global (if it exists) - alternative storage for Blaze data
+    if (blazeTitles.length === 0 && typeof blazeMatches !== 'undefined' && blazeMatches[deal.google_row]) {
+        const blazeData = blazeMatches[deal.google_row];
+        if (blazeData.titles && blazeData.titles.length > 0) {
+            blazeTitles = blazeData.titles;
+        }
+    }
+    
+    if (blazeTitles.length === 0) {
+        return `
+            <div class="card mb-3 border-info">
+                <div class="card-header bg-info text-white">
+                    <strong><i class="bi bi-lightning"></i> Section 3: Blaze Discounts</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-0"><i class="bi bi-info-circle"></i> No Blaze discounts assigned to this deal.</p>
+                    <small class="text-muted">Tip: If a Blaze discount title is in the Google Sheet, it will appear here after syncing Blaze data.</small>
+                </div>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <div class="card mb-3 border-info">
+            <div class="card-header bg-info text-white">
+                <strong><i class="bi bi-lightning"></i> Section 3: Blaze Discounts (${blazeTitles.length})</strong>
+            </div>
+            <div class="card-body p-2">
+                <div style="overflow-x: auto;">
+                    <table class="table table-sm table-bordered mb-0" style="font-size: 0.85em;">
+                        <thead style="background:#e9ecef; color:#212529;">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                                <th>Value</th>
+                                <th>Locations</th>
+                                <th>Start</th>
+                                <th>End</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    blazeTitles.forEach(title => {
+        // v12.25.1: Handle different status scenarios
+        let statusBadge;
+        if (title.source === 'sheet_only') {
+            statusBadge = '<span class="badge bg-warning text-dark" title="Title in Google Sheet but not found in current Blaze data">In Sheet Only</span>';
+        } else if (title.active === true) {
+            statusBadge = '<span class="badge bg-success">Active</span>';
+        } else if (title.active === false) {
+            statusBadge = '<span class="badge bg-secondary">Inactive</span>';
+        } else {
+            statusBadge = '<span class="badge bg-light text-dark">Unknown</span>';
+        }
+        
+        // Highlight source from sheet
+        const nameStyle = title.source === 'sheet' || title.source === 'sheet_only' ? 'background:#e7f1ff;' : '';
+        
+        html += `
+            <tr style="${nameStyle}">
+                <td>${title.id || '-'}</td>
+                <td>${title.name || '-'}${title.source === 'sheet' ? ' <small class="text-success">(from Sheet)</small>' : ''}</td>
+                <td>${statusBadge}</td>
+                <td>${title.type || '-'}</td>
+                <td>${title.value || '-'}</td>
+                <td title="${title.locations || ''}" style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title.locations || '-'}</td>
+                <td>${title.start_date || '-'}</td>
+                <td>${title.end_date || '-'}</td>
+            </tr>
+        `;
+    });
+    
+    html += `</tbody></table></div></div></div>`;
+    return html;
+}
+
+// Build multi-brand checklist
+function buildMultiBrandChecklist(deal) {
+    const brands = (deal.brand_raw || deal.brand || '').split(',').map(b => b.trim()).filter(b => b);
+    
+    let html = `
+        <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <strong><i class="bi bi-tags"></i> Multi-Brand Verification (${brands.length} brands)</strong>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+    `;
+    
+    brands.forEach((brand, idx) => {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span><strong>${idx + 1}.</strong> ${brand}</span>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="multiBrandCheck${idx}">
+                    <label class="form-check-label" for="multiBrandCheck${idx}">Verified</label>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div></div></div>`;
+    return html;
+}
+
+// Mark a deal in audit
+function markAuditDeal(auditIdx, status) {
+    const deals = comprehensiveAuditState.deals;
+    const deal = deals[auditIdx];
+    const notes = document.getElementById('auditNotes')?.value || '';
+    
+    comprehensiveAuditState.results[deal.google_row] = {
+        status: status,
+        notes: notes,
+        auditedAt: new Date().toISOString()
+    };
+    
+    // Update table row
+    renderAuditOverview();
+    
+    // Save progress
+    saveAuditProgress();
+    
+    // If in sequential mode and not at end, move to next
+    if (comprehensiveAuditState.inProgress && auditIdx < deals.length - 1) {
+        navigateAudit(1);
+    } else if (auditIdx === deals.length - 1) {
+        // Completed all
+        showAuditCompletionSummary();
+    }
+}
+
+// Navigate in audit (prev/next)
+function navigateAudit(direction) {
+    const newIdx = comprehensiveAuditState.currentIndex + direction;
+    const deals = comprehensiveAuditState.deals;
+    
+    if (newIdx >= 0 && newIdx < deals.length) {
+        showAuditPopup(newIdx);
+    }
+}
+
+// Exit audit popup
+function exitAuditPopup() {
+    if (confirm('Exit audit? Progress will be saved.')) {
+        saveAuditProgress();
+        const overlay = document.getElementById('comprehensive-audit-popup-overlay');
+        if (overlay) overlay.remove();
+        document.getElementById('exportAuditBtn').disabled = false;
+    }
+}
+
+// Show completion summary
+function showAuditCompletionSummary() {
+    const results = comprehensiveAuditState.results;
+    const deals = comprehensiveAuditState.deals;
+    
+    let verified = 0, attention = 0, skipped = 0, pending = 0;
+    deals.forEach(d => {
+        const r = results[d.google_row];
+        if (!r) pending++;
+        else if (r.status === 'verified') verified++;
+        else if (r.status === 'attention') attention++;
+        else if (r.status === 'skipped') skipped++;
+    });
+    
+    const overlay = document.getElementById('comprehensive-audit-popup-overlay');
+    if (overlay) {
+        overlay.innerHTML = `
+            <div style="background: #fff; padding: 30px; border-radius: 8px; text-align: center; max-width: 500px;">
+                <h3><i class="bi bi-check-circle-fill text-success"></i> Audit Complete!</h3>
+                <hr>
+                <div class="row text-center mb-3">
+                    <div class="col"><h4 class="text-success mb-0">${verified}</h4><small>Verified</small></div>
+                    <div class="col"><h4 class="text-warning mb-0">${attention}</h4><small>Attention</small></div>
+                    <div class="col"><h4 class="text-secondary mb-0">${skipped}</h4><small>Skipped</small></div>
+                </div>
+                ${attention > 0 ? `<button class="btn btn-warning me-2" onclick="reviewAttentionItems()">Review ${attention} Attention Items</button>` : ''}
+                <button class="btn btn-info me-2" onclick="exportAuditReport()">Export Report</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('comprehensive-audit-popup-overlay').remove()">Close</button>
+            </div>
+        `;
+    }
+    
+    comprehensiveAuditState.inProgress = false;
+    document.getElementById('exportAuditBtn').disabled = false;
+}
+
+// Review attention items
+function reviewAttentionItems() {
+    const deals = comprehensiveAuditState.deals;
+    const results = comprehensiveAuditState.results;
+    
+    // Find first attention item
+    for (let i = 0; i < deals.length; i++) {
+        const r = results[deals[i].google_row];
+        if (r && r.status === 'attention') {
+            showAuditPopup(i);
+            return;
+        }
+    }
+}
+
+// Save audit progress to server
+async function saveAuditProgress() {
+    const state = comprehensiveAuditState;
+    const payload = {
+        audit_id: state.auditId || 'audit_' + Date.now(),
+        tab_name: state.tabName,
+        started_at: state.startedAt,
+        settings: state.settings,
+        total_deals: state.deals.length,
+        current_index: state.currentIndex,
+        results: Object.entries(state.results).map(([row, data]) => ({
+            row_number: parseInt(row),
+            status: data.status,
+            notes: data.notes,
+            audited_at: data.auditedAt
+        }))
+    };
+    
+    try {
+        await fetch('/api/audit/save-state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        // Also save to localStorage as backup
+        localStorage.setItem('comprehensiveAuditState', JSON.stringify(payload));
+    } catch (e) {
+        console.error('Failed to save audit state:', e);
+        // Still save to localStorage
+        localStorage.setItem('comprehensiveAuditState', JSON.stringify(payload));
+    }
+}
+
+// Load audit state from server
+async function loadAuditStateFromServer() {
+    const tabName = document.getElementById('mis-tab')?.value || '';
+    
+    try {
+        const response = await fetch(`/api/audit/load-state?tab=${encodeURIComponent(tabName)}`);
+        const data = await response.json();
+        
+        if (data.success && data.state && data.state.results && data.state.results.length > 0) {
+            const completedCount = data.state.results.length;
+            const totalCount = data.state.total_deals;
+            
+            // v12.25.0: Custom Yes/No popup instead of confirm()
+            showResumeAuditPopup(completedCount, totalCount, data.state);
+        }
+    } catch (e) {
+        // Try localStorage backup
+        const localState = localStorage.getItem('comprehensiveAuditState');
+        if (localState) {
+            try {
+                const parsed = JSON.parse(localState);
+                if (parsed.tab_name === tabName && parsed.results && parsed.results.length > 0) {
+                    showResumeAuditPopup(parsed.results.length, parsed.total_deals, parsed, true);
+                }
+            } catch (parseErr) {
+                console.error('Failed to parse local state:', parseErr);
+            }
+        }
+    }
+}
+
+// v12.25.0: Custom Yes/No popup for resuming audit
+function showResumeAuditPopup(completedCount, totalCount, savedState, isLocal = false) {
+    const sourceText = isLocal ? 'local backup' : 'incomplete audit';
+    const content = `
+        <div id="resumeAuditPopup" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:10002; display:flex; align-items:center; justify-content:center;">
+            <div style="background:white; padding:30px; border-radius:12px; max-width:450px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                <div style="margin-bottom:20px;">
+                    <i class="bi bi-question-circle" style="font-size:3em; color:#667eea;"></i>
+                </div>
+                <h4 style="margin-bottom:15px;">Resume Previous Audit?</h4>
+                <p style="color:#6c757d; margin-bottom:25px;">
+                    Found ${sourceText}:<br>
+                    <strong>${completedCount} of ${totalCount}</strong> deals completed.<br>
+                    Would you like to continue where you left off?
+                </p>
+                <div style="display:flex; gap:15px; justify-content:center;">
+                    <button class="btn btn-lg" style="background-color:#28a745; color:white; min-width:100px;" onclick="resumeAuditFromState(${JSON.stringify(savedState).replace(/"/g, '&quot;')}); document.getElementById('resumeAuditPopup').remove();">
+                        <i class="bi bi-check-lg"></i> Yes
+                    </button>
+                    <button class="btn btn-lg" style="background-color:#dc3545; color:white; min-width:100px;" onclick="document.getElementById('resumeAuditPopup').remove();">
+                        <i class="bi bi-x-lg"></i> No
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', content);
+}
+
+// v12.25.0: Resume audit from saved state
+function resumeAuditFromState(savedState) {
+    // Parse if string
+    let state = savedState;
+    if (typeof savedState === 'string') {
+        try {
+            state = JSON.parse(savedState.replace(/&quot;/g, '"'));
+        } catch (e) {
+            console.error('Failed to parse saved state:', e);
+            return;
+        }
+    }
+    
+    // Restore state
+    if (state.results) {
+        state.results.forEach(r => {
+            comprehensiveAuditState.results[r.row_number] = {
+                status: r.status,
+                notes: r.notes,
+                auditedAt: r.audited_at
+            };
+        });
+    }
+    comprehensiveAuditState.currentIndex = state.current_index || 0;
+    comprehensiveAuditState.auditId = state.audit_id;
+    comprehensiveAuditState.startedAt = state.started_at;
+    
+    // Update UI
+    renderAuditOverview();
+}
+
+// Export audit report as CSV
+async function exportAuditReport() {
+    const state = comprehensiveAuditState;
+    const deals = state.deals;
+    const results = state.results;
+    
+    if (deals.length === 0) {
+        alert('No deals to export.');
+        return;
+    }
+    
+    // Build CSV content
+    let csv = 'Row Number,Section,Brand(s),Linked Brand,Weekday,MIS ID(s),Audit Status,Issues Found,Audited Date,Notes\n';
+    
+    deals.forEach(deal => {
+        const r = results[deal.google_row] || {};
+        const section = (deal.section || '').replace(/,/g, ';');
+        const brand = (deal.brand || '').replace(/,/g, ';');
+        const linked = (deal.linked_brand || '').replace(/,/g, ';');
+        const weekday = (deal.weekday || '').replace(/,/g, ';');
+        const misId = (deal.current_sheet_id || '').replace(/,/g, ';');
+        const status = r.status || 'pending';
+        const issues = ''; // Could be enhanced to detect issues
+        const auditedAt = r.auditedAt || '';
+        const notes = (r.notes || '').replace(/,/g, ';').replace(/\n/g, ' ');
+        
+        csv += `${deal.google_row},"${section}","${brand}","${linked}","${weekday}","${misId}","${status}","${issues}","${auditedAt}","${notes}"\n`;
+    });
+    
+    // Create download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    a.href = url;
+    a.download = `Audit_${state.tabName.replace(/\s+/g, '_')}_${timestamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Helper: Show more info for MIS entry - full details popup
+function showMoreInfoForAudit(misId, misData) {
+    // Parse the data if it's a string
+    let data = misData;
+    if (typeof misData === 'string') {
+        try {
+            data = JSON.parse(misData.replace(/&quot;/g, '"'));
+        } catch (e) {
+            data = {};
+        }
+    }
+    
+    // Build detailed info popup
+    let content = `
+        <div style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10001; display:flex; align-items:center; justify-content:center;" onclick="this.remove()">
+            <div style="background:white; padding:20px; border-radius:8px; max-width:600px; max-height:80vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #667eea; padding-bottom:10px;">
+                    <h5 style="margin:0; color:#667eea;"><i class="bi bi-database"></i> MIS Entry: ${misId}</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="this.closest('div[style*=position]').remove()"><i class="bi bi-x"></i></button>
+                </div>
+                <table class="table table-sm table-bordered" style="font-size:0.9em;">
+                    <tbody>
+                        <tr><th style="width:35%; background:#f8f9fa;">MIS ID</th><td><strong>${misId}</strong></td></tr>
+                        <tr><th style="background:#f8f9fa;">Brand</th><td>${data.brand || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Linked Brand</th><td>${data.linked_brand || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Weekdays</th><td>${data.weekdays || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Category</th><td>${data.category || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Discount</th><td>${data.discount !== null && data.discount !== undefined ? data.discount + '%' : '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Vendor Contribution</th><td>${data.vendor_contribution !== null && data.vendor_contribution !== undefined ? data.vendor_contribution + '%' : '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Locations</th><td>${data.locations || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Start Date</th><td>${data.start_date || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">End Date</th><td>${data.end_date || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Deal Name</th><td>${data.deal_name || '-'}</td></tr>
+                        <tr><th style="background:#f8f9fa;">Notes</th><td>${data.notes || '-'}</td></tr>
+                    </tbody>
+                </table>
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary btn-sm" onclick="lookupMisIdWithValidation(this, '${misId}'); this.closest('div[style*=position]').remove();">
+                        <i class="bi bi-search"></i> Lookup in MIS
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', content);
+}
 
 // ============================================
 // GOOGLE SHEET CONFLICT AUDIT (Pre-Flight Check)
@@ -19703,7 +21541,7 @@ async function runTierUpdate(btn) {
         
         // Validate store selection
         if (!selectedStore) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">⚠️ Please select a store first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">Ã¢Å¡Â Ã¯Â¸Â Please select a store first</span>';
             return;
         }
         
@@ -19712,7 +21550,7 @@ async function runTierUpdate(btn) {
         const blazePassword = document.getElementById('blaze-password').value.trim();
         
         if (!blazeEmail || !blazePassword) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">⚠️ Enter Blaze email/password above first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">Ã¢Å¡Â Ã¯Â¸Â Enter Blaze email/password above first</span>';
             return;
         }
         
@@ -19726,7 +21564,7 @@ async function runTierUpdate(btn) {
         storeSelect.disabled = true;
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
-        statusDiv.innerHTML = '<span style="color: #0d6efd;">⏳ Authenticating...</span>';
+        statusDiv.innerHTML = '<span style="color: #0d6efd;">Ã¢ÂÂ³ Authenticating...</span>';
         
         try {
             const response = await fetch('/api/blaze/ecom-sync', {
@@ -19742,7 +21580,7 @@ async function runTierUpdate(btn) {
             const data = await response.json();
             
             if (data.success) {
-                statusDiv.innerHTML = `<span style="color: #198754;">✅ ${data.message || 'Sync Complete'}</span>`;
+                statusDiv.innerHTML = `<span style="color: #198754;">Ã¢Å“â€¦ ${data.message || 'Sync Complete'}</span>`;
                 console.log('[ECOM-SYNC] Success:', data);
             } else {
                 // Differentiate error types for better UX
@@ -19750,18 +21588,18 @@ async function runTierUpdate(btn) {
                 let errorColor = '#dc3545';
                 
                 if (errorMsg.includes('credentials') || errorMsg.includes('Authentication')) {
-                    errorMsg = '🔑 ' + errorMsg;
+                    errorMsg = 'Ã°Å¸â€â€˜ ' + errorMsg;
                 } else if (errorMsg.includes('UUID') || errorMsg.includes('not found')) {
-                    errorMsg = '📍 ' + errorMsg;
+                    errorMsg = 'Ã°Å¸â€œÂ ' + errorMsg;
                 } else if (errorMsg.includes('permission')) {
-                    errorMsg = '🚫 ' + errorMsg;
+                    errorMsg = 'Ã°Å¸Å¡Â« ' + errorMsg;
                 }
                 
-                statusDiv.innerHTML = `<span style="color: ${errorColor};">❌ ${errorMsg}</span>`;
+                statusDiv.innerHTML = `<span style="color: ${errorColor};">Ã¢ÂÅ’ ${errorMsg}</span>`;
                 console.error('[ECOM-SYNC] Error:', data.error);
             }
         } catch (e) {
-            statusDiv.innerHTML = `<span style="color: #dc3545;">❌ Network Error: ${e.message}</span>`;
+            statusDiv.innerHTML = `<span style="color: #dc3545;">Ã¢ÂÅ’ Network Error: ${e.message}</span>`;
             console.error('[ECOM-SYNC] Network Error:', e);
         } finally {
             btn.disabled = false;
@@ -23128,6 +24966,108 @@ def api_mis_audit():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
+# ============================================
+# v12.25.0: Comprehensive Audit State Management
+# ============================================
+
+@app.route('/api/audit/save-state', methods=['POST'])
+def api_audit_save_state():
+    """Save comprehensive audit state to file."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+        
+        audit_id = data.get('audit_id', 'audit_unknown')
+        tab_name = data.get('tab_name', 'Unknown')
+        
+        # Create filename based on tab name
+        safe_tab_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in tab_name).strip()
+        filename = f"audit_state_{safe_tab_name}.json"
+        filepath = AUDIT_REPORTS_DIR / filename
+        
+        # Save state
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        print(f"[AUDIT] Saved state to {filepath}")
+        return jsonify({'success': True, 'filepath': str(filepath)})
+    
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/audit/load-state', methods=['GET'])
+def api_audit_load_state():
+    """Load comprehensive audit state from file."""
+    try:
+        tab_name = request.args.get('tab', '')
+        if not tab_name:
+            return jsonify({'success': False, 'error': 'No tab name provided'})
+        
+        # Find state file
+        safe_tab_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in tab_name).strip()
+        filename = f"audit_state_{safe_tab_name}.json"
+        filepath = AUDIT_REPORTS_DIR / filename
+        
+        if not filepath.exists():
+            return jsonify({'success': False, 'error': 'No saved state found'})
+        
+        with open(filepath, 'r') as f:
+            state = json.load(f)
+        
+        print(f"[AUDIT] Loaded state from {filepath}")
+        return jsonify({'success': True, 'state': state})
+    
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/audit/export', methods=['POST'])
+def api_audit_export():
+    """Export audit report as CSV."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+        
+        tab_name = data.get('tab_name', 'Unknown')
+        results = data.get('results', [])
+        
+        # Create filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_tab_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in tab_name).strip()
+        filename = f"Audit_{safe_tab_name}_{timestamp}.csv"
+        filepath = AUDIT_REPORTS_DIR / filename
+        
+        # Build CSV
+        import csv
+        with open(filepath, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Row Number', 'Section', 'Brand(s)', 'Linked Brand', 'Weekday', 
+                           'MIS ID(s)', 'Audit Status', 'Issues Found', 'Audited Date', 'Notes'])
+            
+            for r in results:
+                writer.writerow([
+                    r.get('row_number', ''),
+                    r.get('section', ''),
+                    r.get('brand', ''),
+                    r.get('linked_brand', ''),
+                    r.get('weekday', ''),
+                    r.get('mis_id', ''),
+                    r.get('status', 'pending'),
+                    r.get('issues', ''),
+                    r.get('audited_at', ''),
+                    r.get('notes', '')
+                ])
+        
+        print(f"[AUDIT] Exported report to {filepath}")
+        return jsonify({'success': True, 'filepath': str(filepath), 'filename': filename})
+    
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/mis/review-discrepancy', methods=['POST'])
 def api_mis_review_discrepancy():
     try:
@@ -23432,16 +25372,16 @@ def api_mis_lookup_mis_id():
                     
                     # v12.22.5: Inject checklist banner for visual checklist panel
                     inject_checklist_banner(driver, expected_data, mode='compare')
-                    print(f"[MIS LOOKUP] âœ… Checklist banner injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Checklist banner injected for MIS ID {mis_id}")
                     
                     # v12.22.6: ALSO send message to existing validator to switch to automation mode
                     # The V2 validator may already be running (persistent from previous entry)
                     # This will send it the expected_data so it validates properly
                     inject_mis_validation(driver, expected_data=expected_data)
-                    print(f"[MIS LOOKUP] âœ… Validator switched to automation mode")
+                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Validator switched to automation mode")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] âŒ Could not inject checklist: {e}")
+                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã‚ÂÃ…â€™ Could not inject checklist: {e}")
                     # Fallback to basic validation
                     inject_mis_validation(driver, expected_data=None)
             else:
@@ -27293,14 +29233,14 @@ def api_mis_create_deal():
             stores = [s.strip() for s in text.split(',') if s.strip()]
             
             # v12.21.3: Apply STORE_MAPPING to convert Settings tab names to MIS names
-            # Example: "Fresno (Palm)" Ã¢â€ â€™ "Fresno"
+            # Example: "Fresno (Palm)" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Fresno"
             mapped_stores = []
             for store in stores:
                 mapped = STORE_MAPPING.get(store, store)  # Try mapping, else use original
                 if mapped:
                     mapped_stores.append(mapped)
                     if mapped != store:
-                        log(f"  Store mapping: '{store}' Ã¢â€ â€™ '{mapped}'", "DEBUG")
+                        log(f"  Store mapping: '{store}' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ '{mapped}'", "DEBUG")
             
             log(f"Store logic: Specific stores = {mapped_stores}", "DEBUG")
             return mapped_stores
@@ -30934,7 +32874,7 @@ def api_blaze_ecom_sync() -> dict:
     
     Flow:
         1. Get Blaze credentials (from request or GLOBAL_DATA)
-        2. Authenticate with Ecom API → get JWT token
+        2. Authenticate with Ecom API Ã¢â€ â€™ get JWT token
         3. Load store UUID from sync_keys.json
         4. POST sync request with token + UUID
     """
@@ -30944,13 +32884,13 @@ def api_blaze_ecom_sync() -> dict:
         
         # Validate store name
         if not store_name:
-            print("[ECOM-SYNC] ❌ No store name provided")
+            print("[ECOM-SYNC] Ã¢ÂÅ’ No store name provided")
             return jsonify({
                 'success': False,
                 'error': 'No store name provided. Please select a store.'
             })
         
-        print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+        print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
         print(f"[ECOM-SYNC] Starting sync for store: {store_name}")
         
         # Step 1: Get Blaze credentials
@@ -30964,7 +32904,7 @@ def api_blaze_ecom_sync() -> dict:
             password = password or blaze_creds.get('password', '')
         
         if not email or not password:
-            print("[ECOM-SYNC] ❌ No Blaze credentials available")
+            print("[ECOM-SYNC] Ã¢ÂÅ’ No Blaze credentials available")
             return jsonify({
                 'success': False,
                 'error': 'Blaze credentials required. Please enter email/password in Blaze Config.'
@@ -30974,7 +32914,7 @@ def api_blaze_ecom_sync() -> dict:
         store_data = load_sync_keys(store_name)
         if store_data is None:
             error_msg = f'No UUID found for {store_name}. Add it to secrets/sync_keys.json'
-            print(f"[ECOM-SYNC] ❌ {error_msg}")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ {error_msg}")
             return jsonify({
                 'success': False,
                 'error': error_msg
@@ -30988,7 +32928,7 @@ def api_blaze_ecom_sync() -> dict:
         token, auth_error = get_ecom_token(email, password)
         
         if token is None:
-            print(f"[ECOM-SYNC] ❌ Authentication failed: {auth_error}")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Authentication failed: {auth_error}")
             return jsonify({
                 'success': False,
                 'error': f'Authentication failed: {auth_error}'
@@ -30999,22 +32939,22 @@ def api_blaze_ecom_sync() -> dict:
         success, message = trigger_ecom_sync(store_uuid, token)
         
         if success:
-            print(f"[ECOM-SYNC] ✅ Sync complete for {store_name}")
-            print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+            print(f"[ECOM-SYNC] Ã¢Å“â€¦ Sync complete for {store_name}")
+            print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return jsonify({
                 'success': True,
                 'message': f'{store_name} sync triggered successfully'
             })
         else:
-            print(f"[ECOM-SYNC] ❌ Sync failed: {message}")
-            print(f"[ECOM-SYNC] ═══════════════════════════════════════")
+            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Sync failed: {message}")
+            print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
             return jsonify({
                 'success': False,
                 'error': message
             })
     
     except Exception as e:
-        print(f"[ECOM-SYNC] ❌ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Unexpected error: {e}")
         traceback.print_exc()
         return jsonify({
             'success': False,
