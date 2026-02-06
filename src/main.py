@@ -1,4 +1,64 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.25.2 AUDIT TAB BLAZE + MIS ID FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.25.5 BLAZE FILTER FIX
+# v12.25.5 CHANGELOG (BLAZE FILTER FIX):
+#   🔴 FIX: Blaze Tab Filters Break After Draft Automation
+#     * ISSUE: After running Draft automation, Name filter stops working
+#     * ROOT CAUSE: All column indices hardcoded (e.g., column(2) for Name)
+#       - When Draft mode ON, checkbox column added at index 0
+#       - Shifts all columns: Name from col 2 → col 3, Status from col 3 → col 4, etc.
+#     * THE FIX: Created getBlazeColumnIndex() helper function
+#       - Returns correct column index based on draftSelectionState.isActive
+#       - Offset of +1 applied when draft mode is active
+#   🟢 UPDATED: All column references now dynamic
+#     * applyBlazeFilters() - Name column search
+#     * DataTable draw event - Status and End Date for filter counting
+#     * applyZombieFilter() - Status, End Date, and Name column clear
+#     * filterToDraftedDeals() - ID column and Name column clear
+#     * Persistence section - Name column search
+#   🟢 NEW: getBlazeColumnIndex(columnName) helper
+#     * Accepts: 'detail', 'id', 'name', 'status', 'autoManual', 'locations',
+#                'buyGroups', 'getGroups', 'type', 'value', 'start', 'end', 'daysUntilEnd'
+#     * Returns: Correct 0-based column index accounting for draft mode
+#
+# v12.25.4 CHANGELOG (AUDIT VIEW BUTTON + EXPORT FIX):
+#   🟢 ENHANCED: Blaze Section ID Column → View Button
+#     * ID column header renamed to "View"
+#     * When Blaze discount found: Blue "View" button that calls navBlaze('promo', id)
+#     * When not found in Blaze: Disabled grey "Not in Blaze" button
+#     * When no ID available: Shows "No ID" text
+#     * Crossreferences Google Sheet title with blazeData.currentRows
+#   🔴 FIX: "Download Filtered" Button Export Error
+#     * ISSUE: "Export failed: No matching rows found" when filtering
+#     * ROOT CAUSE: Column index hardcoded to 1, but Draft mode adds checkbox column
+#       - Draft OFF: col 0=detail, col 1=ID
+#       - Draft ON: col 0=checkbox, col 1=detail, col 2=ID
+#     * THE FIX: Now uses data-promo-id attribute from DOM rows (primary)
+#       - Fallback: Dynamic column index based on draftSelectionState.isActive
+#       - Added console logging for debugging export
+#
+# v12.25.3 CHANGELOG (DRAFT SELECTED FEATURE):
+#   🟢 NEW: Draft Selected Feature in Blaze Tab
+#     * Toggle button renamed: "Cleanup" → "Zombie"
+#     * New "Draft" toggle added to the right of Zombie toggle
+#     * When Draft toggle ON: Checkboxes appear left of DETAIL button
+#     * Selections tracked by deal ID - persist across filter changes
+#   🟢 NEW: Selection Persistence
+#     * Can filter table, select deals, change filter, continue selecting
+#     * draftSelectionState.selectedDealIds uses Set for O(1) lookups
+#     * Checkboxes maintain state when table redraws
+#   🟢 NEW: Select All Visible
+#     * Header checkbox selects/deselects all currently visible deals
+#     * Confirmation popup: "This will select X currently visible deals. Continue?"
+#   🟢 NEW: Draft Automation
+#     * Uses same /api/blaze/zombie-disable endpoint (sets status to Inactive)
+#     * Sequential processing - one deal at a time for safety
+#     * Progress UI: "Drafting 3 of 12: Deal Name"
+#     * Stop button to cancel mid-automation
+#   🟢 NEW: Review Modal on Completion
+#     * Shows DataTable of all drafted deals
+#     * "Filter Table to Show These" button to review in main table
+#     * Auto-clears selections after completion
+#   🟢 UI: Pulse animation on "Draft Selected" button when deals are selected
+#
 # v12.25.2 CHANGELOG (AUDIT TAB BLAZE + MIS ID FIX):
 #   🔴 FIX: Blaze Discounts Not Showing in Audit Popup
 #     * ISSUE: Section 3 showed "No Blaze discounts" even when titles exist in Google Sheet
@@ -7438,6 +7498,134 @@ HTML_TEMPLATE = r"""
         }
 
         /* Zombie Cleanup Styles */
+        
+        /* Draft Selection Styles */
+        .draft-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .draft-toggle-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fd7e14;
+        }
+        .draft-toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+        }
+        .draft-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .draft-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 20px;
+        }
+        .draft-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .draft-toggle-switch input:checked + .draft-toggle-slider {
+            background-color: #fd7e14;
+        }
+        .draft-toggle-switch input:checked + .draft-toggle-slider:before {
+            transform: translateX(16px);
+        }
+        .draft-checkbox-cell {
+            width: 30px !important;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .draft-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #fd7e14;
+        }
+        .draft-checkbox-header {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #fd7e14;
+        }
+        #draftSelectedBtn {
+            transition: all 0.3s ease;
+        }
+        #draftSelectedBtn.has-selections {
+            animation: pulse-orange 1.5s infinite;
+        }
+        @keyframes pulse-orange {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(253, 126, 20, 0); }
+        }
+        /* Draft Modal Styles */
+        .draft-modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+        }
+        .draft-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            z-index: 9999;
+            max-width: 600px;
+            width: 90%;
+        }
+        .draft-progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .draft-progress-bar {
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .draft-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fd7e14, #ffc107);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .draft-progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 500;
+            color: #495057;
+        }
+        .draft-review-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
         .zombie-toggle-container {
             display: flex;
             align-items: center;
@@ -8385,7 +8573,7 @@ HTML_TEMPLATE = r"""
                                     </div>
                                     <div class="mt-2 d-flex gap-2 align-items-center">
                                         <div class="zombie-toggle-container">
-                                            <span class="zombie-toggle-label"> Cleanup</span>
+                                            <span class="zombie-toggle-label"> Zombie</span>
                                             <label class="zombie-toggle-switch">
                                                 <input type="checkbox" id="zombieCleanupToggle" onchange="toggleZombieCleanupMode()">
                                                 <span class="zombie-toggle-slider"></span>
@@ -8393,6 +8581,16 @@ HTML_TEMPLATE = r"""
                                         </div>
                                         <button id="zombieCleanupBtn" onclick="startZombieCleanup()" class="btn btn-danger btn-sm" style="display: none;">
                                              Zombie Cleanup
+                                        </button>
+                                        <div class="draft-toggle-container">
+                                            <span class="draft-toggle-label"> Draft</span>
+                                            <label class="draft-toggle-switch">
+                                                <input type="checkbox" id="draftSelectionToggle" onchange="toggleDraftSelectionMode()">
+                                                <span class="draft-toggle-slider"></span>
+                                            </label>
+                                        </div>
+                                        <button id="draftSelectedBtn" onclick="startDraftSelected()" class="btn btn-warning btn-sm" style="display: none;">
+                                             Draft Selected (<span id="draftSelectedCount">0</span>)
                                         </button>
                                     </div>
                                 </div>
@@ -18020,7 +18218,7 @@ function buildBlazeSection(deal) {
                     <table class="table table-sm table-bordered mb-0" style="font-size: 0.85em;">
                         <thead style="background:#e9ecef; color:#212529;">
                             <tr>
-                                <th>ID</th>
+                                <th style="width:90px;">View</th>
                                 <th>Name</th>
                                 <th>Status</th>
                                 <th>Type</th>
@@ -18049,9 +18247,24 @@ function buildBlazeSection(deal) {
         // Highlight source from sheet
         const nameStyle = title.source === 'sheet' || title.source === 'sheet_only' ? 'background:#e7f1ff;' : '';
         
+        // v12.25.4: ID column becomes View button
+        let viewButton;
+        const hasValidId = title.id && title.id !== '-' && title.id !== '';
+        
+        if (title.source === 'sheet_only') {
+            // Not found in Blaze - disabled button
+            viewButton = '<button class="btn btn-sm btn-secondary" disabled style="font-size:0.75rem; padding:2px 6px; opacity:0.6;" title="Not found in current Blaze data">Not in Blaze</button>';
+        } else if (hasValidId) {
+            // Found in Blaze - clickable View button
+            viewButton = `<button onclick="navBlaze('promo', '${title.id}'); return false;" class="btn btn-sm btn-primary" style="font-size:0.75rem; padding:2px 6px;" title="ID: ${title.id}">View</button>`;
+        } else {
+            // No ID available
+            viewButton = '<span class="text-muted">No ID</span>';
+        }
+        
         html += `
             <tr style="${nameStyle}">
-                <td>${title.id || '-'}</td>
+                <td>${viewButton}</td>
                 <td>${title.name || '-'}${title.source === 'sheet' ? ' <small class="text-success">(from Sheet)</small>' : ''}</td>
                 <td>${statusBadge}</td>
                 <td>${title.type || '-'}</td>
@@ -19551,6 +19764,7 @@ function showOtdModal(rowIndex) {
                 }
 
                 tr.innerHTML = `
+                    ${draftSelectionState.isActive ? `<td class="draft-checkbox-cell"><input type="checkbox" class="draft-checkbox" data-promo-id="${row.ID}" ${draftSelectionState.selectedDealIds.has(String(row.ID)) ? 'checked' : ''} onchange="toggleDraftSelection('${row.ID}', this.checked)"></td>` : ''}
                     <td>${detailCell}</td>
                     <td>${idButton}</td>
                     <td>${row.Name}</td>
@@ -19565,6 +19779,7 @@ function showOtdModal(rowIndex) {
                     <td>${row['End Date']}</td>
                     <td><span style="font-size: 0.85rem; font-style: italic;">${daysDisplay}</span></td>
                 `;
+                tr.setAttribute('data-promo-id', row.ID);
                 tbody.appendChild(tr);
                 
                 // Attach row data to detail cell span for event handlers
@@ -19584,6 +19799,21 @@ function showOtdModal(rowIndex) {
             autoWidth: true,
             deferRender: true
         });
+        
+        // v12.25.3: Add checkbox header if draft mode is active
+        if (draftSelectionState.isActive) {
+            const thead = document.querySelector('#promotionsTable thead tr');
+            const existingCheckboxHeader = thead.querySelector('.draft-checkbox-header-cell');
+            if (!existingCheckboxHeader) {
+                const th = document.createElement('th');
+                th.className = 'draft-checkbox-header-cell';
+                th.style.cssText = 'width: 30px !important; text-align: center;';
+                th.innerHTML = '<input type="checkbox" class="draft-checkbox-header" onclick="toggleSelectAllVisible(this)" title="Select all visible">';
+                thead.insertBefore(th, thead.firstChild);
+            }
+            // Update count display
+            updateDraftSelectedCount();
+        }
         
         // Force redraw if container was hidden during initialization
         const promoContent = document.getElementById('blaze-promo-content');
@@ -19610,9 +19840,13 @@ function showOtdModal(rowIndex) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
+            // v12.25.5: Use dynamic column indices for filter counting
+            const statusColIdx = getBlazeColumnIndex('status');
+            const endColIdx = getBlazeColumnIndex('end');
+            
             filteredData.each(function (value, index) {
-                const statusHTML = String(value[3] || ''); // Index 3 is Status
-                const endDateHTML = String(value[11] || ''); // Index 11 is End Date
+                const statusHTML = String(value[statusColIdx] || '');
+                const endDateHTML = String(value[endColIdx] || '');
                 
                 if (statusHTML.includes('Active')) {
                     filtActive++;
@@ -19636,6 +19870,11 @@ function showOtdModal(rowIndex) {
             document.getElementById('filteredActive').innerText = filtActive + " Active";
             document.getElementById('filteredInactive').innerText = filtInactive + " Inactive";
             document.getElementById('filteredZombie').innerText = " " + filtZombie + " Zombie";
+            
+            // v12.25.3: Preserve checkbox states after filter/redraw
+            if (draftSelectionState.isActive) {
+                updateDraftCheckboxes();
+            }
 
             const nameFilter = document.getElementById('blazeNameSearch').value;
             const subFilter = document.getElementById('blazeSubSearch').value;
@@ -19663,7 +19902,9 @@ function showOtdModal(rowIndex) {
         
         if (primaryVal.trim().length > 0) {
             subContainer.style.display = 'flex';
-            table.column(2).search(primaryVal);  
+            // v12.25.5: Use dynamic column index
+            const nameColIndex = getBlazeColumnIndex('name');
+            table.column(nameColIndex).search(primaryVal);  
             table.search(subVal);                 
             table.draw();
         } else if (subVal.trim().length > 0) {
@@ -19698,23 +19939,41 @@ async function exportFilteredData() {
         return;
     }
     
-    // Collect visible row IDs
+    // v12.25.4: Collect visible row IDs using data-promo-id attribute from DOM
+    // This is more reliable than parsing HTML from DataTable columns
     const visibleIds = [];
-    filteredData.each(function(rowData) {
-        // Extract ID from the button HTML in column 0 (Detail column has the View Discount button)
-        // The ID is in column 1 which contains just the ID text
-        const idCell = rowData[1]; // ID column
-        // Extract numeric ID from potential HTML or text
-        const idMatch = String(idCell).match(/(\d+)/);
-        if (idMatch) {
-            visibleIds.push(idMatch[1]);
+    const visibleRows = table.rows({ search: 'applied' }).nodes();
+    
+    $(visibleRows).each(function() {
+        const promoId = $(this).attr('data-promo-id');
+        if (promoId) {
+            visibleIds.push(promoId);
         }
     });
+    
+    // Fallback: If data-promo-id not found, try extracting from column data
+    if (visibleIds.length === 0) {
+        // Determine which column has the ID based on draft mode
+        // Draft ON: col 0=checkbox, col 1=detail, col 2=ID
+        // Draft OFF: col 0=detail, col 1=ID
+        const idColIndex = draftSelectionState.isActive ? 2 : 1;
+        
+        filteredData.each(function(rowData) {
+            const idCell = rowData[idColIndex];
+            // Extract numeric ID from HTML button or text
+            const idMatch = String(idCell).match(/(\d+)/);
+            if (idMatch) {
+                visibleIds.push(idMatch[1]);
+            }
+        });
+    }
     
     if (visibleIds.length === 0) {
         alert('Could not extract IDs from filtered data');
         return;
     }
+    
+    console.log('[EXPORT] Exporting ' + visibleIds.length + ' rows with IDs:', visibleIds.slice(0, 5), '...');
     
     // Send to backend for CSV generation
     try {
@@ -19835,18 +20094,23 @@ function applyZombieFilter() {
     
     const table = $('#promotionsTable').DataTable();
     
-    // Clear existing filters
+    // Clear existing filters - v12.25.5: Use dynamic column index
     document.getElementById('blazeNameSearch').value = '';
     document.getElementById('blazeSubSearch').value = '';
-    table.column(2).search('');
+    const nameColIndex = getBlazeColumnIndex('name');
+    table.column(nameColIndex).search('');
     table.search('');
     
     // Apply custom filter for zombies only
+    // v12.25.5: Use dynamic column indices in filter function
+    const statusColIndex = getBlazeColumnIndex('status');
+    const endColIndex = getBlazeColumnIndex('end');
+    
     $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
         if (settings.nTable.id !== 'promotionsTable') return true;
         
-        const statusHTML = data[3] || '';
-        const endDateHTML = data[11] || '';
+        const statusHTML = data[statusColIndex] || '';
+        const endDateHTML = data[endColIndex] || '';
         
         // Must be Active
         if (!statusHTML.includes('Active')) return false;
@@ -20013,6 +20277,396 @@ function finishZombieCleanup() {
     zombieCleanupState.currentIndex = 0;
 }
 
+// ============================================
+// DRAFT SELECTED FEATURE - v12.25.3
+// ============================================
+let draftSelectionState = {
+    isActive: false,
+    selectedDealIds: new Set(),  // Persists across filters
+    isAutomating: false,
+    shouldStop: false,
+    currentIndex: 0,
+    draftedDeals: [],  // Results for review popup
+    totalToDraft: 0
+};
+
+function toggleDraftSelectionMode() {
+    const toggle = document.getElementById('draftSelectionToggle');
+    const btn = document.getElementById('draftSelectedBtn');
+    
+    if (toggle.checked) {
+        draftSelectionState.isActive = true;
+        btn.style.display = 'inline-block';
+        // Re-render table to show checkboxes
+        rerenderBlazeTableWithCheckboxes();
+        updateDraftSelectedCount();
+    } else {
+        draftSelectionState.isActive = false;
+        btn.style.display = 'none';
+        // Clear selections
+        draftSelectionState.selectedDealIds.clear();
+        // Re-render table without checkboxes
+        rerenderBlazeTableWithCheckboxes();
+    }
+}
+
+function rerenderBlazeTableWithCheckboxes() {
+    // If DataTable exists, we need to update the header and refresh
+    if (!$.fn.DataTable.isDataTable('#promotionsTable')) return;
+    
+    const table = $('#promotionsTable').DataTable();
+    const isActive = draftSelectionState.isActive;
+    
+    // Update header - add/remove checkbox column
+    const thead = document.querySelector('#promotionsTable thead tr');
+    const existingCheckboxHeader = thead.querySelector('.draft-checkbox-header-cell');
+    
+    if (isActive && !existingCheckboxHeader) {
+        // Add checkbox header
+        const th = document.createElement('th');
+        th.className = 'draft-checkbox-header-cell';
+        th.style.cssText = 'width: 30px !important; text-align: center;';
+        th.innerHTML = '<input type="checkbox" class="draft-checkbox-header" onclick="toggleSelectAllVisible(this)" title="Select all visible">';
+        thead.insertBefore(th, thead.firstChild);
+    } else if (!isActive && existingCheckboxHeader) {
+        existingCheckboxHeader.remove();
+    }
+    
+    // Update body rows
+    const tbody = document.querySelector('#promotionsTable tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const existingCheckboxCell = row.querySelector('.draft-checkbox-cell');
+        const rowId = row.getAttribute('data-promo-id');
+        
+        if (isActive) {
+            if (!existingCheckboxCell && rowId) {
+                // Add checkbox cell
+                const td = document.createElement('td');
+                td.className = 'draft-checkbox-cell';
+                const isChecked = draftSelectionState.selectedDealIds.has(rowId);
+                td.innerHTML = `<input type="checkbox" class="draft-checkbox" data-promo-id="${rowId}" ${isChecked ? 'checked' : ''} onchange="toggleDraftSelection('${rowId}', this.checked)">`;
+                row.insertBefore(td, row.firstChild);
+            } else if (existingCheckboxCell && rowId) {
+                // Update checkbox state
+                const checkbox = existingCheckboxCell.querySelector('input');
+                if (checkbox) {
+                    checkbox.checked = draftSelectionState.selectedDealIds.has(rowId);
+                }
+            }
+        } else if (existingCheckboxCell) {
+            existingCheckboxCell.remove();
+        }
+    });
+    
+    // Adjust columns
+    table.columns.adjust().draw(false);
+}
+
+function toggleDraftSelection(promoId, isChecked) {
+    if (isChecked) {
+        draftSelectionState.selectedDealIds.add(promoId);
+    } else {
+        draftSelectionState.selectedDealIds.delete(promoId);
+    }
+    updateDraftSelectedCount();
+}
+
+function toggleSelectAllVisible(headerCheckbox) {
+    const visibleCount = getVisibleDealIds().length;
+    
+    if (headerCheckbox.checked) {
+        // Show confirmation
+        if (!confirm(`This will select ${visibleCount} currently visible deal(s). Continue?`)) {
+            headerCheckbox.checked = false;
+            return;
+        }
+        // Select all visible
+        const visibleIds = getVisibleDealIds();
+        visibleIds.forEach(id => draftSelectionState.selectedDealIds.add(id));
+    } else {
+        // Deselect all visible
+        const visibleIds = getVisibleDealIds();
+        visibleIds.forEach(id => draftSelectionState.selectedDealIds.delete(id));
+    }
+    
+    // Update checkboxes
+    updateDraftCheckboxes();
+    updateDraftSelectedCount();
+}
+
+function getVisibleDealIds() {
+    const ids = [];
+    const tbody = document.querySelector('#promotionsTable tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        // DataTables hides rows with display:none when filtered
+        if (row.style.display !== 'none') {
+            const promoId = row.getAttribute('data-promo-id');
+            if (promoId) {
+                ids.push(promoId);
+            }
+        }
+    });
+    
+    return ids;
+}
+
+function updateDraftCheckboxes() {
+    const checkboxes = document.querySelectorAll('.draft-checkbox');
+    checkboxes.forEach(cb => {
+        const promoId = cb.getAttribute('data-promo-id');
+        cb.checked = draftSelectionState.selectedDealIds.has(promoId);
+    });
+}
+
+function updateDraftSelectedCount() {
+    const count = draftSelectionState.selectedDealIds.size;
+    document.getElementById('draftSelectedCount').textContent = count;
+    
+    const btn = document.getElementById('draftSelectedBtn');
+    if (count > 0) {
+        btn.classList.add('has-selections');
+        btn.disabled = false;
+    } else {
+        btn.classList.remove('has-selections');
+        btn.disabled = true;
+    }
+}
+
+function startDraftSelected() {
+    const count = draftSelectionState.selectedDealIds.size;
+    
+    if (count === 0) {
+        alert('No deals selected. Use the checkboxes to select deals first.');
+        return;
+    }
+    
+    // Show confirmation modal
+    document.getElementById('draftCountDisplay').textContent = count;
+    document.getElementById('draftModalBackdrop').style.display = 'block';
+    document.getElementById('draftModal').style.display = 'block';
+    document.getElementById('draftActionButtons').style.display = 'flex';
+    document.getElementById('draftProgressContainer').style.display = 'none';
+}
+
+function cancelDraftModal() {
+    document.getElementById('draftModalBackdrop').style.display = 'none';
+    document.getElementById('draftModal').style.display = 'none';
+}
+
+async function runDraftAutomation() {
+    const selectedIds = Array.from(draftSelectionState.selectedDealIds);
+    const total = selectedIds.length;
+    
+    draftSelectionState.isAutomating = true;
+    draftSelectionState.shouldStop = false;
+    draftSelectionState.currentIndex = 0;
+    draftSelectionState.draftedDeals = [];
+    draftSelectionState.totalToDraft = total;
+    
+    // Show progress UI
+    document.getElementById('draftActionButtons').style.display = 'none';
+    document.getElementById('draftProgressContainer').style.display = 'block';
+    document.getElementById('draftStopBtn').style.display = 'block';
+    
+    // Process each selected deal
+    for (let i = 0; i < total; i++) {
+        if (draftSelectionState.shouldStop) {
+            document.getElementById('draftProgressText').textContent = 
+                `Stopped at ${i} of ${total}. ${draftSelectionState.draftedDeals.length} drafted.`;
+            break;
+        }
+        
+        draftSelectionState.currentIndex = i;
+        const promoId = selectedIds[i];
+        
+        // Get deal info for review
+        const dealInfo = blazeData.currentRows?.find(r => String(r.ID) === String(promoId));
+        
+        // Update progress
+        const percent = Math.round(((i + 1) / total) * 100);
+        document.getElementById('draftProgressFill').style.width = percent + '%';
+        document.getElementById('draftProgressText').textContent = 
+            `Drafting ${i + 1} of ${total}: ${dealInfo?.Name || 'ID ' + promoId}`;
+        
+        try {
+            const response = await fetch('/api/blaze/zombie-disable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ promo_id: promoId })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Add to drafted list
+                draftSelectionState.draftedDeals.push({
+                    id: promoId,
+                    name: dealInfo?.Name || 'Unknown',
+                    status: 'Drafted',
+                    locations: dealInfo?.Locations || '-',
+                    startDate: dealInfo?.['Start Date'] || '-',
+                    endDate: dealInfo?.['End Date'] || '-'
+                });
+            } else {
+                console.error(`Failed to draft ${promoId}: ${result.error}`);
+                document.getElementById('draftProgressText').textContent = 
+                    `Error on ${dealInfo?.Name || promoId}: ${result.error}. Continuing...`;
+                await new Promise(r => setTimeout(r, 2000));
+            }
+        } catch (e) {
+            console.error(`Error drafting ${promoId}:`, e);
+            document.getElementById('draftProgressText').textContent = 
+                `Network error on ${dealInfo?.Name || promoId}. Continuing...`;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        
+        // Delay between operations
+        await new Promise(r => setTimeout(r, 500));
+    }
+    
+    // Complete
+    draftSelectionState.isAutomating = false;
+    
+    if (!draftSelectionState.shouldStop) {
+        document.getElementById('draftProgressText').textContent = 
+            `Complete! Drafted ${draftSelectionState.draftedDeals.length} deal(s).`;
+        document.getElementById('draftProgressFill').style.width = '100%';
+        document.getElementById('draftProgressFill').style.background = '#28a745';
+    }
+    
+    document.getElementById('draftStopBtn').style.display = 'none';
+    
+    // Wait then show review
+    await new Promise(r => setTimeout(r, 1500));
+    
+    // Close progress modal
+    document.getElementById('draftModalBackdrop').style.display = 'none';
+    document.getElementById('draftModal').style.display = 'none';
+    
+    // Reset progress UI
+    document.getElementById('draftActionButtons').style.display = 'flex';
+    document.getElementById('draftProgressContainer').style.display = 'none';
+    document.getElementById('draftProgressFill').style.width = '0%';
+    document.getElementById('draftProgressFill').style.background = 'linear-gradient(90deg, #fd7e14, #ffc107)';
+    
+    // Clear selections
+    draftSelectionState.selectedDealIds.clear();
+    updateDraftSelectedCount();
+    updateDraftCheckboxes();
+    
+    // Show review modal
+    showDraftReviewModal();
+    
+    // Refresh Blaze data
+    fetchBlazeData();
+}
+
+function stopDraftAutomation() {
+    draftSelectionState.shouldStop = true;
+    document.getElementById('draftStopBtn').disabled = true;
+    document.getElementById('draftStopBtn').textContent = 'Stopping...';
+}
+
+function showDraftReviewModal() {
+    const drafted = draftSelectionState.draftedDeals;
+    
+    if (drafted.length === 0) {
+        alert('No deals were drafted.');
+        return;
+    }
+    
+    document.getElementById('draftReviewCount').textContent = drafted.length;
+    
+    // Build review table
+    let tableHtml = `
+        <table class="table table-sm table-striped" style="font-size: 0.85em;">
+            <thead style="background: #e9ecef;">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Locations</th>
+                    <th>Start</th>
+                    <th>End</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    drafted.forEach(deal => {
+        tableHtml += `
+            <tr>
+                <td>${deal.id}</td>
+                <td>${deal.name}</td>
+                <td><span class="badge bg-success">${deal.status}</span></td>
+                <td title="${deal.locations}" style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.locations}</td>
+                <td>${deal.startDate}</td>
+                <td>${deal.endDate}</td>
+            </tr>
+        `;
+    });
+    
+    tableHtml += '</tbody></table>';
+    
+    document.getElementById('draftReviewTableContainer').innerHTML = tableHtml;
+    document.getElementById('draftReviewModalBackdrop').style.display = 'block';
+    document.getElementById('draftReviewModal').style.display = 'block';
+}
+
+function closeDraftReviewModal() {
+    document.getElementById('draftReviewModalBackdrop').style.display = 'none';
+    document.getElementById('draftReviewModal').style.display = 'none';
+    draftSelectionState.draftedDeals = [];
+}
+
+function filterToDraftedDeals() {
+    const draftedIds = draftSelectionState.draftedDeals.map(d => d.id);
+    
+    if (draftedIds.length === 0) return;
+    
+    // Close review modal
+    closeDraftReviewModal();
+    
+    // Apply custom filter
+    if (!$.fn.DataTable.isDataTable('#promotionsTable')) return;
+    
+    const table = $('#promotionsTable').DataTable();
+    
+    // Clear existing search - v12.25.5: Use dynamic column index
+    document.getElementById('blazeNameSearch').value = '';
+    document.getElementById('blazeSubSearch').value = '';
+    const nameColIndex = getBlazeColumnIndex('name');
+    table.column(nameColIndex).search('');
+    table.search('');
+    
+    // Add custom filter for drafted IDs
+    // v12.25.5: Use dynamic column index for ID
+    const idColIndex = getBlazeColumnIndex('id');
+    
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (settings.nTable.id !== 'promotionsTable') return true;
+        
+        // Get the ID from dynamic column
+        const idCell = data[idColIndex] || '';
+        const idMatch = idCell.match(/\d+/);
+        if (!idMatch) return false;
+        
+        return draftedIds.includes(idMatch[0]);
+    });
+    
+    table.draw();
+    
+    // Remove filter after 30 seconds or on next filter change
+    setTimeout(() => {
+        $.fn.dataTable.ext.search.pop();
+        table.draw();
+    }, 30000);
+}
+
         document.addEventListener('click', function(event) {
             const tooltip = document.getElementById('suggestion-tooltip');
             if (!event.target.closest('.suggestion-indicator') && !event.target.closest('.tooltip-container')) {
@@ -20070,6 +20724,28 @@ function finishZombieCleanup() {
             applyBlazeFilters();
         }
 
+// v12.25.5: Helper to get correct column index based on draft mode
+// When Draft mode is ON, checkbox column is added at index 0, shifting all others by 1
+function getBlazeColumnIndex(columnName) {
+    const offset = draftSelectionState.isActive ? 1 : 0;
+    const baseIndices = {
+        'detail': 0,
+        'id': 1,
+        'name': 2,
+        'status': 3,
+        'autoManual': 4,
+        'locations': 5,
+        'buyGroups': 6,
+        'getGroups': 7,
+        'type': 8,
+        'value': 9,
+        'start': 10,
+        'end': 11,
+        'daysUntilEnd': 12
+    };
+    return (baseIndices[columnName] ?? 0) + offset;
+}
+
 // 2. Applies both filters to the DataTable
         function applyBlazeFilters() {
             if (!$.fn.DataTable.isDataTable('#promotionsTable')) return;
@@ -20078,9 +20754,9 @@ function finishZombieCleanup() {
             const primaryVal = document.getElementById('blazeNameSearch').value;
             const subVal = document.getElementById('blazeSubSearch').value;
             
-            // Step 1: Apply Name Filter (Column 2) - v63 FIX: Column index changed after adding Detail column
-            // Column 0 = Detail, Column 1 = ID, Column 2 = Name
-            table.column(2).search(primaryVal);
+            // v12.25.5: Use dynamic column index for Name column
+            const nameColIndex = getBlazeColumnIndex('name');
+            table.column(nameColIndex).search(primaryVal);
             
             // Step 2: Apply Global "Sub" Search
             // This searches WITHIN the results remaining from Step 1
@@ -20422,6 +21098,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="zombieProgressFill" class="zombie-progress-fill"></div>
             </div>
             <div id="zombieProgressText" class="zombie-progress-text">Initializing...</div>
+        </div>
+    </div>
+
+    <!-- DRAFT SELECTED MODAL -->
+    <div id="draftModalBackdrop" class="draft-modal-backdrop"></div>
+    <div id="draftModal" class="draft-modal">
+        <h3 style="color: #fd7e14;"><i class="bi bi-pencil-square"></i> Draft Selected Deals</h3>
+        <p>
+            You are about to set <strong><span id="draftCountDisplay">0</span> deal(s)</strong> to <span style="color: #6c757d; font-weight: bold;">Inactive</span> status.
+        </p>
+        <p class="text-muted small">
+            This will disable the selected promotions one by one. You can stop the process at any time.
+        </p>
+        <div id="draftActionButtons" class="btn-group-vertical w-100" style="gap: 10px;">
+            <button onclick="runDraftAutomation()" class="btn btn-warning">
+                <i class="bi bi-play-fill"></i> Start Drafting
+            </button>
+            <button onclick="cancelDraftModal()" class="btn btn-secondary">
+                <i class="bi bi-x-lg"></i> Cancel
+            </button>
+        </div>
+        <div id="draftProgressContainer" class="draft-progress-container">
+            <div class="draft-progress-bar">
+                <div id="draftProgressFill" class="draft-progress-fill"></div>
+            </div>
+            <div id="draftProgressText" class="draft-progress-text">Initializing...</div>
+            <button onclick="stopDraftAutomation()" class="btn btn-outline-danger btn-sm mt-3 w-100" id="draftStopBtn">
+                <i class="bi bi-stop-fill"></i> Stop
+            </button>
+        </div>
+    </div>
+
+    <!-- DRAFT REVIEW MODAL -->
+    <div id="draftReviewModalBackdrop" class="draft-modal-backdrop"></div>
+    <div id="draftReviewModal" class="draft-modal" style="max-width: 900px;">
+        <h3 style="color: #28a745;"><i class="bi bi-check-circle-fill"></i> Draft Complete!</h3>
+        <p>Successfully set <strong><span id="draftReviewCount">0</span> deal(s)</strong> to Inactive.</p>
+        <div class="draft-review-table mb-3" id="draftReviewTableContainer">
+            <!-- Table will be injected here -->
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+            <button onclick="filterToDraftedDeals()" class="btn btn-outline-primary">
+                <i class="bi bi-filter"></i> Filter Table to Show These
+            </button>
+            <button onclick="closeDraftReviewModal()" class="btn btn-success">
+                <i class="bi bi-check-lg"></i> Done
+            </button>
         </div>
     </div>
     
