@@ -1,32 +1,77 @@
-# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.25.5 BLAZE FILTER FIX
+# [BLAZE MIS Project 2 - Phase 3 Implementation] - v12.25.7 SMART COLUMN DETECTION
+# v12.25.7 CHANGELOG (SMART COLUMN DETECTION):
+#   ðŸŸ¢ ENHANCED: Location Column Detection with Debug Logging
+#     * Added debug logging to help troubleshoot column detection issues
+#     * Prints all available column names once per unique set
+#     * Logs which column was matched (primary, secondary, or fallback)
+#     * Warns if no location column is found
+#   ðŸŸ¢ ENHANCED: Monthly Day-of-Month Detection with Debug Logging
+#     * Prints when "Contracted Duration" column is found
+#     * Logs the value being extracted
+#     * Warns if no day-of-month column is found
+#   ðŸ”´ FIX: Multi-line Header Handling
+#     * Normalizes newlines to spaces before searching: .replace('\n', ' ')
+#     * Fallback detection improved for columns starting with "locations"
+#   ðŸ”´ FIX: Updated All Direct Location References
+#     * Line 25378: Now uses resolve_location_columns() 
+#     * Line 26123: Now uses resolve_location_columns()
+#     * Line 26304: Now uses resolve_location_columns()
+#
+# v12.25.6 CHANGELOG (COLUMN DETECTION + DATATABLES FIX):
+#   ðŸ”´ FIX: DataTables "Incorrect column count" Error
+#     * ISSUE: After Draft automation, table shows "Incorrect column count" error
+#     * ROOT CAUSE: Header checkbox added AFTER DataTable init, but rows already had checkbox cells
+#     * THE FIX: Add/remove header checkbox BEFORE DataTable initialization
+#       - If draftSelectionState.isActive: Add header checkbox first
+#       - If NOT active: Remove existing header checkbox first
+#       - Then initialize DataTable with matching header/body column counts
+#   ðŸŸ¢ ENHANCED: Smart Column Detection for Google Sheet Changes
+#     * NEW: find_column_by_header_contains() helper - searches headers by text
+#     * NEW: get_monthly_day_of_month() helper - finds Monthly day data
+#   ðŸ”´ FIX: Location Column Detection
+#     * ISSUE: Locations not being read after Google Sheet column changes
+#     * THE FIX: resolve_location_columns() now searches for "(Discount Applies At)" in header
+#       - Primary match: "(discount applies at)" with parentheses
+#       - Fallback: 'discount' AND 'applies' for backwards compatibility
+#       - Same header detection for Weekly, Monthly, and Sale sections
+#   ðŸ”´ FIX: Monthly Section Day-of-Month Column
+#     * ISSUE: Monthly deals not reading day of month after column moved to "Contracted Duration"
+#     * THE FIX: get_monthly_day_of_month() searches for "Contracted Duration" in header
+#       - Falls back to old column names for backwards compatibility
+#       - NOTE: Column A may contain comma-separated dates for multi-day deals
+#   ðŸŸ¢ UPDATED: All section-aware weekday/date detection now uses smart helpers
+#     * Weekly: Uses 'Weekday', 'Day of Week' columns (unchanged)
+#     * Monthly: Uses get_monthly_day_of_month() - searches "Contracted Duration" header
+#     * Sale: Uses 'Sale Runs:', 'Contracted Duration' columns for date ranges
+#
 # v12.25.5 CHANGELOG (BLAZE FILTER FIX):
-#   🔴 FIX: Blaze Tab Filters Break After Draft Automation
+#   ðŸ”´ FIX: Blaze Tab Filters Break After Draft Automation
 #     * ISSUE: After running Draft automation, Name filter stops working
 #     * ROOT CAUSE: All column indices hardcoded (e.g., column(2) for Name)
 #       - When Draft mode ON, checkbox column added at index 0
-#       - Shifts all columns: Name from col 2 → col 3, Status from col 3 → col 4, etc.
+#       - Shifts all columns: Name from col 2 â†’ col 3, Status from col 3 â†’ col 4, etc.
 #     * THE FIX: Created getBlazeColumnIndex() helper function
 #       - Returns correct column index based on draftSelectionState.isActive
 #       - Offset of +1 applied when draft mode is active
-#   🟢 UPDATED: All column references now dynamic
+#   ðŸŸ¢ UPDATED: All column references now dynamic
 #     * applyBlazeFilters() - Name column search
 #     * DataTable draw event - Status and End Date for filter counting
 #     * applyZombieFilter() - Status, End Date, and Name column clear
 #     * filterToDraftedDeals() - ID column and Name column clear
 #     * Persistence section - Name column search
-#   🟢 NEW: getBlazeColumnIndex(columnName) helper
+#   ðŸŸ¢ NEW: getBlazeColumnIndex(columnName) helper
 #     * Accepts: 'detail', 'id', 'name', 'status', 'autoManual', 'locations',
 #                'buyGroups', 'getGroups', 'type', 'value', 'start', 'end', 'daysUntilEnd'
 #     * Returns: Correct 0-based column index accounting for draft mode
 #
 # v12.25.4 CHANGELOG (AUDIT VIEW BUTTON + EXPORT FIX):
-#   🟢 ENHANCED: Blaze Section ID Column → View Button
+#   ðŸŸ¢ ENHANCED: Blaze Section ID Column â†’ View Button
 #     * ID column header renamed to "View"
 #     * When Blaze discount found: Blue "View" button that calls navBlaze('promo', id)
 #     * When not found in Blaze: Disabled grey "Not in Blaze" button
 #     * When no ID available: Shows "No ID" text
 #     * Crossreferences Google Sheet title with blazeData.currentRows
-#   🔴 FIX: "Download Filtered" Button Export Error
+#   ðŸ”´ FIX: "Download Filtered" Button Export Error
 #     * ISSUE: "Export failed: No matching rows found" when filtering
 #     * ROOT CAUSE: Column index hardcoded to 1, but Draft mode adds checkbox column
 #       - Draft OFF: col 0=detail, col 1=ID
@@ -36,31 +81,31 @@
 #       - Added console logging for debugging export
 #
 # v12.25.3 CHANGELOG (DRAFT SELECTED FEATURE):
-#   🟢 NEW: Draft Selected Feature in Blaze Tab
-#     * Toggle button renamed: "Cleanup" → "Zombie"
+#   ðŸŸ¢ NEW: Draft Selected Feature in Blaze Tab
+#     * Toggle button renamed: "Cleanup" â†’ "Zombie"
 #     * New "Draft" toggle added to the right of Zombie toggle
 #     * When Draft toggle ON: Checkboxes appear left of DETAIL button
 #     * Selections tracked by deal ID - persist across filter changes
-#   🟢 NEW: Selection Persistence
+#   ðŸŸ¢ NEW: Selection Persistence
 #     * Can filter table, select deals, change filter, continue selecting
 #     * draftSelectionState.selectedDealIds uses Set for O(1) lookups
 #     * Checkboxes maintain state when table redraws
-#   🟢 NEW: Select All Visible
+#   ðŸŸ¢ NEW: Select All Visible
 #     * Header checkbox selects/deselects all currently visible deals
 #     * Confirmation popup: "This will select X currently visible deals. Continue?"
-#   🟢 NEW: Draft Automation
+#   ðŸŸ¢ NEW: Draft Automation
 #     * Uses same /api/blaze/zombie-disable endpoint (sets status to Inactive)
 #     * Sequential processing - one deal at a time for safety
 #     * Progress UI: "Drafting 3 of 12: Deal Name"
 #     * Stop button to cancel mid-automation
-#   🟢 NEW: Review Modal on Completion
+#   ðŸŸ¢ NEW: Review Modal on Completion
 #     * Shows DataTable of all drafted deals
 #     * "Filter Table to Show These" button to review in main table
 #     * Auto-clears selections after completion
-#   🟢 UI: Pulse animation on "Draft Selected" button when deals are selected
+#   ðŸŸ¢ UI: Pulse animation on "Draft Selected" button when deals are selected
 #
 # v12.25.2 CHANGELOG (AUDIT TAB BLAZE + MIS ID FIX):
-#   🔴 FIX: Blaze Discounts Not Showing in Audit Popup
+#   ðŸ”´ FIX: Blaze Discounts Not Showing in Audit Popup
 #     * ISSUE: Section 3 showed "No Blaze discounts" even when titles exist in Google Sheet
 #     * ROOT CAUSE: buildBlazeSection() only checked approvedMatches (requires re-approval)
 #       - User expectation: If Blaze title is IN the Google Sheet, it's already approved
@@ -73,24 +118,24 @@
 #       2. approvedMatches (newly approved in ID Matcher)
 #       3. deal.blaze_titles directly attached
 #       4. blazeMatches global
-#   🔴 FIX: Multiple MIS IDs Not Parsed in Audit Table
+#   ðŸ”´ FIX: Multiple MIS IDs Not Parsed in Audit Table
 #     * ISSUE: MIS ID column showed combined IDs as single string instead of separate buttons
 #     * ROOT CAUSE: renderAuditOverview() used deal.current_sheet_id directly
 #     * THE FIX: Now uses parseMultipleMisIdsForAudit() to split IDs
 #       - Creates separate button for each MIS ID
 #       - Each button triggers lookupMisId() with clean ID
-#   🔴 FIX: "STIIIZY MONTHLY+ WEEKLY DEAL PLANNER" Ignore Logic
+#   ðŸ”´ FIX: "STIIIZY MONTHLY+ WEEKLY DEAL PLANNER" Ignore Logic
 #     * Added to BOTH Audit Tab and ID Matcher Tab
 #     * parseMultipleMisIds() now filters out this note text
 #     * parseMultipleMisIdsForAudit() already had this logic
 #     * Only rows containing actual numeric IDs are shown as MIS ID buttons
-#   🟢 ENHANCED: Blaze Section Table Display
+#   ðŸŸ¢ ENHANCED: Blaze Section Table Display
 #     * Shows "(from Sheet)" label for titles sourced from Google Sheet column
 #     * "In Sheet Only" badge for titles not found in current Blaze data
 #     * Row highlighting for sheet-sourced titles
 #
 # v12.25.1 CHANGELOG (SETUP TAB FIX):
-#   🔴 FIX: Initialize Button Not Working
+#   ðŸ”´ FIX: Initialize Button Not Working
 #     * ISSUE: Button clicked but nothing happened (no browser launch)
 #     * ROOT CAUSE: initializeAllSystems() used 'event.target' but 'event' was undefined
 #       - onclick="initializeAllSystems()" did NOT pass event parameter
@@ -101,84 +146,84 @@
 #       - Button element now properly captured for disable/enable logic
 #
 # v12.25.0 CHANGELOG (COMPREHENSIVE AUDIT TAB + SET-BASED MATCHING):
-#   ðŸŸ¢ NEW: Comprehensive Audit Tab (OWN SUB-NAV TAB - NOT nested in ID Matcher)
+#   Ã°Å¸Å¸Â¢ NEW: Comprehensive Audit Tab (OWN SUB-NAV TAB - NOT nested in ID Matcher)
 #     * Located in MIS sub-nav, after "Up-Down Planning" button
 #     * Full Audit mode: All deals from selected Google Sheet tab
 #     * Custom Audit mode: Filter by Section (Weekly/Monthly/Sale), Weekday, Date
 #     * Weekend Toggle: Quick filter for Sat+Sun
 #     * Date Picker: For specific date filtering
-#   ðŸŸ¢ NEW: Sequential Audit Process
+#   Ã°Å¸Å¸Â¢ NEW: Sequential Audit Process
 #     * Start Audit: Confirmation popup with deal count
 #     * Progress tracking: "Deal 12 of 47" indicator
-#     * Mark buttons: Verified âœ… / Needs Attention âš ï¸ / Skip â­ï¸
+#     * Mark buttons: Verified Ã¢Å“â€¦ / Needs Attention Ã¢Å¡Â Ã¯Â¸Â / Skip Ã¢ÂÂ­Ã¯Â¸Â
 #     * Previous/Next navigation through deals
 #     * Exit Audit: Saves progress and exits
-#   ðŸŸ¢ NEW: Audit Popup with 3 Sections
+#   Ã°Å¸Å¸Â¢ NEW: Audit Popup with 3 Sections
 #     * Section 1: Google Sheet Data (full row from matchesData)
 #     * Section 2: Assigned MIS ID Entries (now supports MULTIPLE MIS IDs!)
 #     * Section 3: Blaze Discounts (if assigned)
 #     * Notes field per MIS entry
 #     * Multi-brand verification checklist
-#   ðŸŸ¢ NEW: State Persistence
+#   Ã°Å¸Å¸Â¢ NEW: State Persistence
 #     * Server-side state file in AUDIT_REPORTS folder
 #     * Browser localStorage backup
 #     * Resume incomplete audits on return
-#   ðŸŸ¢ NEW: Export Report
+#   Ã°Å¸Å¸Â¢ NEW: Export Report
 #     * CSV export: Row, Section, Brand, Weekday, MIS ID, Status, Issues, Notes
-#   ðŸ”´ FIX: SET-BASED MATCHING (Order Independent)
+#   Ã°Å¸â€Â´ FIX: SET-BASED MATCHING (Order Independent)
 #     * ISSUE: "Dixon, Davis" vs "Davis, Dixon" marked as mismatch
 #     * THE FIX: Split by comma, trim, compare as JavaScript Sets
 #     * Logic: set(sheet_list) == set(csv_list) - order no longer matters
-#   ðŸ”´ FIX: NaN/Blank as Universal Match
+#   Ã°Å¸â€Â´ FIX: NaN/Blank as Universal Match
 #     * Blank, empty, NaN, null, undefined in Locations/Categories = "All"
 #     * Treated as universal match (Include All)
-#   ðŸ”´ FIX: "All Except" Logic
+#   Ã°Å¸â€Â´ FIX: "All Except" Logic
 #     * "All Locations Except:" and "All Categories Except:" now properly compared
 #     * Exclusion lists compared as sets for order independence
-#   ðŸ”´ FIX: Weekly Deals + Specific Date Filter
+#   Ã°Å¸â€Â´ FIX: Weekly Deals + Specific Date Filter
 #     * ISSUE: Weekly deals excluded when using Specific Date filter
 #     * THE FIX: Weekly deals now included if their weekday matches selected weekday toggle
 #     * Weekly deals run every week - specific date only filters by weekday match
-#   ðŸ”´ FIX: Monthly Deals Weekday Column (Day-of-Month Format)
+#   Ã°Å¸â€Â´ FIX: Monthly Deals Weekday Column (Day-of-Month Format)
 #     * ISSUE: Monthly "weekday" column contains "10th", "15th" format, not actual weekdays
 #     * THE FIX: Parse day-of-month values, calculate actual weekday for tab month
 #     * NOTE: This column format may change - see parseDayOfMonthValues() for updates
-#   ðŸ”´ FIX: Multiple MIS IDs Support
+#   Ã°Å¸â€Â´ FIX: Multiple MIS IDs Support
 #     * Now parses and displays multiple MIS IDs (same as ID Matcher)
 #     * Ignores "STIIIZY MONTHLY + WEEKLY DEAL PLANNER" text (user notes, not IDs)
-#   ðŸ”´ FIX: Brand + Linked Brand Display
+#   Ã°Å¸â€Â´ FIX: Brand + Linked Brand Display
 #     * MIS table now shows "Brand / Linked" column
 #     * Compares both brand AND linked brand for matching
 #     * Cross-match support (sheet linked = MIS brand, etc.)
-#   ðŸŸ¢ REUSES: All existing ID Matcher functions
+#   Ã°Å¸Å¸Â¢ REUSES: All existing ID Matcher functions
 #     * matchesData array for data source
 #     * showSuggestionTooltip() pattern for popup
 #     * lookupMisIdWithValidation() for MIS ID buttons
 #     * goToSheetRow() for Google Sheet navigation
 #
 # v12.24.8 CHANGELOG (ENHANCED COMPARISON + END DATE BUTTON FIX):
-#   Ã°Å¸â€Â´ FIX: End Date Buttons Now Show Correct Colors
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: End Date Buttons Now Show Correct Colors
 #     * ISSUE: End date buttons showed GREY instead of RED/GREEN/ORANGE
 #     * ROOT CAUSE #1: Empty inline style when getEndDateButtonColor() returned empty
 #       - THE FIX: Added fallback style if empty: `style || 'background:#6c757d; ...'`
 #     * ROOT CAUSE #2: Wrong element ID for tab name lookup
-#       - Code used: document.getElementById('sheet-select') Ã¢â€ â€™ null
+#       - Code used: document.getElementById('sheet-select') ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ null
 #       - Correct ID: document.getElementById('mis-tab')
 #       - THE FIX: Changed to use 'mis-tab' which has the tab name like "February 2026"
-#   Ã°Å¸â€Â´ FIX: Credential Loading Crash When No Profile Detected
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Credential Loading Crash When No Profile Detected
 #     * ISSUE: Setup tab didn't populate, credentials didn't load
 #     * ROOT CAUSE: BLAZE_CONFIG_FILE/TOKEN_FILE/CREDENTIALS_FILE could be None
 #       - Calling .exists() on None crashes with AttributeError
 #     * THE FIX: Added None guards in load_credentials_config() and authenticate_google_sheets()
-#   Ã°Å¸Å¸Â¢ NEW: Multiple Assigned MIS IDs Support
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: Multiple Assigned MIS IDs Support
 #     * Google Sheet can have multiple MIS IDs (line-separated in cell)
 #     * Each ID rendered as its own row in Assigned section
 #     * Tag shown per row: "ASSIGNED (W1)", "ASSIGNED (W2)", etc.
-#   Ã°Å¸Å¸Â¢ NEW: Enhanced Comparison Helpers
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: Enhanced Comparison Helpers
 #     * getWeekdayMatchStyle() - Multi-day aware, GREEN if MIS contains all sheet days
 #     * getCategoryMatchStyle() - Handles blank=All, "All Except", specific lists
 #     * getLocationMatchStyle() - Same logic as category
-#   Ã°Å¸Å¸Â¢ NEW: All Comparable Fields Now Color-Coded
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: All Comparable Fields Now Color-Coded
 #     * Weekday: GREEN if MIS weekdays contain all Google Sheet weekdays
 #     * Brand: GREEN if exact/contains match
 #     * Category: GREEN if both All, or both have same specific list
@@ -187,38 +232,38 @@
 #     * Locations: GREEN if both All, or both have same specific list
 #
 # v12.24.7 CHANGELOG (FIX: ASSIGNED MIS ID TAG STRIPPING):
-#   Ã°Å¸â€Â´ FIX: Assigned MIS ID Now Strips Tag Prefixes for Lookup
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Assigned MIS ID Now Strips Tag Prefixes for Lookup
 #     * ISSUE: Assigned section showed "MIS ID not found in CSV" even when present
 #     * ROOT CAUSE: Google Sheet IDs have tags like "W1 12345", CSV has clean "12345"
 #       - Comparison: String(s.mis_id) === assignedMisId failed
 #       - "12345" !== "W1 12345"
 #     * THE FIX: Added cleanMisId() helper function
-#       - Strips tag prefixes: "W1 12345" Ã¢â€ â€™ "12345"
+#       - Strips tag prefixes: "W1 12345" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ "12345"
 #       - Handles patterns: "W1", "M2", "S1", etc.
 #       - Falls back to last numeric sequence if no tag pattern
 #     * DISPLAY: Shows tag in header if present: "(Tag: W1)"
 #     * LOOKUP: Uses clean ID for suggestion matching & MIS automation
 #
 # v12.24.6 CHANGELOG (NEW: ASSIGNED SECTION + END DATE COLORS):
-#   Ã°Å¸Å¸Â¢ NEW: Assigned MIS ID Section in Suggestions Popup
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: Assigned MIS ID Section in Suggestions Popup
 #     * Shows currently assigned MIS ID above suggestions list
 #     * Same datatable structure as suggestions for consistency
 #     * Green border/header to distinguish from suggestions
 #     * Full data display if ID found in CSV, minimal if not
 #     * "ASSIGNED" status badge + "Current" action badge
-#   Ã°Å¸Å¸Â¢ NEW: End Date Button Color Coding
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: End Date Button Color Coding
 #     * Compares end date month to Google Sheet tab name month
 #     * RED: End date is in PAST month (expired - needs update!)
 #     * GREEN: End date is CURRENT month (correct)
 #     * ORANGE: End date is FUTURE month (already extended)
 #     * Applied to BOTH Assigned section and all Suggestions
 #     * Tooltip shows detailed status message
-#   Ã°Å¸Å¸Â¢ NEW: Updated Color Legend
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: Updated Color Legend
 #     * Added End Date color legend (Past/Current/Future Month)
 #     * Separated from field match legend for clarity
 #
 # v12.24.5 CHANGELOG (FIX: JWT KEY EXTRACTION):
-#   Ã°Å¸â€Â´ FIX: Token Extraction Now Checks "jwt" Key FIRST
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Token Extraction Now Checks "jwt" Key FIRST
 #     * ISSUE: Auth 200 OK but token not found - server uses "jwt" key
 #     * ROOT CAUSE: Blaze Ecom API returns token as top-level "jwt" key
 #       - Response: {"jwt": "eyJ...", ...}
@@ -228,13 +273,13 @@
 #     * EXTRACTION ORDER NOW:
 #       1. Authorization header
 #       2. Access-Token header  
-#       3. response.json()['jwt']  Ã¢â€ Â NEW PRIORITY
+#       3. response.json()['jwt']  ÃƒÂ¢Ã¢â‚¬Â Ã‚Â NEW PRIORITY
 #       4. data.attributes.token
 #       5. data.id / data.token / meta.token / token / access_token
-#     * RESULT: JWT successfully captured Ã¢â€ â€™ sync can proceed
+#     * RESULT: JWT successfully captured ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sync can proceed
 #
 # v12.24.3 CHANGELOG (FIX: COMPREHENSIVE TOKEN EXTRACTION):
-#   Ã°Å¸â€Â´ FIX: Token Extraction Now Checks Headers FIRST + Multiple Body Paths
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Token Extraction Now Checks Headers FIRST + Multiple Body Paths
 #     * ISSUE: Still getting "Authentication failed" after json.dumps fix
 #     * ROOT CAUSE: Token location varies in JSON:API - may be in headers OR body
 #     * THE FIX: Comprehensive extraction in get_ecom_token():
@@ -257,7 +302,7 @@
 #     * 422 HANDLING: Added specific error for payload format rejection
 #
 # v12.24.2 CHANGELOG (FIX: JSON:API CONTENT-TYPE OVERRIDE):
-#   Ã°Å¸â€Â´ FIX: requests.post(json=) Was Overriding Content-Type Header
+#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: requests.post(json=) Was Overriding Content-Type Header
 #     * ISSUE: 401 "Invalid Blaze credentials" despite correct payload
 #     * ROOT CAUSE: Using `json=payload` in requests.post() auto-sets
 #       Content-Type to "application/json", OVERRIDING our explicit
@@ -266,10 +311,10 @@
 #       - get_ecom_token(): Line ~2183 - data=json.dumps(payload)
 #       - trigger_ecom_sync(): Line ~2288 - data=json.dumps(payload)
 #     * ADDED: Extra debug logging for Content-Type verification
-#     * RESULT: Correct Content-Type preserved Ã¢â€ â€™ API accepts credentials
+#     * RESULT: Correct Content-Type preserved ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ API accepts credentials
 #
 # v12.24.1 CHANGELOG (FIX: ECOM SYNC - MISSION CONTROL API):
-#   Ã°Å¸Å¸Â¢ FIX: Corrected API Integration for Blaze Ecom Sync
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ FIX: Corrected API Integration for Blaze Ecom Sync
 #     * ISSUE: v12.24.0 used wrong endpoint (api.blaze.me/api/v1/sync - 404)
 #     * ROOT CAUSE: Tymber sync uses Ecom Mission Control API, not Retail API
 #     * THE FIX: Implemented correct 3-step flow:
@@ -277,8 +322,8 @@
 #       2. Get JWT token from response
 #       3. Sync: POST https://ecom-api.blaze.me/api/v1/store/sync-requests
 #     * NEW FUNCTIONS:
-#       - get_ecom_token(email, password) Ã¢â€ â€™ JWT token
-#       - trigger_ecom_sync(store_uuid, token) Ã¢â€ â€™ sync result
+#       - get_ecom_token(email, password) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ JWT token
+#       - trigger_ecom_sync(store_uuid, token) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sync result
 #     * HEADERS REQUIRED:
 #       - X-Store: [STORE_UUID]
 #       - Authorization: Bearer [JWT_TOKEN]
@@ -286,20 +331,20 @@
 #     * PAYLOAD: {"data":{"type":"store_sync_requests","attributes":{"request_type":"on_demand"}}}
 #     * sync_keys.json NOW USES store_uuid (not api_key/api_secret)
 #     * UI: Now requires Blaze email/password from Blaze Config section
-#     * STATUS: Enhanced error messages (Ã°Å¸â€â€˜ auth, Ã°Å¸â€œÂ UUID, Ã°Å¸Å¡Â« permission)
+#     * STATUS: Enhanced error messages (ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Ëœ auth, ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â UUID, ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« permission)
 #
 # v12.24.0 CHANGELOG (NEW: BLAZE ECOM SYNC TO TYMBER):
-#   Ã°Å¸Å¸Â¢ NEW: Blaze Ecom Sync Feature
+#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ NEW: Blaze Ecom Sync Feature
 #     * UI: Added store dropdown (12 locations) + "SYNC TO TYMBER" button in Setup tab
 #     * BACKEND: New /api/blaze/ecom-sync endpoint for store-specific sync
 #     * SECURITY: API keys stored in secrets/sync_keys.json (not in code)
 #     * STORES: DAVIS, DIXON, NAPA, SANTA ROSA, OAKLAND, SAN FRANCISCO,
 #               LOS ANGELES, SAN DIEGO, SAN JOSE, SACRAMENTO, FRESNO, LONG BEACH
 #     * HELPER: load_sync_keys() function with graceful error handling
-#     * STATUS: Real-time feedback (Ready Ã¢â€ â€™ Syncing... Ã¢â€ â€™ Sync Complete/Failed)
+#     * STATUS: Real-time feedback (Ready ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Syncing... ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Sync Complete/Failed)
 #
 # v12.22.8 CHANGELOG (FIX: SINGLE-SELECT SELECT2 DROPDOWNS IN CHECKLIST):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: Brand, Linked Brand, Rebate Type Now Properly Validated in Checklist
 #     * ISSUE: These fields always showed "(empty)" and never turned green
 #       - Checklist showed Brand as "(empty)" even when filled
 #       - Linked Brand never validated correctly
@@ -324,28 +369,28 @@
 #     * CALL SITE UPDATE (line ~31066):
 #       actual = getSelect2Value(fieldId, isMulti);  // Now passes isMulti flag
 #     * AFFECTED FIELDS (now working):
-#       - Brand (brand_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-brand_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Linked Brand (linked_brand_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-linked_brand_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Rebate Type (daily_discount_type_id) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ select2-daily_discount_type_id-container ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Brand (brand_id) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ select2-brand_id-container ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Linked Brand (linked_brand_id) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ select2-linked_brand_id-container ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Rebate Type (daily_discount_type_id) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ select2-daily_discount_type_id-container ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #     * RESULT:
-#       - All 11 checklist fields now properly monitored ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Brand/Linked Brand/Rebate Type turn green when correct ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Real-time validation works for all field types ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - All 11 checklist fields now properly monitored ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Brand/Linked Brand/Rebate Type turn green when correct ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Real-time validation works for all field types ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.7 CHANGELOG (FIX: PHASE 1 MIS ID BUTTONS + CHECKLIST VALIDATION):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX 1: Phase 1 Up-Down Planning MIS ID Buttons Now Pass Row Data
 #     * ISSUE: MIS ID buttons in Phase 1 didn't pass row data to validation
 #       - CREATE_PART1, CREATE_PART2, PATCH buttons had no data-row attribute
 #       - Clicking them triggered backend Google Sheet search (inefficient)
 #       - Validation didn't use the split's actual data
 #     * THE FIX: Pass `split` data to renderClickableMisId() for all action types
-#       - Line 9144: CREATE_PART1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
-#       - Line 9156: CREATE_PART2 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
-#       - Line 9174: PATCH ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ renderClickableMisId(..., split)
+#       - Line 9144: CREATE_PART1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ renderClickableMisId(..., split)
+#       - Line 9156: CREATE_PART2 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ renderClickableMisId(..., split)
+#       - Line 9174: PATCH ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ renderClickableMisId(..., split)
 #       - GAP already passed split.interrupting_deal (unchanged)
-#     * RESULT: Phase 1 MIS ID buttons now have validation data attached ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Phase 1 MIS ID buttons now have validation data attached ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 2: Checklist "All Locations" and "All Categories" Validation
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX 2: Checklist "All Locations" and "All Categories" Validation
 #     * ISSUE: Checklist showed false mismatch errors
 #       - Expected: "All Locations" (from Google Sheet)
 #       - Actual: Empty in MIS (which MEANS "All Locations")
@@ -358,21 +403,21 @@
 #       - categories: "all categories", "all", starts with "all categories"
 #       - Empty MIS selection = correct when "All" is expected
 #     * RESULT:
-#       - "All Locations" expected + empty MIS = ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Correct
-#       - "All Categories" expected + empty MIS = ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Correct
-#       - No more false "1 field(s) don't match" errors ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - "All Locations" expected + empty MIS = ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Correct
+#       - "All Categories" expected + empty MIS = ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Correct
+#       - No more false "1 field(s) don't match" errors ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX 3: Rebate Type False Positive (was actually Issue 2)
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX 3: Rebate Type False Positive (was actually Issue 2)
 #     * ISSUE: "1 field(s) don't match" appeared even with correct Rebate Type
 #     * ROOT CAUSE: The mismatch was from Stores/Categories, not Rebate Type
 #       - Checklist summary just showed count, didn't specify which field
 #       - User assumed Rebate Type was the problem
-#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * THE FIX: Same as Fix 2 - fixing Locations/Categories fixes this ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.6 CHANGELOG (FIX: MIS ID BUTTON VALIDATOR MODE SWITCHING):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: MIS ID Button Now Properly Switches Validator to Automation Mode
 #     * ISSUE: Checklist appeared but validation ran in "manual mode"
-#       - inject_checklist_banner() was called ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ (checklist showed)
+#       - inject_checklist_banner() was called ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ (checklist showed)
 #       - BUT persistent validator (inject_mis_validation) was ALSO running
 #       - That validator was in "manual mode" from previous injection
 #       - Result: "Manual mode - skipping Phase 2 validation" in console
@@ -381,31 +426,31 @@
 #       - Once injected, it monitors for modal open/close
 #       - New checklist injection didn't notify the existing validator
 #     * THE FIX: Call BOTH functions
-#       - inject_checklist_banner() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ visual checklist panel
-#       - inject_mis_validation(expected_data) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sends message to switch mode
+#       - inject_checklist_banner() ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ visual checklist panel
+#       - inject_mis_validation(expected_data) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ sends message to switch mode
 #       - V2 architecture: If validator already active, just sends message
 #       - Message tells validator to switch from 'manual' to 'automation'
 #     * IMPLEMENTATION (line ~22380):
 #       inject_checklist_banner(driver, expected_data, mode='compare')  # Visual
 #       inject_mis_validation(driver, expected_data=expected_data)      # Mode switch
 #     * CONSOLE OUTPUT (expected after fix):
-#       [V2] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Validator already active, sending message instead of re-injecting
-#       [V2] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Switched to AUTOMATION mode
+#       [V2] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Validator already active, sending message instead of re-injecting
+#       [V2] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Switched to AUTOMATION mode
 #       [MIS-VALIDATION] Validation mode: automation  (NOT manual!)
 #     * RESULT:
-#       - Checklist panel appears ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Validator runs in automation mode ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Phase 2 validation (all fields including After Wholesale) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - Checklist panel appears ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Validator runs in automation mode ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Phase 2 validation (all fields including After Wholesale) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.5 CHANGELOG (FIX: MIS ID BUTTON VALIDATION + CHECKLIST):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: MIS ID Button Now Uses Same Validation as Compare to Google Sheet
 #     * ISSUE: MIS ID button click had broken validation
 #       - After Wholesale toggle not being validated
 #       - Checklist popup not appearing
 #       - Banner said "Check Deal Entry Checklist" but checklist didn't exist
 #     * ROOT CAUSE: Two separate validation systems
-#       - MIS ID button used: inject_mis_validation() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ summary banner only
-#       - Compare to Google Sheet used: inject_checklist_banner() ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ full checklist
+#       - MIS ID button used: inject_mis_validation() ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ summary banner only
+#       - Compare to Google Sheet used: inject_checklist_banner() ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ full checklist
 #       - inject_mis_validation() NEVER called inject_checklist_banner()
 #     * THE FIX: Unified validation system (Option B)
 #       - MIS ID button now calls inject_checklist_banner() directly
@@ -420,26 +465,26 @@
 #       [MIS LOOKUP] Injecting checklist banner with row data
 #       [MIS LOOKUP] Expected: Brand=Stiiizy, Weekday=Monday
 #       [MIS LOOKUP] After Wholesale: True
-#       [MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Checklist banner injected for MIS ID 12345
+#       [MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Checklist banner injected for MIS ID 12345
 #     * RESULT:
-#       - MIS ID button shows same checklist popup as Compare to Google Sheet ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - After Wholesale toggle now validated properly ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - All field mismatches visible in checklist panel ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Single unified validation system (no duplication) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#       - MIS ID button shows same checklist popup as Compare to Google Sheet ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - After Wholesale toggle now validated properly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - All field mismatches visible in checklist panel ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Single unified validation system (no duplication) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.4 CHANGELOG (FIX: WEEKLY DEALS USE COLUMN A FOR WEEKDAY):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: Weekly Deals Now Read Weekday from Column A Instead of Column K
 #     * ISSUE: Weekly deals incorrectly used Column K ('Weekday/ Day of Month')
 #       - Column A header: "Weekday" (correct for Weekly)
 #       - Column K header: "Weekday/ Day of Month" (correct for Monthly/Sale)
 #       - get_col() checked Column K FIRST, so Weekly used wrong column
 #     * ROOT CAUSE: Column priority in get_col() calls
 #       - Old: get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')
-#       - Column K checked first ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ always used if data exists
-#       - All sections used same priority ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Weekly got wrong column
+#       - Column K checked first ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ always used if data exists
+#       - All sections used same priority ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Weekly got wrong column
 #     * THE FIX: Section-aware column selection
-#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Column A first
-#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Column K first
+#       - Weekly: get_col(row, ['Weekday', 'Day of Week'], '') ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Column A first
+#       - Monthly/Sale: get_col(row, ['Weekday/ Day of Month', ...]) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Column K first
 #     * LOCATIONS FIXED (10 total):
 #       - Line ~4048: detect_multi_day_groups()
 #       - Line ~4167: enhanced_match_mis_ids()
@@ -456,14 +501,14 @@
 #           weekday = get_col(row, ['Weekday', 'Day of Week'], '')
 #       else:
 #           weekday = get_col(row, ['Weekday/ Day of Month', ...], '')
-#     * RESULT: Weekly deals now correctly read from Column A ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Monthly deals still use Column K (ordinals like "1st, 10th") ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Sale deals still use Column K or Column C as appropriate ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Weekly deals now correctly read from Column A ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Monthly deals still use Column K (ordinals like "1st, 10th") ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Sale deals still use Column K or Column C as appropriate ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.3 CHANGELOG (FIX: SUGGESTIONS POPUP END DATE AUTOMATION):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: End Date Update Button in MIS ID Suggestions Popup
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: End Date Update Button in MIS ID Suggestions Popup
 #     * ISSUE: End Date "Update" button in Suggestions popup fails
-#       - User clicks date ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ adjusts with dropdowns ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ clicks Update
+#       - User clicks date ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ adjusts with dropdowns ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ clicks Update
 #       - Automation fails to find MIS ID in datatable
 #       - Phase 1 End Date button works fine (different code path)
 #     * ROOT CAUSE: Wrong API endpoint
@@ -473,7 +518,7 @@
 #       - Changed from: `/api/mis/update-end-date`
 #       - Changed to: `/api/mis/automate-end-date`
 #       - Added proper loading overlay (matches Phase 1 style)
-#       - Fixed date format: MM/DD/YY ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MM/DD/YYYY (full year)
+#       - Fixed date format: MM/DD/YY ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ MM/DD/YYYY (full year)
 #       - Added googleRow from matchesData for better context
 #     * IMPLEMENTATION (line ~12156):
 #       - Gets date values from dropdown selectors (unchanged)
@@ -483,18 +528,18 @@
 #       - Updates display on success
 #     * CONSOLE OUTPUT:
 #       [UPDATE-END-DATE] Starting with date: 01/31/2026 MIS ID: 12345
-#     * RESULT: Suggestions popup End Date button now works ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Suggestions popup End Date button now works ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.2 CHANGELOG (FIX: CONTINUE ROW REBATE TYPE):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ FIX: Rebate Type Not Populating for Continue Row Create Button
-#     * ISSUE: Continue row in Up-Down Planning Phase 1 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Create ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Pre-Flight
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ FIX: Rebate Type Not Populating for Continue Row Create Button
+#     * ISSUE: Continue row in Up-Down Planning Phase 1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Create ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pre-Flight
 #       - All fields populate correctly EXCEPT Rebate Type (empty)
 #       - GAP row works fine (has Rebate Type)
 #     * ROOT CAUSE (Backend): splits_required structure missing rebate fields
 #       - Lines ~26817-26855: splits_required object built for each split
 #       - Only `interrupting_deal` nested object had retail/wholesale/after_wholesale
 #       - Main split (weekly deal) was MISSING these fields
-#       - Continue rows use main split data ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ no rebate type available
+#       - Continue rows use main split data ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ no rebate type available
 #     * ROOT CAUSE (Frontend): Strict equality check
 #       - Code: `if (sourceData.wholesale === 'TRUE')` 
 #       - Failed if value was 'true', true (boolean), or other formats
@@ -511,10 +556,10 @@
 #       - if (wholesaleVal === 'TRUE') rebateType = 'Wholesale';
 #     * CONSOLE OUTPUT (after fix):
 #       [AUTOMATE] Rebate Type: Wholesale (W: TRUE -> TRUE, R: FALSE -> FALSE)
-#     * RESULT: Continue row Create button now populates Rebate Type ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Continue row Create button now populates Rebate Type ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.1 CHANGELOG (ENHANCEMENT: WEEKLY DEAL DATE AUTO-FILL):
-#   ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â¢ ENHANCEMENT: Smart Date Auto-Fill for Weekly Deals
 #     * FEATURE: Automatically set Start/End dates for Weekly deals
 #       - Start Date: 1st day of the month
 #       - End Date: Last day of the month (handles 28/29/30/31 correctly)
@@ -542,10 +587,10 @@
 #         Start Date: 01/01/2026 (1st of month)
 #         End Date: 01/31/2026 (last day of month)
 #     * NON-WEEKLY DEALS: Unchanged behavior (parses from date_raw field)
-#     * RESULT: Weekly deals auto-fill with full month date range ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Weekly deals auto-fill with full month date range ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #
 # v12.22.0 CHANGELOG (CRITICAL FIX: MULTI-DAY DEAL WEEKDAY COLLECTION):
-#   ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
+#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX: Multi-Day Deal Weekday Collection for Pre-Flight Popup
 #     * ISSUE: Pre-Flight popup only shows ONE weekday for multi-day deals
 #       - Google Sheet has a multi-day group (3 rows, same deal):
 #         Row 45: Monday    - Highatus, 40% off (GROUP HEADER)
@@ -554,7 +599,7 @@
 #       - User clicks Create on any row in group
 #       - Pre-Flight popup opens with Weekday field
 #       - Expected: "Monday, Wednesday, Friday" (ALL weekdays selected)
-#       - Actual: Only shows weekday of clicked row (e.g., "Monday") ÃƒÂ¢Ã‚ÂÃ…â€™
+#       - Actual: Only shows weekday of clicked row (e.g., "Monday") ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
 #     * ROOT CAUSE: useUnifiedPreFlightForIDMatcher() at line ~12128
 #       - Code: `const weekday = match.weekday || '';`
 #       - Only reads single row's weekday, ignores group membership
@@ -580,11 +625,11 @@
 #       [MULTI-DAY-FIX] Group detected! group_id: 9a3d328682f4
 #       [MULTI-DAY-FIX] All weekdays in group: ["Monday", "Wednesday", "Friday"]
 #       [MULTI-DAY-FIX] Combined weekday string: Monday, Wednesday, Friday
-#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Click Create on header row ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows all weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Click Create on member row ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows all weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - Single-day deals ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Shows single weekday (unchanged) ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
-#       - openUnifiedPreFlight() already handles comma-separated weekdays ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦
+#     * RESULT: Pre-Flight popup now shows ALL weekdays for multi-day deals ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Click Create on header row ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Shows all weekdays ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Click Create on member row ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Shows all weekdays ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Single-day deals ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Shows single weekday (unchanged) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - openUnifiedPreFlight() already handles comma-separated weekdays ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
 #   - TECHNICAL NOTES:
 #     * match.multi_day_group structure:
 #       { group_id: "9a3d328682f4", weekdays: ["Monday", "Wednesday", "Friday"], is_first: true }
@@ -594,19 +639,19 @@
 #     * No changes needed to openUnifiedPreFlight() - it's already ready!
 #
 # v12.21.4.2 CHANGELOG (CRITICAL FIX: LINKED BRAND AUTO-FILL):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 10: Linked Brand Not Auto-Filling in Pre-Flight Popup
 #     * ISSUE: Linked Brand dropdown shows empty, not auto-selected
 #       - User clicks Create from ID Matcher
 #       - Google Sheet has: Brand="Highatus", Linked Brand="Cannabiotix"
 #       - Pre-Flight popup opens:
-#         * Brand dropdown: empty ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
-#         * Linked Brand dropdown: empty ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#         * Brand dropdown: empty ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
+#         * Linked Brand dropdown: empty ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #       - Console shows: "brandOptions: Array(0)" (empty!)
 #     * ROOT CAUSE: brandOptions uses splitPlanningData.brand_list
 #       - splitPlanningData is ONLY populated for Up-Down Planning tab
 #       - When coming from ID Matcher, splitPlanningData is empty
 #       - Result: brandOptions = [] (no brands to select from!)
-#       - Code tries to select "Cannabiotix" in empty dropdown ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ fails ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - Code tries to select "Cannabiotix" in empty dropdown ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ fails ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #     * THE FIX: Build brandOptions from settingsCache.brandLinkedMap
 #       - settingsCache.brandLinkedMap is populated by loadSettingsDropdownData()
 #       - Contains: {highatus: "Cannabiotix", raw: "Cookies", ...}
@@ -644,19 +689,19 @@
 #     * CONSOLE OUTPUT (after fix):
 #       [PRE-FLIGHT] Brand options from Settings: 45 brands
 #       [LINKED-BRAND-DROPDOWN] data.linked_brand: Cannabiotix
-#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Ãƒâ€šÃ‚Â NOW HAS OPTIONS!
-#       [LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SELECTED: "Cannabiotix" (matches...)
-#     * RESULT: Brand and Linked Brand dropdowns now populated ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - Works for ID Matcher Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - Works for Up-Down Planning Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - Works for Suggestions popup Create button ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - Linked brand auto-selected correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       [LINKED-BRAND-DROPDOWN] brandOptions: Array(45)  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â NOW HAS OPTIONS!
+#       [LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ SELECTED: "Cannabiotix" (matches...)
+#     * RESULT: Brand and Linked Brand dropdowns now populated ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - Works for ID Matcher Create button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - Works for Up-Down Planning Create button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - Works for Suggestions popup Create button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - Linked brand auto-selected correctly ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - USER IMPACT:
-#     * Linked Brand dropdown now has options ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Linked Brand auto-fills from Google Sheet ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Brand dropdown also populated from Settings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Works consistently across all Create button locations ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * No more empty dropdowns in Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Linked Brand dropdown now has options ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Linked Brand auto-fills from Google Sheet ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Brand dropdown also populated from Settings ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Works consistently across all Create button locations ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * No more empty dropdowns in Pre-Flight popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - TECHNICAL NOTES:
 #     * getBrandOptionsFromSettings() helper function added
 #     * Extracts brands from settingsCache.brandLinkedMap (both keys and values)
@@ -667,7 +712,7 @@
 #     * Falls back to splitPlanningData.brand_list if settings not loaded
 #     * Debug logging: "[PRE-FLIGHT] Brand options from Settings: X brands"
 # v12.21.4.1 CHANGELOG (DEBUG: ENHANCED EXCEPTION LOGGING):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â DEBUG ENHANCEMENT: Comma-Separated Exception Parsing
 #     * ISSUE REPORTED: "All Locations Except: Davis, Dixon" only excludes Davis
 #     * SYMPTOM: Second exception (Dixon) not being excluded
 #     * DIAGNOSTIC ADDITIONS:
@@ -682,11 +727,11 @@
 #          - Shows each store being checked
 #          - Shows which exception it matches (if any)
 #          - Example output:
-#            ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Davis" (matches exception "Davis")
-#            ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Dixon" (matches exception "Dixon")
-#            ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "Beverly Hills"
+#            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "Davis" (matches exception "Davis")
+#            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "Dixon" (matches exception "Dixon")
+#            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ KEEPING: "Beverly Hills"
 #       5. Summary logging:
-#          "12 total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 2 excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 10 remaining"
+#          "12 total ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ 2 excluded ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ 10 remaining"
 #     * EXPECTED CONSOLE OUTPUT:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Input String: "All Locations Except: Davis, Dixon"
@@ -694,30 +739,30 @@
 #         Master List: [12 stores]
 #         Exceptions Raw: ["Davis", "Dixon"]
 #         Exceptions Expanded: ["Davis", "Dixon"]
-#         ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Davis" (matches exception "Davis")
-#         ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "Beverly Hills"
-#         ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "Dixon" (matches exception "Dixon")
-#         ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "El Sobrante"
+#         ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "Davis" (matches exception "Davis")
+#         ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ KEEPING: "Beverly Hills"
+#         ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "Dixon" (matches exception "Dixon")
+#         ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ KEEPING: "El Sobrante"
 #         ... (continues for all stores)
 #         Final Result: [10 stores]
-#         Summary: 12 total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 2 excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 10 remaining
+#         Summary: 12 total ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ 2 excluded ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ 10 remaining
 #     * PURPOSE: Identify where comma-separated parsing is failing
 #     * ACTION: User should check console logs and report what they see
 # v12.21.4 CHANGELOG (CRITICAL FIXES: STORE MAPPING + ALL LOCATIONS EXCEPT):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 8: Store Name Sanitization for MIS Automation
 #     * ISSUE: Settings tab stores don't match MIS dropdown names
-#       - Settings tab: "Fresno (Palm)" ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
-#       - MIS dropdown: "Fresno" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Settings tab: "Fresno (Palm)" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
+#       - MIS dropdown: "Fresno" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #       - Result: Automation fails to select stores
 #     * ROOT CAUSE: resolve_store_selection() returned names directly without mapping
 #       - User selects "Fresno (Palm)" in Pre-Flight popup
 #       - Function returns ["Fresno (Palm)"] 
 #       - atomic_multi_select tries to find "Fresno (Palm)" in MIS
-#       - MIS only has "Fresno" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ selection fails ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - MIS only has "Fresno" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ selection fails ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #     * THE FIX: Apply STORE_MAPPING before automation
 #       - resolve_store_selection() now applies STORE_MAPPING
-#       - "Fresno (Palm)" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Fresno" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - "Beverly" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Beverly Hills" ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - "Fresno (Palm)" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Fresno" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - "Beverly" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Beverly Hills" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #       - Specific stores AND exceptions both mapped
 #     * STORE_MAPPING Dictionary (lines 1627-1642, 1668-1683):
 #       {
@@ -739,28 +784,28 @@
 #     * IMPLEMENTATION:
 #       - Case 3 (Specific Stores): Apply mapping to each store
 #         mapped = STORE_MAPPING.get(store, store)
-#         Logs: "Store mapping: 'Fresno (Palm)' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ 'Fresno'"
+#         Logs: "Store mapping: 'Fresno (Palm)' ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ 'Fresno'"
 #       - Case 2 (All Except): Apply mapping to exceptions list
 #         mapped_exceptions = [STORE_MAPPING.get(exc, exc) for exc in exceptions]
-#     * RESULT: Automation now works with Settings tab store names ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * RESULT: Automation now works with Settings tab store names ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #       - User sees: "Fresno (Palm)" in Pre-Flight dropdown
 #       - Backend sends: "Fresno" to MIS automation
-#       - MIS finds: "Fresno" in dropdown ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
+#       - MIS finds: "Fresno" in dropdown ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 9: "All Locations Except:" Auto-Populate Logic
 #     * ISSUE: Pre-Flight popup doesn't handle "All Locations Except:" correctly
 #       - Google Sheet: "All Locations Except: Davis, Hawthorne"
 #       - Expected: Auto-select 10 stores (all except Davis, Hawthorne)
-#       - Actual: Only selected Davis and Hawthorne (backwards!) ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - Actual: Only selected Davis and Hawthorne (backwards!) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #     * ROOT CAUSE: expandLocationCodes() had broken logic
-#       - Line 9229: return exceptions.map(...) ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - Line 9229: return exceptions.map(...) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #       - This returned ONLY the exceptions, not the remaining stores
 #       - Should return: Master List MINUS exceptions
 #     * THE FIX: Implement proper subtraction logic
 #       Step 1: Start with Master List (all 12 stores from Settings tab)
 #       Step 2: Extract exceptions ("Davis, Hawthorne")
-#       Step 3: Expand exception codes ("DV" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Davis")
+#       Step 3: Expand exception codes ("DV" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Davis")
 #       Step 4: Subtract exceptions from master list
-#       Result: Return 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       Result: Return 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #     * IMPLEMENTATION (line ~9219):
 #       const masterList = settingsCache.stores || [12 default stores];
 #       const exceptions = exceptionsRaw.map(code => 
@@ -769,22 +814,22 @@
 #       const result = masterList.filter(store => 
 #           !exceptions.some(exc => exc.toLowerCase() === store.toLowerCase())
 #       );
-#       return result;  // ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ All stores EXCEPT exceptions
+#       return result;  // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ All stores EXCEPT exceptions
 #     * CONSOLE LOGGING:
 #       [SMART-LOCATION] All Locations Except logic:
 #         Master List: [Dixon, Davis, Beverly Hills, ...]
 #         Exceptions Raw: ["Davis", "Hawthorne"]
 #         Exceptions Expanded: ["Davis", "Hawthorne"]
 #         Result (Master - Exceptions): [Dixon, Beverly Hills, El Sobrante, ...]
-#     * RESULT: Pre-Flight popup now auto-selects correct stores ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * RESULT: Pre-Flight popup now auto-selects correct stores ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #       - Input: "All Locations Except: Davis, Hawthorne"
-#       - Auto-selected: 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - Auto-selected: 10 stores (all except Davis, Hawthorne) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - USER IMPACT:
-#     * Store automation now works correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * No more "Could not fill Store" warnings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * "All Locations Except:" logic works in Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Settings tab controls store names (single source of truth) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Mapping handles special characters, parentheses, etc. ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Store automation now works correctly ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * No more "Could not fill Store" warnings ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * "All Locations Except:" logic works in Pre-Flight popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Settings tab controls store names (single source of truth) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Mapping handles special characters, parentheses, etc. ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - TECHNICAL NOTES:
 #     * STORE_MAPPING defined twice (lines 1627 and 1668) - duplicate, safe
 #     * Mapping applied in resolve_store_selection() (backend automation)
@@ -793,7 +838,7 @@
 #     * Fallback: If store not in mapping, uses original name
 #     * Debug logging shows mapping transformations and subtraction results
 # v12.21.3 CHANGELOG (FINAL FIXES FOR PHASE 3):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 5: Rebate Type Auto-Fill Not Working
 #     * ISSUE: Rebate Type dropdown in Pre-Flight popup not auto-filling
 #     * ROOT CAUSE: Google Sheet columns named "Wholesale?" and "Retail?" (with ?)
 #       - Code was checking for 'Wholesale' and 'Retail' (without ?)
@@ -802,13 +847,13 @@
 #       - raw_row_data?.['Retail?'] (primary check)
 #       - raw_row_data?.['Retail'] (fallback)
 #       - Added console logging: [REBATE-TYPE-DEBUG] for debugging
-#     * RESULT: Rebate Type now auto-fills correctly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
+#     * RESULT: Rebate Type now auto-fills correctly ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 6: Wrong Store List in Pre-Flight Popup
 #     * ISSUE: Hardcoded store list showing wrong locations
 #       - Showed: San Jose, Santa Cruz, Fresno, DTSJ, Campbell, etc.
 #       - Should show: Dixon, Davis, Beverly Hills, El Sobrante, etc.
 #     * ROOT CAUSE: Pre-Flight popup used hardcoded array instead of Settings tab
-#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#       - const storeOptions = ['San Jose', 'Santa Cruz', ...] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #       - Should use: settingsCache.stores (loaded from Settings tab)
 #     * FIX: Use Settings tab stores like brands/categories
 #       - const storeOptions = settingsCache.stores || fallback
@@ -817,8 +862,8 @@
 #     * FIX: Ensure settings loaded before popup opens
 #       - Added await loadSettingsDropdownData() in automateCreateDeal
 #       - Adapter function already had this (useUnifiedPreFlightForIDMatcher)
-#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ ENHANCEMENT: Compare Checklist Visibility Improvements
+#     * RESULT: Pre-Flight popup now shows correct stores from Settings tab ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ ENHANCEMENT: Compare Checklist Visibility Improvements
 #     * ISSUE: Checklist sometimes not visible after Compare
 #     * IMPROVEMENTS:
 #       - Increased setTimeout from 500ms to 800ms (more reliable)
@@ -826,19 +871,19 @@
 #       - Enhanced console logging with DEBUG details
 #       - Added search for all checklist elements if main banner not found
 #       - Logs banner display/opacity status for debugging
-#     * RESULT: More reliable checklist visibility + better debugging ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * RESULT: More reliable checklist visibility + better debugging ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - TECHNICAL DETAILS:
 #     * Column name checks now resilient to ? punctuation
 #     * Settings loading ensures fresh data from Google Sheet
 #     * Store list dynamically updates when Settings tab changes
 #     * Checklist injection verified with comprehensive logging
 #   - USER IMPACT:
-#     * Rebate Type auto-fills correctly from Google Sheet ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Store locations match Settings tab exactly ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Compare checklist more reliably visible ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Better console debugging for troubleshooting ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Rebate Type auto-fills correctly from Google Sheet ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Store locations match Settings tab exactly ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Compare checklist more reliably visible ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Better console debugging for troubleshooting ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 # v12.21.2 CHANGELOG (ADDITIONAL CRITICAL FIXES):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 3: Create Button TypeError - Non-String Discount/Vendor
 #     * ISSUE: Clicking Create in Suggestions Popup caused error:
 #       "TypeError: (match.discount || "").replace is not a function"
 #     * ROOT CAUSE: match.discount was a number, not a string
@@ -847,8 +892,8 @@
 #     * FIX: Convert to string before .replace() operation
 #       - const discount = String(match.discount || '').replace('%', '');
 #       - const vendorContrib = String(match.vendor_contrib || '').replace('%', '');
-#     * RESULT: Create button in Suggestions Popup now works ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 4: Compare Button Checklist Visibility
+#     * RESULT: Create button in Suggestions Popup now works ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 4: Compare Button Checklist Visibility
 #     * ISSUE: Compare button validates correctly but checklist popup not visible
 #     * SYMPTOM: Console shows "Found MIS ID" but no visual checklist sidebar
 #     * ROOT CAUSE: Timing issue between backend injection and frontend display
@@ -861,34 +906,34 @@
 #       - Forces visibility: display='block', opacity='1'
 #       - Scrolls into view if off-screen
 #       - Triggers runValidation() to update field states
-#     * RESULT: Compare button now shows checklist popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * RESULT: Compare button now shows checklist popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #   - TECHNICAL DETAILS:
 #     * String() wrapper safely handles null, undefined, numbers, strings
 #     * setTimeout(500ms) allows backend Selenium injection time to complete
 #     * scrollIntoView with smooth behavior for better UX
 #     * runValidation() refresh ensures field icons update correctly
 #   - USER IMPACT:
-#     * Create in Suggestions Popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now works (no more TypeError) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Compare to Google Sheet ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist popup now visible ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Consistent validation experience across all workflows ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * Create in Suggestions Popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Now works (no more TypeError) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Compare to Google Sheet ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Checklist popup now visible ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Consistent validation experience across all workflows ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 # v12.21.1 CHANGELOG (CRITICAL BUGFIXES):
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 1: ID Matcher Create Button Unification
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 1: ID Matcher Create Button Unification
 #     * ISSUE: ID Matcher was using old white "Create New Deal in MIS" popup
 #     * Up-Down Planning was using new dark "Pre-Flight Confirmation" popup
 #     * INCONSISTENT USER EXPERIENCE - Two different UIs for same action
 #     * FIX: Created `useUnifiedPreFlightForIDMatcher()` adapter function
 #       - Converts ID Matcher data format to Pre-Flight data format
 #       - Calls `openUnifiedPreFlight()` (same as Up-Down Planning)
-#       - BOTH tabs now use identical dark blue Pre-Flight popup ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - BOTH tabs now use identical dark blue Pre-Flight popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #     * RESULT: Consistent UX across all Create workflows
-#   ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â´ CRITICAL FIX 2: Compare to Google Sheet Not Finding Matches
 #     * ISSUE: Backend returns mode='comparison', frontend checks mode='automation'
 #     * ISSUE: Backend doesn't return expected_data in JSON
-#     * RESULT: Frontend never activates automation mode, stays in manual ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢
+#     * RESULT: Frontend never activates automation mode, stays in manual ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢
 #     * Console showed: "Found MIS ID 973" then "MIS ID not found" (contradictory!)
 #     * FIX: Backend now returns:
-#       - mode: 'automation' (matches frontend check) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#       - expected_data: {...} (frontend needs this) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#       - mode: 'automation' (matches frontend check) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#       - expected_data: {...} (frontend needs this) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 #     * RESULT: Compare button correctly activates checklist validation
 #   - TECHNICAL DETAILS:
 #     * ID Matcher adapter extracts: brand, linked_brand, weekday, categories, 
@@ -898,21 +943,21 @@
 #     * Compare endpoint injection still works (v12.19 feature preserved)
 #     * Compare endpoint now returns data for frontend validation activation
 #   - USER IMPACT:
-#     * ID Matcher Create ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now shows dark Pre-Flight popup (consistent) ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * Compare button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Now correctly finds matches and activates checklist ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
-#     * No more "MIS ID not found" false warnings ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦
+#     * ID Matcher Create ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Now shows dark Pre-Flight popup (consistent) ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * Compare button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Now correctly finds matches and activates checklist ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
+#     * No more "MIS ID not found" false warnings ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦
 # v12.21 CHANGELOG (PHASE 3: SMART PRE-FLIGHT & DATA INTEGRITY):
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SMART LOCATION EXPANSION:
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ SMART LOCATION EXPANSION:
 #     * JavaScript now auto-expands location codes to full store names
-#     * Mapping: "DV"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"Davis", "MOD"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"Modesto", "SJ"ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢"San Jose", etc.
+#     * Mapping: "DV"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢"Davis", "MOD"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢"Modesto", "SJ"ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢"San Jose", etc.
 #     * Pre-Flight popup automatically checks correct Store checkboxes
 #     * No more manual checkbox selection for known codes
 #     * Handles "All Locations" and "All Locations Except" patterns
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SMART REBATE TYPE DETECTION:
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ SMART REBATE TYPE DETECTION:
 #     * Detects "Rebate After Wholesale" vs plain "Retail"/"Wholesale"
-#     * Logic: If rebate_type="Retail" AND after_wholesale=True ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Rebate After Wholesale"
+#     * Logic: If rebate_type="Retail" AND after_wholesale=True ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Rebate After Wholesale"
 #     * Provides clearer semantic meaning to users
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ORIGINAL VALUE TRACKING:
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ORIGINAL VALUE TRACKING:
 #     * Added 9 hidden input fields to track original Google Sheet values:
 #       - pf-original-discount
 #       - pf-original-vendor
@@ -925,8 +970,8 @@
 #       - pf-original-after-wholesale
 #     * Enables "Modified" status detection in future validation
 #     * Checklist can show Yellow Warning when user edits values
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ FUNCTION RENAME:
-#     * showPreFlightPopup() ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ openUnifiedPreFlight()
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ FUNCTION RENAME:
+#     * showPreFlightPopup() ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ openUnifiedPreFlight()
 #     * Signifies architectural shift to unified, intelligent popup
 #     * Maintains all v12.20 date dropdown functionality
 #   - ARCHITECTURE IMPROVEMENTS:
@@ -940,16 +985,16 @@
 #     * Data integrity preserved (original values tracked)
 #     * Future checklist can warn: "You changed Discount from 20% to 25%"
 #   - TESTING PRIORITY:
-#     * Location codes expand correctly (DV ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Davis checkbox selected)
+#     * Location codes expand correctly (DV ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Davis checkbox selected)
 #     * Rebate After Wholesale detected and displayed
 #     * Hidden fields populated with original values
 #     * Store checkboxes auto-selected based on smart expansion
 # v12.20 CHANGELOG (PHASE 2: FRONTEND UNIFICATION):
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ TASK 1-3 COMPLETED IN v12.19 (Backend API Wiring):
 #     * Compare endpoint now calls inject_checklist_banner with mode='compare'
 #     * Checklist banner supports dual modes (create/compare)
 #     * Alert banner simplified to show only status + metadata
-#   ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ TASK 4 COMPLETED (Frontend Refactor):
+#   ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ TASK 4 COMPLETED (Frontend Refactor):
 #     * UNIFIED CREATE WORKFLOW:
 #       - Both Up-Down Planning AND ID Matcher now use /api/mis/automate-create-deal
 #       - Pre-Flight Popup date inputs converted to dropdowns (Month/Day/Year)
@@ -959,7 +1004,7 @@
 #       - Start/End Date now use dropdown selectors instead of text inputs
 #       - Month: Jan-Dec dropdown
 #       - Day: 1-31 dropdown (auto-populated)
-#       - Year: Current year ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years
+#       - Year: Current year ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years
 #       - Auto-initialization from data.start_date/end_date (MM/DD/YY format)
 #     * ID MATCHER CREATE BUTTON:
 #       - Now reads all form values (Weekday, Category, Locations, etc.)
@@ -974,8 +1019,8 @@
 #   - REMOVED ENDPOINTS:
 #     * /api/mis/create-deal (legacy ID Matcher endpoint) - no longer called
 #   - TESTING PRIORITY:
-#     * Up-Down Planning Create button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pre-Flight popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist appears
-#     * ID Matcher Create button ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Pre-Flight popup ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Checklist appears
+#     * Up-Down Planning Create button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Pre-Flight popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Checklist appears
+#     * ID Matcher Create button ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Pre-Flight popup ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Checklist appears
 #     * Date dropdowns populate correctly from Google Sheet dates
 #     * All field validations work consistently
 # v12.19 CHANGELOG (PHASE 1: BACKEND API WIRING):
@@ -2267,6 +2312,8 @@ def parse_locations(location_str):
     """
     Parse location string into a set of store names.
     Handles: "All Locations", "All Locations Except: X, Y", "Store1, Store2, Store3"
+    v12.26.1: Normalizes all store names via normalize_store_name() before comparison.
+    v12.26.2: Detects "All Locations Except:" ANYWHERE in string, not just at start.
     Returns: (store_set, is_all_except, excluded_stores)
     """
     if not location_str or location_str == '-':
@@ -2274,22 +2321,35 @@ def parse_locations(location_str):
     
     location_str = str(location_str).strip()
     
-    # Handle "All Locations Except: X, Y, Z"
-    if location_str.startswith("All Locations Except:"):
-        excluded_part = location_str.replace("All Locations Except:", "").strip()
-        excluded_stores = set()
-        if excluded_part:
-            excluded_stores = {s.strip() for s in excluded_part.split(',') if s.strip()}
-        included_stores = set(ALL_LOCATIONS) - excluded_stores
+    # v12.26.2: Handle "All Locations Except: X, Y, Z" ANYWHERE in string
+    except_stores = _extract_except_stores(location_str)
+    if except_stores is not None:
+        excluded_stores = set(except_stores)
+        included_stores = ALL_STORES_SET - excluded_stores
         return included_stores, True, excluded_stores
     
     # Handle "All Locations"
-    if location_str == "All Locations":
-        return set(ALL_LOCATIONS), False, set()
+    if location_str.lower() in ['all locations', 'all']:
+        return set(ALL_STORES_SET), False, set()
     
-    # Handle comma-separated list
-    stores = {s.strip() for s in location_str.split(',') if s.strip()}
+    # Handle comma-separated list - normalize each store name
+    stores = {normalize_store_name(s.strip()) for s in location_str.split(',') if s.strip()}
     return stores, False, set()
+
+
+def resolve_to_store_set(location_string: str) -> frozenset:
+    """v12.26.3: Convert any location string to a normalized frozenset of canonical store names.
+    Handles: 'All Locations', 'All Locations Except: X, Y', 'All Locations (Except: X)',
+             specific comma-separated lists, blank/empty.
+    Used for set-based comparison: if resolve_to_store_set(sheet) == resolve_to_store_set(mis): MATCH.
+    """
+    if not location_string or str(location_string).strip().lower() in ['', 'nan', 'none', '-', 'n/a', 'not specified']:
+        return frozenset(ALL_STORES_SET)
+    store_set, _, _ = parse_locations(location_string)
+    if not store_set:
+        return frozenset(ALL_STORES_SET)
+    return frozenset(store_set)
+
 
 def calculate_location_conflict(weekly_locations, tier1_locations):
     """
@@ -2382,7 +2442,7 @@ def load_sync_keys(store_name: str) -> dict | None:
     """
     try:
         if not SYNC_KEYS_FILE.exists():
-            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â Sync keys file not found: {SYNC_KEYS_FILE}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Sync keys file not found: {SYNC_KEYS_FILE}")
             return None
         
         with open(SYNC_KEYS_FILE, 'r') as f:
@@ -2392,24 +2452,24 @@ def load_sync_keys(store_name: str) -> dict | None:
         store_upper = store_name.upper().strip()
         
         if store_upper not in all_keys:
-            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â No UUID found for store: {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â No UUID found for store: {store_name}")
             return None
         
         store_data = all_keys[store_upper]
         
         # Validate required field
         if 'store_uuid' not in store_data:
-            print(f"[ECOM-SYNC] Ã¢Å¡Â Ã¯Â¸Â Missing store_uuid for store: {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Missing store_uuid for store: {store_name}")
             return None
         
-        print(f"[ECOM-SYNC] Ã¢Å“â€¦ Loaded UUID for store: {store_name}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded UUID for store: {store_name}")
         return store_data
     
     except json.JSONDecodeError as e:
-        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Invalid JSON in sync_keys.json: {e}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Invalid JSON in sync_keys.json: {e}")
         return None
     except Exception as e:
-        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Error loading sync keys: {e}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Error loading sync keys: {e}")
         return None
 
 
@@ -2457,7 +2517,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                 }
             }
         }
-        print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+        print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
         print(f"[ECOM-AUTH] Authenticating as: {email}")
         print(f"[ECOM-AUTH] Endpoint: {login_url}")
         print(f"[ECOM-AUTH] Content-Type: {headers['Content-Type']}")
@@ -2482,14 +2542,14 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
             auth_header = response.headers.get('Authorization')
             if auth_header:
                 token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
-                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in Authorization header")
+                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in Authorization header")
             
             # Check Access-Token header (alternate pattern)
             if not token:
                 access_token = response.headers.get('Access-Token')
                 if access_token:
                     token = access_token
-                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in Access-Token header")
+                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in Access-Token header")
             
             # ===== METHOD 2: Check Response Body (multiple paths) =====
             if not token and response.text:
@@ -2500,7 +2560,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                     # PRIORITY: Check for "jwt" key (Blaze Ecom specific)
                     if 'jwt' in response_data:
                         token = response_data['jwt']
-                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in: jwt key")
+                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in: jwt key")
                     
                     # Path 1: data.attributes.token
                     if not token and 'data' in response_data:
@@ -2509,7 +2569,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                             if 'attributes' in data and isinstance(data['attributes'], dict):
                                 token = data['attributes'].get('token')
                                 if token:
-                                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.attributes.token")
+                                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.attributes.token")
                             
                             # Path 2: data.id (some APIs return token as ID)
                             if not token and 'id' in data:
@@ -2517,73 +2577,73 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                                 # Token IDs are typically long strings
                                 if isinstance(potential_token, str) and len(potential_token) > 20:
                                     token = potential_token
-                                    print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.id")
+                                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.id")
                             
                             # Path 3: data.token
                             if not token and 'token' in data:
                                 token = data['token']
-                                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in data.token")
+                                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.token")
                     
                     # Path 4: meta.token
                     if not token and 'meta' in response_data:
                         meta = response_data['meta']
                         if isinstance(meta, dict) and 'token' in meta:
                             token = meta['token']
-                            print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in meta.token")
+                            print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in meta.token")
                     
                     # Path 5: top-level token
                     if not token and 'token' in response_data:
                         token = response_data['token']
-                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found at top level")
+                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found at top level")
                     
                     # Path 6: access_token (OAuth style)
                     if not token and 'access_token' in response_data:
                         token = response_data['access_token']
-                        print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token found in access_token")
+                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in access_token")
                         
                 except json.JSONDecodeError as e:
-                    print(f"[ECOM-AUTH] Ã¢Å¡Â Ã¯Â¸Â Could not parse JSON response: {e}")
+                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not parse JSON response: {e}")
             
             if token:
-                print(f"[ECOM-AUTH] Ã¢Å“â€¦ Token acquired (length: {len(token)})")
-                print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token acquired (length: {len(token)})")
+                print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
                 return token, None
             else:
-                print(f"[ECOM-AUTH] Ã¢Å¡Â Ã¯Â¸Â 200 OK but no token found anywhere!")
-                print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â 200 OK but no token found anywhere!")
+                print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
                 return None, "Authentication succeeded but no token in response"
         
         elif response.status_code == 401:
-            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Invalid credentials (401)")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Invalid credentials (401)")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return None, "Invalid Blaze credentials"
         
         elif response.status_code == 403:
-            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Access forbidden")
-            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Access forbidden")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return None, "Access forbidden - check account permissions"
         
         elif response.status_code == 422:
-            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Unprocessable Entity (422) - payload format issue")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Unprocessable Entity (422) - payload format issue")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return None, "Payload format rejected by API"
         
         else:
             error_text = response.text[:300] if response.text else 'No response body'
-            print(f"[ECOM-AUTH] Ã¢ÂÅ’ Auth failed: {response.status_code} - {error_text}")
-            print(f"[ECOM-AUTH] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Auth failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return None, f"Auth failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-AUTH] Ã¢ÂÅ’ Request timed out")
+        print("[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Request timed out")
         return None, "Authentication timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-AUTH] Ã¢ÂÅ’ Connection error: {e}")
+        print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Connection error: {e}")
         return None, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-AUTH] Ã¢ÂÅ’ Unexpected error: {e}")
+        print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return None, f"Auth error: {str(e)}"
@@ -2638,38 +2698,38 @@ def trigger_ecom_sync(store_uuid: str, token: str) -> tuple[bool, str]:
         
         if response.status_code in [200, 201, 202]:
             response_data = response.json() if response.text else {}
-            print(f"[ECOM-SYNC] Ã¢Å“â€¦ Sync triggered successfully")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Sync triggered successfully")
             return True, "Sync request accepted"
         
         elif response.status_code == 401:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Token expired or invalid")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Token expired or invalid")
             return False, "Token expired - try again"
         
         elif response.status_code == 403:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Forbidden - no permission for this store")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Forbidden - no permission for this store")
             return False, "No permission for this store"
         
         elif response.status_code == 404:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Store not found")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Store not found")
             return False, "Store UUID not found"
         
         elif response.status_code == 429:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Rate limited")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Rate limited")
             return False, "Rate limited - wait before retrying"
         
         else:
             error_text = response.text[:300] if response.text else 'No details'
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Sync failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Sync failed: {response.status_code} - {error_text}")
             return False, f"Sync failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-SYNC] Ã¢ÂÅ’ Request timed out")
+        print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Request timed out")
         return False, "Sync request timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Connection error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Connection error: {e}")
         return False, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
         return False, f"Sync error: {str(e)}"
 
 # Default Tax Rates (Hardcoded - can be overridden via tax_config.json)
@@ -2738,31 +2798,157 @@ PRIORITY_MAP = {
 }
 
 # MIS Store Mapping - UPDATED
+# v12.26.1: Canonical Store Name Normalization
+# Maps ALL known MIS/raw variations → Clean Google Sheet name
 STORE_MAPPING = {
+    # Raw MIS "The Artist Tree - X" → Clean Google Sheet name
+    "The Artist Tree - West Hollywood": "West Hollywood",
+    "The Artist Tree - Beverly Hills": "Beverly Hills",
+    "The Artist Tree - Beverly": "Beverly Hills",
+    "The Artist Tree - Koreatown": "Koreatown",
+    "The Artist Tree - Riverside": "Riverside",
+    "The Artist Tree - Fresno": "Fresno (Palm)",
+    "The Artist Tree - Fresno Palm": "Fresno (Palm)",
+    "The Artist Tree - Fresno Shaw": "Fresno (Shaw)",
+    "The Artist Tree - Oxnard": "Oxnard",
+    "The Artist Tree - El Sobrante": "El Sobrante",
+    "The Artist Tree - Laguna Woods": "Laguna Woods",
+    "The Artist Tree - Hawthorne": "Hawthorne",
+    "The Artist Tree - Dixon": "Dixon",
+    "The Artist Tree - Davis": "Davis",
+    # Short MIS CSV variations → Clean Google Sheet name
     "West Hollywood": "West Hollywood",
     "Beverly": "Beverly Hills",
     "Beverly Hills": "Beverly Hills",
     "Koreatown": "Koreatown",
     "Riverside": "Riverside",
-    "Fresno": "Fresno",
-    "Fresno (Palm)": "Fresno",
-    "Fresno Shaw": "Fresno Shaw",
+    "Fresno": "Fresno (Palm)",
+    "Fresno Palm": "Fresno (Palm)",
+    "Fresno (Palm)": "Fresno (Palm)",
+    "Fresno Shaw": "Fresno (Shaw)",
+    "Fresno (Shaw)": "Fresno (Shaw)",
     "Oxnard": "Oxnard",
     "El Sobrante": "El Sobrante",
     "Laguna Woods": "Laguna Woods",
     "Hawthorne": "Hawthorne",
     "Dixon": "Dixon",
-    "Davis": "Davis"
+    "Davis": "Davis",
 }
 
-# The strict list of stores that appear in the CSV (for 'All Except' logic)
-CSV_TARGET_STORES = [
-    "Dixon", "Davis", "Beverly Hills", "El Sobrante", "Fresno", 
-    "Fresno Shaw", "Hawthorne", "Koreatown", "Laguna Woods", 
-    "Oxnard", "Riverside", "West Hollywood"
-]
+# v12.26.1: Build case-insensitive lookup for STORE_MAPPING
+_STORE_MAPPING_LOWER = {k.lower(): v for k, v in STORE_MAPPING.items()}
 
-ALL_STORES = list(set(STORE_MAPPING.values()))
+# v12.26.1: The 12 canonical store names (Google Sheet format) - SINGLE SOURCE OF TRUTH
+ALL_STORES_SET = frozenset([
+    "Davis", "Dixon", "Beverly Hills", "El Sobrante",
+    "Fresno (Palm)", "Fresno (Shaw)", "Hawthorne",
+    "Koreatown", "Laguna Woods", "Oxnard",
+    "Riverside", "West Hollywood"
+])
+
+ALL_STORES = sorted(ALL_STORES_SET)
+
+# Legacy alias for backward compatibility
+CSV_TARGET_STORES = ALL_STORES
+
+
+def normalize_store_name(raw_name: str) -> str:
+    """v12.26.1: Normalize any MIS/raw store name to canonical Google Sheet name.
+    Handles: 'The Artist Tree - Fresno Shaw' → 'Fresno (Shaw)',
+             'Beverly' → 'Beverly Hills', 'Fresno' → 'Fresno (Palm)', etc.
+    """
+    if not raw_name:
+        return raw_name
+    clean = str(raw_name).strip()
+    if not clean:
+        return clean
+    # Direct lookup (fast path)
+    if clean in STORE_MAPPING:
+        return STORE_MAPPING[clean]
+    # Case-insensitive lookup
+    clean_lower = clean.lower()
+    if clean_lower in _STORE_MAPPING_LOWER:
+        return _STORE_MAPPING_LOWER[clean_lower]
+    # Regex fallback: strip known prefixes then re-lookup
+    stripped = re.sub(
+        r"^(The Artist Tree|Davisville Business Enterprises,?\s*Inc\.?|Club 420)\s*[-\u2013\u2014]?\s*",
+        "", clean, flags=re.IGNORECASE
+    ).strip()
+    if stripped in STORE_MAPPING:
+        return STORE_MAPPING[stripped]
+    stripped_lower = stripped.lower()
+    if stripped_lower in _STORE_MAPPING_LOWER:
+        return _STORE_MAPPING_LOWER[stripped_lower]
+    # Return stripped version as-is if no mapping found
+    return stripped
+
+
+def _extract_except_stores(text: str) -> list | None:
+    """v12.26.3: Extract exception store names from text containing 'Except:' ANYWHERE.
+    Handles both 'All Locations Except: X' and 'All Locations (Except: X)' formats.
+    Returns sorted list of canonical store names, or None if no 'except' pattern found.
+    Filters against ALL_STORES_SET to discard trailing garbage text.
+    """
+    # v12.26.3: [\s(]* allows optional whitespace or open-paren before "except"
+    m = re.search(r'all\s+locations[\s(]*except[):\s]*(.+)', text, re.IGNORECASE)
+    if not m:
+        return None
+    raw_part = m.group(1).strip()
+    if not raw_part:
+        return []
+    # Strip trailing/leading parentheses and whitespace from the captured group
+    raw_part = raw_part.strip('()[] \t')
+    # Split by comma, normalize each, keep only recognized stores
+    result = []
+    for segment in raw_part.split(','):
+        seg = segment.strip().strip('()[] \t')
+        if not seg:
+            continue
+        # Try normalizing the full segment first
+        normed = normalize_store_name(seg)
+        if normed in ALL_STORES_SET:
+            result.append(normed)
+            continue
+        # If segment has trailing garbage (e.g., "Dixon - 20% off"), try just the first word(s)
+        # Split on " - " or other separators and try the first part
+        for sep in [' - ', ' | ', ' (', ';']:
+            if sep in seg:
+                prefix = seg.split(sep)[0].strip()
+                normed_prefix = normalize_store_name(prefix)
+                if normed_prefix in ALL_STORES_SET:
+                    result.append(normed_prefix)
+                    break
+    return sorted(set(result))
+
+
+def normalize_location_string(loc_str: str) -> str:
+    """v12.26.2: Normalize a full MIS location string to canonical Google Sheet format.
+    Handles: comma-separated lists, 'All Locations', 'All Locations Except: X, Y'.
+    v12.26.2: 'All Locations Except:' detected ANYWHERE in string (not just at start).
+    Applies normalize_store_name() to every individual store in the string.
+    """
+    if not loc_str or str(loc_str).strip().lower() in ['', 'nan', 'none', '-', 'n/a', 'nat']:
+        return "All Locations"
+    s = str(loc_str).strip()
+
+    # v12.26.2: "All Locations Except: X, Y" detected ANYWHERE in the string
+    except_stores = _extract_except_stores(s)
+    if except_stores is not None:
+        if except_stores:
+            return f"All Locations Except: {', '.join(except_stores)}"
+        return "All Locations"
+
+    # "All Locations" / "All"
+    if s.lower() in ['all locations', 'all']:
+        return "All Locations"
+
+    # Comma-separated list of stores
+    stores = sorted({normalize_store_name(st.strip()) for st in s.split(',') if st.strip()})
+    if len(stores) >= len(ALL_STORES_SET):
+        # If all 12 stores listed individually, collapse to "All Locations"
+        if set(stores) == ALL_STORES_SET:
+            return "All Locations"
+    return ', '.join(stores)
 
 # Strict list of categories for 'All Categories' expansion
 ALL_CATEGORIES = [
@@ -2778,32 +2964,8 @@ if not GROUPS_FILE.exists():
     with open(GROUPS_FILE, 'w') as f:
         json.dump({}, f)
 
-# MIS Store Mapping - UPDATED
-STORE_MAPPING = {
-    "West Hollywood": "West Hollywood",
-    "Beverly": "Beverly Hills",
-    "Beverly Hills": "Beverly Hills",
-    "Koreatown": "Koreatown",
-    "Riverside": "Riverside",
-    "Fresno": "Fresno", # Updated per request
-    "Fresno (Palm)": "Fresno",
-    "Fresno Shaw": "Fresno Shaw",
-    "Oxnard": "Oxnard",
-    "El Sobrante": "El Sobrante",
-    "Laguna Woods": "Laguna Woods",
-    "Hawthorne": "Hawthorne",
-    "Dixon": "Dixon",
-    "Davis": "Davis"
-}
-
-# The strict list of stores that appear in the CSV (for 'All Except' logic)
-CSV_TARGET_STORES = [
-    "Dixon", "Davis", "Beverly Hills", "El Sobrante", "Fresno", 
-    "Fresno Shaw", "Hawthorne", "Koreatown", "Laguna Woods", 
-    "Oxnard", "Riverside", "West Hollywood"
-]
-
-ALL_STORES = list(set(STORE_MAPPING.values()))
+# v12.26.1: STORE_MAPPING, CSV_TARGET_STORES, ALL_STORES, ALL_STORES_SET
+# now defined once above (lines ~2786-2880) as single source of truth
 
 # Strict list of categories for 'All Categories' expansion
 ALL_CATEGORIES = [
@@ -3536,8 +3698,8 @@ def scrape_blaze_data_from_browser():
             names = []
             for sid in shop_ids:
                 raw_name = shops.get(sid, sid)
-                # Updated Regex to remove "Davisville Business Enterprises, Inc." as well
-                clean_name = re.sub(r"^(The Artist Tree|Davisville Business Enterprises, Inc\.|Club 420)\s*[--]?\s*", "", str(raw_name), flags=re.IGNORECASE).strip()
+                # v12.26.1: Use canonical normalize_store_name() instead of regex-only strip
+                clean_name = normalize_store_name(str(raw_name))
                 names.append(clean_name)
 
             if len(names) >= 12:
@@ -4532,6 +4694,68 @@ def get_col(row: pd.Series, possible_names: List[str], default: Any = '') -> Any
             return row[name]
     return default
 
+def find_column_by_header_contains(row: pd.Series, search_text: str, case_sensitive: bool = False) -> Any:
+    """
+    v12.25.6: Smart column finder - searches for column header containing specific text.
+    This makes column detection resilient to column position changes in Google Sheet.
+    
+    Args:
+        row: pandas Series (row from DataFrame)
+        search_text: Text to search for in column headers
+        case_sensitive: Whether to do case-sensitive matching (default: False)
+    
+    Returns:
+        Column value if found, empty string if not found
+    
+    Example:
+        # Find location column by searching for "(Discount Applies At)" in header
+        locations = find_column_by_header_contains(row, "(Discount Applies At)")
+        
+        # Find monthly day of month from "Contracted Duration" column
+        day_of_month = find_column_by_header_contains(row, "Contracted Duration")
+    """
+    search_lower = search_text if case_sensitive else search_text.lower()
+    
+    for col in row.index:
+        col_header = str(col) if case_sensitive else str(col).lower()
+        if search_lower in col_header:
+            val = row[col]
+            if pd.notna(val):
+                return val
+    return ''
+
+def get_monthly_day_of_month(row: pd.Series) -> str:
+    """
+    v12.25.6: Get day of month for Monthly section deals.
+    
+    Searches for column containing "Contracted Duration" in header.
+    Returns values like "10th", "15th", etc.
+    
+    NOTE: Column A may contain detailed date information in comma-separated format
+    for multi-day deals - this is handled separately by multi-day grouping logic.
+    """
+    # Search for "Contracted Duration" in header (case-insensitive)
+    for col in row.index:
+        col_str = str(col)
+        c_lower = col_str.lower().replace('\n', ' ')  # Normalize newlines
+        if 'contracted duration' in c_lower:
+            val = row[col]
+            if pd.notna(val):
+                result = str(val).strip()
+                print(f"[MONTHLY-DAY] Found 'Contracted Duration' column '{col_str}' with value: '{result}'")
+                return result
+    
+    # Fallback to old column names for backwards compatibility
+    fallback_names = ['Weekday/ Day of Month', 'Day of Month', 'Monthly Day']
+    for name in fallback_names:
+        if name in row.index and pd.notna(row[name]):
+            result = str(row[name]).strip()
+            print(f"[MONTHLY-DAY] Using fallback column '{name}' with value: '{result}'")
+            return result
+    
+    print(f"[MONTHLY-DAY-WARNING] No day-of-month column found!")
+    return ''
+
 def manage_brand_list(mis_df: pd.DataFrame) -> List[str]:
     """Manage brand list."""
     stored_brands = set()
@@ -4576,14 +4800,19 @@ def parse_end_date(contracted_duration: str, default: str = '') -> Tuple[str, st
     return (default, default)
 
 def format_location_display(locations: str, exceptions: str) -> str:
+    """v12.26.3: Format location + exceptions into display string.
+    Outputs 'All Locations Except: X, Y' (no parentheses) for downstream set-matching.
+    Normalizes store names to canonical Google Sheet format.
+    """
     if pd.isna(locations) or not str(locations).strip():
         return "Not Specified"
     loc_str = str(locations).strip()
     exc_str = str(exceptions).strip() if pd.notna(exceptions) else ""
     if exc_str:
-        if "except" in loc_str.lower():
-            loc_str = "All Locations"
-        return f"{loc_str} (Except: {exc_str})"
+        # Normalize exception store names to canonical format
+        exc_parts = [normalize_store_name(e.strip()) for e in exc_str.split(',') if e.strip()]
+        exc_normalized = ', '.join(sorted(set(exc_parts)))
+        return f"All Locations Except: {exc_normalized}"
     return loc_str
 
 def format_category_display(categories: str, exceptions: str) -> str:
@@ -4832,11 +5061,16 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
     for g_idx, g_row in google_df.iterrows():
         # Standard Logic for all sections (Removed Sale Swap)
         brand_raw = str(g_row.get('Brand', '')).strip()
-        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        # v12.25.6: Updated column detection for Monthly section
+        # Weekly: Uses 'Weekday', 'Day of Week' columns
+        # Monthly: Uses column containing "Contracted Duration" in header (was 'Weekday/ Day of Month')
+        # Sale: Uses 'Sale Runs:', 'Contracted Duration' for date ranges
         if section_type == 'weekly':
             weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
-        else:
-            weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+        elif section_type == 'monthly':
+            weekday_raw = get_monthly_day_of_month(g_row).title()
+        else:  # sale
+            weekday_raw = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
@@ -4949,17 +5183,46 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
         if 'sun' in d: return 'sunday'
         return ''
     
+    # v12.26.0: Parse tab name for temporal scoring of MIS ID suggestions
+    _tab_name = GLOBAL_DATA.get('mis', {}).get('current_sheet', '')
+    _tab_month, _tab_year = -1, -1
+    _months_list = ['january','february','march','april','may','june','july','august','september','october','november','december']
+    for _part in _tab_name.lower().strip().split():
+        if _part in _months_list:
+            _tab_month = _months_list.index(_part) + 1  # 1-indexed (1=Jan, 12=Dec)
+        if _part.isdigit() and len(_part) == 4:
+            _tab_year = int(_part)
+    
+    def _parse_end_date_ym(date_str: str) -> Tuple[int, int]:
+        """Parse end date to (year, month). Returns (-1, -1) on failure."""
+        if not date_str or date_str in ['N/A', 'nan', 'None', '-', '']:
+            return (-1, -1)
+        import re
+        s = str(date_str).strip()
+        # YYYY-MM-DD
+        m = re.match(r'^(\d{4})-(\d{1,2})-\d{1,2}$', s)
+        if m: return (int(m.group(1)), int(m.group(2)))
+        # MM/DD/YYYY
+        m = re.match(r'^(\d{1,2})/\d{1,2}/(\d{4})$', s)
+        if m: return (int(m.group(2)), int(m.group(1)))
+        # MM/DD/YY
+        m = re.match(r'^(\d{1,2})/\d{1,2}/(\d{2})$', s)
+        if m: return (2000 + int(m.group(2)), int(m.group(1)))
+        return (-1, -1)
+    
     for g_idx, g_row in google_df.iterrows():
         if should_skip_end420_row(g_row.to_dict()):
             continue
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
         brand_raw = str(g_row.get('Brand', '')).strip()
-        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
             weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
-        else:
-            weekday_raw = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+        elif section_type == 'monthly':
+            weekday_raw = get_monthly_day_of_month(g_row)
+        else:  # sale
+            weekday_raw = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand_raw:
             continue
@@ -5167,11 +5430,33 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                     score_category = 5
             
                 # Final Confidence Calculation
-                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category), 100)
+                # v12.26.0: Add temporal scoring based on tab month/year
+                score_temporal = 0
+                temporal_tag = ''
+                if _tab_month > 0 and _tab_year > 0:
+                    end_date_str = str(c_row.get('End date', '')).strip()
+                    end_y, end_m = _parse_end_date_ym(end_date_str)
+                    if end_y > 0 and end_m > 0:
+                        tab_ym = _tab_year * 12 + _tab_month
+                        end_ym = end_y * 12 + end_m
+                        if end_ym == tab_ym:
+                            score_temporal = 10  # Current month - highest priority
+                            temporal_tag = 'current'
+                        elif end_ym == tab_ym + 1:
+                            score_temporal = 5   # Next month - still relevant
+                            temporal_tag = 'next'
+                        elif end_ym > tab_ym:
+                            score_temporal = 3   # Future - somewhat relevant
+                            temporal_tag = 'future'
+                        else:
+                            score_temporal = -5  # Past/expired - deprioritize
+                            temporal_tag = 'expired'
+                
+                final_confidence = min(round(score_brand + score_discount + score_vendor + score_category + score_temporal), 100)
             
                 # Build Display Data
-                locs = str(c_row.get('Store', '')).strip()
-                if not locs or locs.lower() == 'nan': locs = "All Locations"
+                # v12.26.1: Normalize MIS store names to canonical Google Sheet format
+                locs = normalize_location_string(str(c_row.get('Store', '')).strip())
             
                 # [FIX] USE ROBUST ID GETTER HERE
                 clean_mis_id = get_clean_mis_id(c_row)
@@ -5219,16 +5504,22 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                     reasoning_parts.append("(fuzzy - similar name)")
                 if linked_brand_match:
                     reasoning_parts.append("[LB[EMOJI]]")  # Linked Brand matched
+                # v12.26.0: Temporal relevance indicator
+                if temporal_tag == 'current':
+                    reasoning_parts.append("[EMOJI]Current")
+                elif temporal_tag == 'expired':
+                    reasoning_parts.append("[EMOJI]Expired")
             
                 suggestions.append({
                     'mis_id': clean_mis_id,
                     'confidence': final_confidence,
+                    'temporal_score': score_temporal,
                     'reasoning': ' '.join(reasoning_parts),
                     'mis_data': mis_data_pack
                 })
         
-            # Sort by confidence (Highest first) and take top 5
-            suggestions = sorted(suggestions, key=lambda x: x['confidence'], reverse=True)[:5]
+            # Sort by confidence (Highest first), temporal_score as tiebreaker, take top 5
+            suggestions = sorted(suggestions, key=lambda x: (x['confidence'], x.get('temporal_score', 0)), reverse=True)[:5]
         
             # Determine Match Status based on top suggestion
             matched_mis_id = ''
@@ -5319,11 +5610,13 @@ def audit_google_vs_mis(google_df: pd.DataFrame, mis_df: pd.DataFrame, section_t
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
         brand = str(g_row.get('Brand', '')).strip()
-        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
             weekday = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
-        else:
-            weekday = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+        elif section_type == 'monthly':
+            weekday = get_monthly_day_of_month(g_row)
+        else:  # sale
+            weekday = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand:
             continue
@@ -5783,17 +6076,52 @@ def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
 def resolve_location_columns(row: pd.Series) -> Tuple[str, str]:
     """
     Logic Router for Location Columns.
-    Prioritizes 'Locations (Discount Applies at)' column using FUZZY matching.
-    Falls back to 'Locations (Marketing)' if needed.
+    v12.25.7: Prioritizes column header containing "(Discount Applies At)" using FUZZY matching.
+    Falls back to 'Locations' column if needed.
+    
+    HEADER DETECTION: Searches for header containing "(Discount Applies At)" (with parentheses)
+    Handles multi-line headers where "Locations" and "(Discount Applies At)" are on separate lines.
+    This makes the function resilient to column position changes in Google Sheet.
     """
-    # 1. FUZZY FIND the "Master Switch" column (Column N)
-    # We scan the row's index (headers) for the column that contains 'discount' and 'applies'
+    # 1. FUZZY FIND the "Master Switch" column
+    # v12.25.7: Enhanced to handle multi-line headers and various formats
     master_col_name = None
+    fallback_locations_col = None  # Pure "Locations" column (not Marketing)
+    
+    # DEBUG: Print all column names once per unique set (helps diagnose column detection)
+    debug_cols = [str(col) for col in row.index]
+    if not hasattr(resolve_location_columns, '_logged_cols') or resolve_location_columns._logged_cols != debug_cols:
+        resolve_location_columns._logged_cols = debug_cols
+        print(f"[LOCATION-DEBUG] Available columns: {debug_cols}")
+    
     for col in row.index:
-        c_lower = str(col).lower()
-        if 'discount' in c_lower and 'applies' in c_lower:
+        col_str = str(col)
+        c_lower = col_str.lower().replace('\n', ' ')  # Normalize newlines to spaces
+        
+        # Primary match: "(discount applies at)" with parentheses
+        if '(discount applies at)' in c_lower:
             master_col_name = col
+            print(f"[LOCATION] Found primary match: '{col_str}'")
             break
+        # Secondary match: "discount applies" without parentheses
+        if master_col_name is None and 'discount' in c_lower and 'applies' in c_lower:
+            master_col_name = col
+            print(f"[LOCATION] Found secondary match (discount+applies): '{col_str}'")
+        # Fallback: "locations" column that is NOT the marketing column
+        if fallback_locations_col is None:
+            if 'locations' in c_lower and 'marketing' not in c_lower:
+                # Check if it starts with "locations" or is primarily a locations column
+                if c_lower.startswith('locations') or 'locations' in c_lower.split()[0] if c_lower.split() else False:
+                    fallback_locations_col = col
+                    print(f"[LOCATION] Found fallback 'Locations' column: '{col_str}'")
+    
+    # Use fallback if no primary match found
+    if master_col_name is None and fallback_locations_col is not None:
+        master_col_name = fallback_locations_col
+        print(f"[LOCATION] Using fallback column: {master_col_name}")
+    
+    if master_col_name is None:
+        print(f"[LOCATION-WARNING] No location column found!")
             
     # Read value if column found, else empty
     master_col_val = str(row[master_col_name]).strip() if master_col_name else ""
@@ -5884,11 +6212,13 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
         
         # Standard Logic for all sections (Removed Sale Swap)
         brand_raw = str(g_row.get('Brand', '')).strip()
-        # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+        # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
             weekday_val_input = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
-        else:
-            weekday_val_input = str(get_col(g_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+        elif section_type == 'monthly':
+            weekday_val_input = get_monthly_day_of_month(g_row).title()
+        else:  # sale
+            weekday_val_input = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
@@ -5941,10 +6271,11 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
                 if section_type == 'sale':
                     day_val = str(sub_row.get('Brand', '')).strip()
                 elif section_type == 'weekly':
-                    # v12.22.4: Weekly uses Column A ('Weekday')
+                    # v12.25.6: Weekly uses 'Weekday', 'Day of Week' columns
                     day_val = str(get_col(sub_row, ['Weekday', 'Day of Week'], '')).strip()
                 else:
-                    day_val = str(get_col(sub_row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                    # v12.25.6: Monthly uses column containing "Contracted Duration"
+                    day_val = get_monthly_day_of_month(sub_row)
                 
                 note_val = str(sub_row.get('SPECIAL NOTES', '')).strip()
                 if note_val: special_notes_package.append({'row': r_num, 'day': day_val, 'note': note_val})
@@ -10652,7 +10983,7 @@ HTML_TEMPLATE = r"""
                 if (!locationStr) return [];
                 
                 // Handle "All Locations Except:" logic
-                // Example: "All Locations Except: Davis, Hawthorne" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Returns 10 stores (all except Davis, Hawthorne)
+                // Example: "All Locations Except: Davis, Hawthorne" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Returns 10 stores (all except Davis, Hawthorne)
                 if (locationStr.toLowerCase().includes('all locations')) {
                     if (locationStr.toLowerCase().includes('except')) {
                         // v12.21.4: FIXED - Return all stores EXCEPT the listed ones
@@ -10676,7 +11007,7 @@ HTML_TEMPLATE = r"""
                                 .map(s => s.trim())
                                 .filter(s => s.length > 0);  // Remove empty strings
                             
-                            // Step 3: Expand exception codes (e.g., "DV" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Davis")
+                            // Step 3: Expand exception codes (e.g., "DV" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Davis")
                             const exceptions = exceptionsRaw.map(code => 
                                 locationCodeMap[code.toLowerCase()] || code
                             );
@@ -10695,24 +11026,24 @@ HTML_TEMPLATE = r"""
                                     const excLower = exc.toLowerCase();
                                     const matches = excLower === storeLower;
                                     if (matches) {
-                                        console.log(`  ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                        console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "${store}" (matches exception "${exc}")`);
                                     }
                                     return matches;
                                 });
                                 
                                 if (!isExcluded) {
-                                    console.log(`  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ KEEPING: "${store}"`);
+                                    console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ KEEPING: "${store}"`);
                                 }
                                 
                                 return !isExcluded;
                             });
                             
                             console.log('  Final Result (Master - Exceptions):', result);
-                            console.log(`  Summary: ${masterList.length} total ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ${exceptions.length} excluded ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ ${result.length} remaining`);
+                            console.log(`  Summary: ${masterList.length} total ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ${exceptions.length} excluded ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ${result.length} remaining`);
                             return result;
                         }
                     }
-                    // Just "All Locations" with no exceptions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ return empty array (auto-selects all)
+                    // Just "All Locations" with no exceptions ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ return empty array (auto-selects all)
                     console.log('[SMART-LOCATION] All Locations (no exceptions) - returning empty array');
                     return [];
                 }
@@ -10724,7 +11055,7 @@ HTML_TEMPLATE = r"""
                     return locationCodeMap[codeLower] || code; // Use mapping or original if not found
                 });
                 
-                console.log('[SMART-LOCATION] Expanded:', locationStr, 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', expanded);
+                console.log('[SMART-LOCATION] Expanded:', locationStr, 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢', expanded);
                 return expanded;
             }
             
@@ -10847,7 +11178,7 @@ HTML_TEMPLATE = r"""
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
                     if (sel) {
-                        console.log(`[LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                        console.log(`[LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
                     }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
@@ -10908,7 +11239,7 @@ HTML_TEMPLATE = r"""
             
             document.body.appendChild(popup);
             
-            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years)
+            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years)
             const currentYear = new Date().getFullYear();
             const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
             
@@ -12694,13 +13025,19 @@ HTML_TEMPLATE = r"""
 
             // Helper: Get cell style based on match
             const getMatchStyle = (sourceVal, targetVal, isNumeric = false) => {
-                if (!sourceVal && !targetVal) return '';
-                if (!sourceVal || !targetVal) return 'background:#fff3cd; color:#856404;'; // Yellow - missing
+                // v12.26.0: Fix 0% matching - explicit null/undefined/empty checks
+                const srcEmpty = (sourceVal === null || sourceVal === undefined || String(sourceVal).trim() === '' || String(sourceVal).trim() === '-' || String(sourceVal).toLowerCase() === 'nan');
+                const tgtEmpty = (targetVal === null || targetVal === undefined || String(targetVal).trim() === '' || String(targetVal).trim() === '-' || String(targetVal).toLowerCase() === 'nan');
+                
+                if (srcEmpty && tgtEmpty) return '';
+                if (srcEmpty || tgtEmpty) return 'background:#fff3cd; color:#856404;';
                 
                 let matches = false;
                 if (isNumeric) {
-                    const s = parseFloat(String(sourceVal).replace(/[%$,]/g, '')) || 0;
-                    const t = parseFloat(String(targetVal).replace(/[%$,]/g, '')) || 0;
+                    const s = parseFloat(String(sourceVal).replace(/[%$,]/g, ''));
+                    const t = parseFloat(String(targetVal).replace(/[%$,]/g, ''));
+                    if (isNaN(s) && isNaN(t)) return '';
+                    if (isNaN(s) || isNaN(t)) return 'background:#fff3cd; color:#856404;';
                     matches = Math.abs(s - t) < 0.01;
                 } else {
                     matches = String(sourceVal).toLowerCase().trim() === String(targetVal).toLowerCase().trim();
@@ -13070,7 +13407,7 @@ HTML_TEMPLATE = r"""
             // --- v12.24.8: ASSIGNED MIS ID SECTION (supports multiple IDs, proper comparison) ---
             const assignedMisIdRaw = match.current_sheet_id ? String(match.current_sheet_id).trim() : '';
             
-            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" Ã¢â€ â€™ "12345")
+            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ "12345")
             const cleanMisId = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -13084,7 +13421,7 @@ HTML_TEMPLATE = r"""
                 return str;
             };
             
-            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" Ã¢â€ â€™ "W1")
+            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ "W1")
             const extractTag = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -13210,47 +13547,71 @@ HTML_TEMPLATE = r"""
             };
             
             // v12.25.0: Location comparison - SET-BASED (order independent) with NaN/blank = All
-            const getLocationMatchStyle = (sheetLocations, misLocations) => {
-                const sheetLoc = String(sheetLocations || '').toLowerCase().trim();
-                const misLoc = String(misLocations || '').toLowerCase().trim();
-                
-                // v12.25.0: Treat blank/empty/NaN as "All" (universal match)
-                const isSheetAll = !sheetLoc || sheetLoc === 'all' || sheetLoc === '-' || 
-                                   sheetLoc === 'all locations' || sheetLoc.includes('all locations') ||
-                                   sheetLoc === 'nan' || sheetLoc === 'null' || sheetLoc === 'undefined';
-                const isMisAll = !misLoc || misLoc === 'all' || misLoc === '-' || 
-                                 misLoc === 'n/a' || misLoc === 'nan' || misLoc === 'all locations' ||
-                                 misLoc === 'null' || misLoc === 'undefined';
-                
-                // Check for "All Except" pattern
-                const sheetExceptMatch = sheetLoc.match(/all\s*(?:locations\s*)?except[:\s]*(.+)/i);
-                const misExceptMatch = misLoc.match(/all\s*(?:locations\s*)?except[:\s]*(.+)/i);
-                
-                // Both are "All" - GREEN
-                if (isSheetAll && isMisAll) return 'background:#d4edda; color:#155724;';
-                
-                // Sheet is "All Except X" - compare exclusions as sets
-                if (sheetExceptMatch) {
-                    if (misExceptMatch) {
-                        const sheetExcepts = new Set(sheetExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
-                        const misExcepts = new Set(misExceptMatch[1].split(',').map(s => s.trim().toLowerCase()).filter(s => s));
-                        const setsEqual = sheetExcepts.size === misExcepts.size && 
-                                         [...sheetExcepts].every(x => misExcepts.has(x));
-                        return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
-                    }
-                    return 'background:#fff3cd; color:#856404;';
+            // v12.26.1: Master store list for "All Locations Except" set expansion
+            const ALL_STORES_JS = new Set([
+                'davis', 'dixon', 'beverly hills', 'el sobrante',
+                'fresno (palm)', 'fresno (shaw)', 'hawthorne',
+                'koreatown', 'laguna woods', 'oxnard',
+                'riverside', 'west hollywood'
+            ]);
+
+            // v12.26.1: Normalize a single store name to canonical form (lowercase)
+            const _STORE_NORM_MAP = {
+                'beverly': 'beverly hills',
+                'fresno': 'fresno (palm)',
+                'fresno palm': 'fresno (palm)',
+                'fresno shaw': 'fresno (shaw)',
+            };
+            const normalizeStoreJS = (name) => {
+                const n = name.toLowerCase().trim()
+                    .replace(/^(the artist tree|davisville business enterprises,?\s*inc\.?|club 420)\s*[-\u2013\u2014]?\s*/i, '');
+                return _STORE_NORM_MAP[n] || n;
+            };
+
+            // v12.26.2: Parse any location string into a normalized Set of store names
+            // Detects "All Locations Except:" ANYWHERE in string (not just at start)
+            const parseLocationSet = (locStr) => {
+                const s = String(locStr || '').trim().toLowerCase();
+                if (!s || s === '-' || s === 'nan' || s === 'n/a' || s === 'null' || s === 'undefined' ||
+                    s === 'all' || s === 'all locations') {
+                    return { isAll: true, stores: new Set(ALL_STORES_JS), isExcept: false };
                 }
-                
-                // One is All, other is specific - YELLOW (mismatch)
-                if (isSheetAll !== isMisAll) return 'background:#fff3cd; color:#856404;';
-                
-                // v12.25.0: Both are specific lists - SET-BASED comparison (order independent)
-                const sheetSet = new Set(sheetLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
-                const misSet = new Set(misLoc.split(',').map(s => s.trim().toLowerCase()).filter(s => s));
-                
-                // Set equality: same size and all elements match
-                const setsEqual = sheetSet.size === misSet.size && [...sheetSet].every(x => misSet.has(x));
-                return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+                // v12.26.3: "All Locations Except: X, Y" or "All Locations (Except: X, Y)"
+                // Handles both parenthesized and non-parenthesized formats ANYWHERE in string
+                const exceptMatch = s.match(/all\s*(?:locations\s*)?[\s(]*except[):\s]*(.+)/i);
+                if (exceptMatch) {
+                    // Filter to only known stores (discards trailing garbage like "- 20% off")
+                    const exceptions = new Set(
+                        exceptMatch[1].split(',')
+                            .map(e => normalizeStoreJS(e))
+                            .filter(e => e && ALL_STORES_JS.has(e))
+                    );
+                    const included = new Set([...ALL_STORES_JS].filter(st => !exceptions.has(st)));
+                    return { isAll: false, stores: included, isExcept: true, exceptions };
+                }
+                // Comma-separated explicit list
+                const stores = new Set(s.split(',').map(e => normalizeStoreJS(e)).filter(e => e));
+                // If all 12 stores listed, treat as "All"
+                if (stores.size >= ALL_STORES_JS.size && [...ALL_STORES_JS].every(st => stores.has(st))) {
+                    return { isAll: true, stores: new Set(ALL_STORES_JS), isExcept: false };
+                }
+                return { isAll: false, stores, isExcept: false };
+            };
+
+            const getLocationMatchStyle = (sheetLocations, misLocations) => {
+                const GREEN = 'background:#d4edda; color:#155724;';
+                const YELLOW = 'background:#fff3cd; color:#856404;';
+
+                const sheet = parseLocationSet(sheetLocations);
+                const mis = parseLocationSet(misLocations);
+
+                // Both All → GREEN
+                if (sheet.isAll && mis.isAll) return GREEN;
+
+                // Compare as normalized sets (handles All Except vs explicit list)
+                const setsEqual = sheet.stores.size === mis.stores.size &&
+                                  [...sheet.stores].every(x => mis.stores.has(x));
+                return setsEqual ? GREEN : YELLOW;
             };
             
             // v12.24.8: Parse multiple assigned MIS IDs
@@ -13260,7 +13621,7 @@ HTML_TEMPLATE = r"""
                 html += `
                     <div style="margin-bottom:20px;">
                         <h6 style="color:#198754; margin-bottom:10px; border-bottom:2px solid #198754; padding-bottom:5px;">
-                            Ã¢Å“â€¦ Currently Assigned in Google Sheet
+                            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Currently Assigned in Google Sheet
                             ${assignedMisIds.length > 1 ? '<small style="color:#6c757d; font-weight:normal;"> (' + assignedMisIds.length + ' IDs)</small>' : ''}
                         </h6>
                         <div style="overflow-x:auto;">
@@ -13368,7 +13729,7 @@ HTML_TEMPLATE = r"""
                                             <select id="end-day-assigned-${aIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                             <select id="end-year-assigned-${aIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                             <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate('assigned', ${aIdx}, '${cleanId}')">Update</button>
-                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">Ã¢Å“â€¢</button>
+                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢</button>
                                         </div>
                                     </div>
                                 </td>
@@ -13507,7 +13868,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â Ã¯Â¸Â Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -13525,7 +13886,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">Ã¢Å¡Â Ã¯Â¸Â Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Needs Linked Brand</span>';
                     }
                 }
                 
@@ -13579,7 +13940,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">Ã¢Å“â€¢</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢</button>
                                 </div>
                             </div>
                         </td>
@@ -13803,7 +14164,7 @@ HTML_TEMPLATE = r"""
                     // Update the display in the Suggestions popup
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${newEndDate}</span>`;
+                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${newEndDate}</span>`;
                     }
                     
                     // Hide the editor
@@ -13812,7 +14173,7 @@ HTML_TEMPLATE = r"""
                         editorEl.style.display = 'none';
                     }
                     
-                    alert('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                 } else {
                     alert('Error updating end date: ' + (data.error || 'Unknown error'));
                 }
@@ -13826,7 +14187,7 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        // v12.21: Adapter function for ID Matcher ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Unified Pre-Flight
+        // v12.21: Adapter function for ID Matcher ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Unified Pre-Flight
         async function useUnifiedPreFlightForIDMatcher(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) {
@@ -13977,7 +14338,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
             
-            console.log('[ID-MATCHER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ PRE-FLIGHT] Converted data:', preFlightData);
+            console.log('[ID-MATCHER ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ PRE-FLIGHT] Converted data:', preFlightData);
             
             // Call unified Pre-Flight popup
             openUnifiedPreFlight(preFlightData, match.google_row, match.section_type || 'weekly', null, null);
@@ -14257,10 +14618,12 @@ HTML_TEMPLATE = r"""
                 
                 if (locLower === 'all locations' || locLower === '') {
                     modeSelect.value = 'ALL_LOCATIONS';
-                } else if (locLower.startsWith('all locations except')) {
+                } else if (locLower.includes('all locations except') || locLower.includes('except')) {
+                    // v12.26.2: Detect "All Locations Except" ANYWHERE in string
                     modeSelect.value = 'ALL_EXCEPT';
-                    const exceptions = locValue.replace(/all locations except:?/i, '').trim();
-                    const excList = exceptions.split(',').map(s => s.trim());
+                    const exceptMatch = locValue.match(/except[:\s]*(.+)/i);
+                    const exceptions = exceptMatch ? exceptMatch[1].trim() : '';
+                    const excList = exceptions.split(',').map(s => s.trim()).filter(s => s);
                     Array.from(locSelect.options).forEach(opt => {
                         if (excList.some(e => e.toLowerCase() === opt.value.toLowerCase())) {
                             opt.selected = true;
@@ -16525,7 +16888,7 @@ function handleMISCSV(input) {
                         let locStyle = '';
                         if (locRaw === 'All Locations') {
                             locStyle = 'color: #28a745; font-weight: bold;';
-                        } else if (String(locRaw).startsWith('All Locations Except')) {
+                        } else if (String(locRaw).toLowerCase().includes('all locations except')) {
                             locStyle = 'color: #dc3545; font-weight: bold;';
                             const match = locRaw.match(/: (.*)/);
                             if (match) {
@@ -17511,9 +17874,9 @@ function renderAuditOverview() {
 // Get badge for audit status
 function getAuditStatusBadge(status) {
     if (!status) return '<span class="badge bg-secondary">Pending</span>';
-    if (status === 'verified') return '<span class="badge bg-success">âœ“ Verified</span>';
-    if (status === 'attention') return '<span class="badge bg-warning text-dark">âš  Attention</span>';
-    if (status === 'skipped') return '<span class="badge bg-secondary">â­ Skipped</span>';
+    if (status === 'verified') return '<span class="badge bg-success">Ã¢Å“â€œ Verified</span>';
+    if (status === 'attention') return '<span class="badge bg-warning text-dark">Ã¢Å¡Â  Attention</span>';
+    if (status === 'skipped') return '<span class="badge bg-secondary">Ã¢ÂÂ­ Skipped</span>';
     return `<span class="badge bg-secondary">${status}</span>`;
 }
 
@@ -17679,10 +18042,10 @@ function buildAuditPopupContent(deal, auditIdx, existingResult) {
                                 <td><button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openSheetRow(${deal.google_row})">${deal.google_row}</button></td>
                                 <td><strong>${deal.weekday || '-'}</strong></td>
                                 <td><strong>${deal.brand || '-'}</strong>${deal.linked_brand ? '<br><small class="text-muted">' + deal.linked_brand + '</small>' : ''}</td>
-                                <td title="${deal.categories || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.categories || '-'}</td>
-                                <td><strong>${deal.discount !== null && deal.discount !== '' ? deal.discount + '%' : '-'}</strong></td>
-                                <td>${deal.vendor_contrib !== null && deal.vendor_contrib !== '' ? deal.vendor_contrib + '%' : '-'}</td>
-                                <td title="${deal.locations || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.locations || '-'}</td>
+                                <td title="${deal.categories || 'Not Specified'}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;${!deal.categories || deal.categories === '-' ? ' background:#fff3cd; color:#856404;' : ''}">${deal.categories || '<em style="color:#856404;">Not Specified</em>'}</td>
+                                <td><strong>${(deal.discount !== null && deal.discount !== undefined && String(deal.discount).trim() !== '') ? deal.discount + '%' : '-'}</strong></td>
+                                <td>${(deal.vendor_contrib !== null && deal.vendor_contrib !== undefined && String(deal.vendor_contrib).trim() !== '') ? deal.vendor_contrib + '%' : '-'}</td>
+                                <td title="${deal.locations || 'All Locations'}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.locations || 'All Locations'}</td>
                                 <td title="${deal.deal_info || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.deal_info || '-'}</td>
                                 <td title="${deal.special_notes || ''}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${deal.special_notes || '-'}</td>
                             </tr>
@@ -17943,6 +18306,20 @@ function renderMISSuggestionTable(suggestions, deal, isAssigned, colWidths) {
         // Compare both brand AND linked brand
         const brandStyle = getBrandAndLinkedStyleForAudit(sheetBrand, sheetLinkedBrand, misBrand, misLinkedBrand);
         
+        // v12.26.0: Smart display for Locations - blank/NaN MIS = "All Locations"
+        const misLocRaw = String(data.locations || '').trim();
+        const misLocIsBlank = !misLocRaw || misLocRaw === '-' || misLocRaw.toLowerCase() === 'nan' || misLocRaw.toLowerCase() === 'n/a' || misLocRaw.toLowerCase() === 'null' || misLocRaw.toLowerCase() === 'none';
+        const misLocDisplay = misLocIsBlank ? 'All Locations' : data.locations;
+        
+        // v12.26.0: Smart display for Categories - blank/NaN MIS = "All Categories"
+        const misCatRaw = String(data.category || '').trim();
+        const misCatIsBlank = !misCatRaw || misCatRaw === '-' || misCatRaw.toLowerCase() === 'nan' || misCatRaw.toLowerCase() === 'n/a' || misCatRaw.toLowerCase() === 'null' || misCatRaw.toLowerCase() === 'none';
+        const misCatDisplay = misCatIsBlank ? 'All Categories' : data.category;
+        
+        // v12.26.0: Fix discount display for 0% - explicit check for null/undefined only
+        const discountDisplay = (data.discount !== null && data.discount !== undefined && String(data.discount).trim() !== '') ? data.discount + '%' : '-';
+        const vendorDisplay = (data.vendor_contribution !== null && data.vendor_contribution !== undefined && String(data.vendor_contribution).trim() !== '') ? data.vendor_contribution + '%' : '-';
+        
         html += `
             <tr>
                 <td>
@@ -17952,10 +18329,10 @@ function renderMISSuggestionTable(suggestions, deal, isAssigned, colWidths) {
                 </td>
                 <td style="${getWeekdayStyleForAudit(deal.weekday, data.weekdays)}">${data.weekdays || '-'}</td>
                 <td style="${brandStyle}">${combinedMisBrand}</td>
-                <td style="${getCategoryStyleForAudit(deal.categories, data.category)}" title="${data.category || ''}" class="text-truncate">${data.category || '-'}</td>
-                <td style="${getMatchStyleForAudit(deal.discount, data.discount, true)}">${data.discount !== null ? data.discount + '%' : '-'}</td>
-                <td style="${getMatchStyleForAudit(deal.vendor_contrib, data.vendor_contribution, true)}">${data.vendor_contribution !== null ? data.vendor_contribution + '%' : '-'}</td>
-                <td style="${getLocationStyleForAudit(deal.locations, data.locations)}" title="${data.locations || ''}" class="text-truncate">${data.locations || '-'}</td>
+                <td style="${getCategoryStyleForAudit(deal.categories, data.category)}" title="${misCatDisplay}" class="text-truncate">${misCatDisplay}</td>
+                <td style="${getMatchStyleForAudit(deal.discount, data.discount, true)}">${discountDisplay}</td>
+                <td style="${getMatchStyleForAudit(deal.vendor_contrib, data.vendor_contribution, true)}">${vendorDisplay}</td>
+                <td style="${getLocationStyleForAudit(deal.locations, data.locations)}" title="${misLocDisplay}" class="text-truncate">${misLocDisplay}</td>
                 <td>${data.start_date || '-'}</td>
                 <td>
                     <button class="btn btn-sm py-0 px-2" style="${endDateColor.style}" title="${endDateColor.tooltip}">
@@ -18042,13 +18419,19 @@ function getEndDateColorForAudit(endDateStr, tabName) {
 
 // Comparison style helpers (simplified versions)
 function getMatchStyleForAudit(src, tgt, isNumeric = false) {
-    if (!src && !tgt) return '';
-    if (!src || !tgt) return 'background:#fff3cd; color:#856404;';
+    // v12.26.0: Fix 0% matching - use explicit null/undefined/empty checks instead of falsy
+    const srcEmpty = (src === null || src === undefined || String(src).trim() === '' || String(src).trim() === '-' || String(src).toLowerCase() === 'nan');
+    const tgtEmpty = (tgt === null || tgt === undefined || String(tgt).trim() === '' || String(tgt).trim() === '-' || String(tgt).toLowerCase() === 'nan');
+    
+    if (srcEmpty && tgtEmpty) return '';
+    if (srcEmpty || tgtEmpty) return 'background:#fff3cd; color:#856404;';
     
     let matches = false;
     if (isNumeric) {
-        const s = parseFloat(String(src).replace(/[%$,]/g, '')) || 0;
-        const t = parseFloat(String(tgt).replace(/[%$,]/g, '')) || 0;
+        const s = parseFloat(String(src).replace(/[%$,]/g, ''));
+        const t = parseFloat(String(tgt).replace(/[%$,]/g, ''));
+        if (isNaN(s) && isNaN(t)) return '';
+        if (isNaN(s) || isNaN(t)) return 'background:#fff3cd; color:#856404;';
         matches = Math.abs(s - t) < 0.01;
     } else {
         matches = String(src).toLowerCase().trim() === String(tgt).toLowerCase().trim();
@@ -18072,16 +18455,33 @@ function getWeekdayStyleForAudit(srcWeekday, tgtWeekdays) {
     return 'background:#f8d7da; color:#721c24;';
 }
 
-// v12.25.0: SET-BASED category comparison (order independent) + NaN/blank = All
+// v12.26.0: SET-BASED category comparison + asymmetric blank handling
+// srcCat = Google Sheet, tgtCat = MIS Entry
+// MIS blank = "All Categories" (acceptable) → can match GREEN
+// Google Sheet blank = "Not Specified" (needs review) → always ORANGE
 function getCategoryStyleForAudit(srcCat, tgtCat) {
     const s = String(srcCat || '').toLowerCase().trim();
     const t = String(tgtCat || '').toLowerCase().trim();
     
-    // Treat blank/NaN as "All"
-    const srcAll = !s || s === 'all' || s === '-' || s.includes('all categories') || s === 'nan' || s === 'null';
-    const tgtAll = !t || t === 'all' || t === '-' || t === 'n/a' || t === 'nan' || t === 'null';
+    // Detect blank/NaN
+    const srcBlank = !s || s === '-' || s === 'nan' || s === 'null' || s === 'none' || s === 'n/a';
+    const tgtBlank = !t || t === '-' || t === 'nan' || t === 'null' || t === 'none' || t === 'n/a';
     
-    // Both All = GREEN
+    // Detect "All Categories" (explicit)
+    const srcAllExplicit = s === 'all' || s.includes('all categories');
+    const tgtAllExplicit = t === 'all' || t.includes('all categories');
+    
+    // MIS blank = "All Categories" (acceptable behavior - user doesn't need to select all)
+    const tgtAll = tgtBlank || tgtAllExplicit;
+    // Google Sheet "All Categories" (explicit) 
+    const srcAll = srcAllExplicit;
+    
+    // v12.26.0: Google Sheet blank = "Not Specified" → ORANGE (needs review/data entry)
+    if (srcBlank && !srcAllExplicit) {
+        return 'background:#fff3cd; color:#856404;';
+    }
+    
+    // Both All = GREEN (Google Sheet explicitly says "All Categories" + MIS is blank/all)
     if (srcAll && tgtAll) return 'background:#d4edda; color:#155724;';
     
     // One All, one specific = YELLOW
@@ -18094,26 +18494,64 @@ function getCategoryStyleForAudit(srcCat, tgtCat) {
     return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
 }
 
-// v12.25.0: SET-BASED location comparison (order independent) + NaN/blank = All
+// v12.26.1: Master store list + normalization helpers for audit location comparison
+const _AUDIT_ALL_STORES = new Set([
+    'davis', 'dixon', 'beverly hills', 'el sobrante',
+    'fresno (palm)', 'fresno (shaw)', 'hawthorne',
+    'koreatown', 'laguna woods', 'oxnard',
+    'riverside', 'west hollywood'
+]);
+const _AUDIT_STORE_NORM = {
+    'beverly': 'beverly hills',
+    'fresno': 'fresno (palm)',
+    'fresno palm': 'fresno (palm)',
+    'fresno shaw': 'fresno (shaw)',
+};
+function _auditNormStore(name) {
+    const n = name.toLowerCase().trim()
+        .replace(/^(the artist tree|davisville business enterprises,?\s*inc\.?|club 420)\s*[-\u2013\u2014]?\s*/i, '');
+    return _AUDIT_STORE_NORM[n] || n;
+}
+function _auditParseLocSet(locStr) {
+    const s = String(locStr || '').trim().toLowerCase();
+    if (!s || s === '-' || s === 'nan' || s === 'n/a' || s === 'null' || s === 'none' || s === 'undefined' ||
+        s === 'all' || s === 'all locations') {
+        return { isAll: true, stores: new Set(_AUDIT_ALL_STORES) };
+    }
+    // v12.26.2: Detect "All Locations Except" ANYWHERE in string; filter to known stores only
+    // v12.26.3: Handles both "Except:" and "(Except:" formats ANYWHERE in string
+    const exceptMatch = s.match(/all\s*(?:locations\s*)?[\s(]*except[):\s]*(.+)/i);
+    if (exceptMatch) {
+        const exceptions = new Set(
+            exceptMatch[1].split(',')
+                .map(e => _auditNormStore(e))
+                .filter(e => e && _AUDIT_ALL_STORES.has(e))
+        );
+        const included = new Set([..._AUDIT_ALL_STORES].filter(st => !exceptions.has(st)));
+        return { isAll: false, stores: included };
+    }
+    const stores = new Set(s.split(',').map(e => _auditNormStore(e)).filter(e => e));
+    if (stores.size >= _AUDIT_ALL_STORES.size && [..._AUDIT_ALL_STORES].every(st => stores.has(st))) {
+        return { isAll: true, stores: new Set(_AUDIT_ALL_STORES) };
+    }
+    return { isAll: false, stores };
+}
+
+// v12.26.1: SET-BASED location comparison with normalization + All Except support
 function getLocationStyleForAudit(srcLoc, tgtLoc) {
-    const s = String(srcLoc || '').toLowerCase().trim();
-    const t = String(tgtLoc || '').toLowerCase().trim();
-    
-    // Treat blank/NaN as "All"
-    const srcAll = !s || s === 'all' || s === '-' || s.includes('all locations') || s === 'nan' || s === 'null';
-    const tgtAll = !t || t === 'all' || t === '-' || t === 'n/a' || t === 'nan' || t === 'null';
-    
-    // Both All = GREEN
-    if (srcAll && tgtAll) return 'background:#d4edda; color:#155724;';
-    
-    // One All, one specific = YELLOW
-    if (srcAll !== tgtAll) return 'background:#fff3cd; color:#856404;';
-    
-    // Both specific - SET comparison (order independent)
-    const srcSet = new Set(s.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
-    const tgtSet = new Set(t.split(',').map(x => x.trim().toLowerCase()).filter(x => x));
-    const setsEqual = srcSet.size === tgtSet.size && [...srcSet].every(x => tgtSet.has(x));
-    return setsEqual ? 'background:#d4edda; color:#155724;' : 'background:#fff3cd; color:#856404;';
+    const GREEN = 'background:#d4edda; color:#155724;';
+    const YELLOW = 'background:#fff3cd; color:#856404;';
+
+    const src = _auditParseLocSet(srcLoc);
+    const tgt = _auditParseLocSet(tgtLoc);
+
+    // Both All → GREEN
+    if (src.isAll && tgt.isAll) return GREEN;
+
+    // Compare as normalized sets (handles All Except vs explicit list)
+    const setsEqual = src.stores.size === tgt.stores.size &&
+                      [...src.stores].every(x => tgt.stores.has(x));
+    return setsEqual ? GREEN : YELLOW;
 }
 
 // Build Blaze section (Section 3)
@@ -19790,17 +20228,8 @@ function showOtdModal(rowIndex) {
             });
         }
         
-        // Initialize DataTable
-        const table = $('#promotionsTable').DataTable({ 
-            paging: false, 
-            scrollY: '60vh', 
-            scrollCollapse: false,  // Don't collapse - maintain scroll area
-            dom: 't',
-            autoWidth: true,
-            deferRender: true
-        });
-        
-        // v12.25.3: Add checkbox header if draft mode is active
+        // v12.25.6: Add checkbox header BEFORE DataTable init if draft mode is active
+        // This prevents "Incorrect column count" error
         if (draftSelectionState.isActive) {
             const thead = document.querySelector('#promotionsTable thead tr');
             const existingCheckboxHeader = thead.querySelector('.draft-checkbox-header-cell');
@@ -19811,7 +20240,27 @@ function showOtdModal(rowIndex) {
                 th.innerHTML = '<input type="checkbox" class="draft-checkbox-header" onclick="toggleSelectAllVisible(this)" title="Select all visible">';
                 thead.insertBefore(th, thead.firstChild);
             }
-            // Update count display
+        } else {
+            // Remove checkbox header if draft mode is OFF
+            const thead = document.querySelector('#promotionsTable thead tr');
+            const existingCheckboxHeader = thead.querySelector('.draft-checkbox-header-cell');
+            if (existingCheckboxHeader) {
+                existingCheckboxHeader.remove();
+            }
+        }
+        
+        // Initialize DataTable
+        const table = $('#promotionsTable').DataTable({ 
+            paging: false, 
+            scrollY: '60vh', 
+            scrollCollapse: false,  // Don't collapse - maintain scroll area
+            dom: 't',
+            autoWidth: true,
+            deferRender: true
+        });
+        
+        // v12.25.6: Update count display if draft mode is active (moved from after init)
+        if (draftSelectionState.isActive) {
             updateDraftSelectedCount();
         }
         
@@ -22264,7 +22713,7 @@ async function runTierUpdate(btn) {
         
         // Validate store selection
         if (!selectedStore) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">Ã¢Å¡Â Ã¯Â¸Â Please select a store first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Please select a store first</span>';
             return;
         }
         
@@ -22273,7 +22722,7 @@ async function runTierUpdate(btn) {
         const blazePassword = document.getElementById('blaze-password').value.trim();
         
         if (!blazeEmail || !blazePassword) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">Ã¢Å¡Â Ã¯Â¸Â Enter Blaze email/password above first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Enter Blaze email/password above first</span>';
             return;
         }
         
@@ -22287,7 +22736,7 @@ async function runTierUpdate(btn) {
         storeSelect.disabled = true;
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
-        statusDiv.innerHTML = '<span style="color: #0d6efd;">Ã¢ÂÂ³ Authenticating...</span>';
+        statusDiv.innerHTML = '<span style="color: #0d6efd;">ÃƒÂ¢Ã‚ÂÃ‚Â³ Authenticating...</span>';
         
         try {
             const response = await fetch('/api/blaze/ecom-sync', {
@@ -22303,7 +22752,7 @@ async function runTierUpdate(btn) {
             const data = await response.json();
             
             if (data.success) {
-                statusDiv.innerHTML = `<span style="color: #198754;">Ã¢Å“â€¦ ${data.message || 'Sync Complete'}</span>`;
+                statusDiv.innerHTML = `<span style="color: #198754;">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${data.message || 'Sync Complete'}</span>`;
                 console.log('[ECOM-SYNC] Success:', data);
             } else {
                 // Differentiate error types for better UX
@@ -22311,18 +22760,18 @@ async function runTierUpdate(btn) {
                 let errorColor = '#dc3545';
                 
                 if (errorMsg.includes('credentials') || errorMsg.includes('Authentication')) {
-                    errorMsg = 'Ã°Å¸â€â€˜ ' + errorMsg;
+                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Ëœ ' + errorMsg;
                 } else if (errorMsg.includes('UUID') || errorMsg.includes('not found')) {
-                    errorMsg = 'Ã°Å¸â€œÂ ' + errorMsg;
+                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â ' + errorMsg;
                 } else if (errorMsg.includes('permission')) {
-                    errorMsg = 'Ã°Å¸Å¡Â« ' + errorMsg;
+                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« ' + errorMsg;
                 }
                 
-                statusDiv.innerHTML = `<span style="color: ${errorColor};">Ã¢ÂÅ’ ${errorMsg}</span>`;
+                statusDiv.innerHTML = `<span style="color: ${errorColor};">ÃƒÂ¢Ã‚ÂÃ…â€™ ${errorMsg}</span>`;
                 console.error('[ECOM-SYNC] Error:', data.error);
             }
         } catch (e) {
-            statusDiv.innerHTML = `<span style="color: #dc3545;">Ã¢ÂÅ’ Network Error: ${e.message}</span>`;
+            statusDiv.innerHTML = `<span style="color: #dc3545;">ÃƒÂ¢Ã‚ÂÃ…â€™ Network Error: ${e.message}</span>`;
             console.error('[ECOM-SYNC] Network Error:', e);
         } finally {
             btn.disabled = false;
@@ -23667,10 +24116,14 @@ def api_mis_generate_newsletter():
             if store == 'All Locations':
                 return True
             
+            # v12.26.2: Detect "All Locations Except" anywhere in string
+            store_lower = store.lower()
+            is_except_pattern = 'all locations except' in store_lower or 'except' in store_lower
+            
             for loc in CLUB420_LOCATIONS:
                 if loc in store:
-                    if store.startswith('All Locations Except:'):
-                        continue
+                    if is_except_pattern:
+                        continue  # Name appears in exceptions list, not included
                     return True
             
             return False
@@ -23694,7 +24147,8 @@ def api_mis_generate_newsletter():
             if all(part in CLUB420_LOCATIONS for part in store_parts):
                 return False
             
-            if store.startswith('All Locations Except:'):
+            # v12.26.2: Detect "All Locations Except" anywhere in string
+            if 'all locations except' in store.lower():
                 return True
             
             return True
@@ -25246,7 +25700,9 @@ def api_mis_maudit():
                 mis_id_cell = str(row.get('MIS ID', '')).strip()
                 discount = str(row.get('Discount', '')).strip()
                 vendor_pct = str(row.get('Vendor %', row.get('Vendor', ''))).strip()
-                locations = str(row.get('Location', row.get('Locations', ''))).strip()
+                # v12.25.7: Use resolve_location_columns for smart column detection
+                loc_raw, exc_raw = resolve_location_columns(row)
+                locations = format_location_display(loc_raw, exc_raw) if loc_raw else str(row.get('Location', row.get('Locations', ''))).strip()
                 weekday = str(row.get('Weekday', '')).strip() if section_name == 'weekly' else ''
                 start_date = str(row.get('Start Date', '')).strip() if section_name != 'weekly' else ''
                 end_date = str(row.get('End Date', '')).strip() if section_name != 'weekly' else ''
@@ -25464,9 +25920,23 @@ def api_mis_cleanup_audit():
         
         # Helper: Normalize location set for comparison
         def normalize_location_set(loc_str):
-            if not loc_str or loc_str.lower() in ['all locations', 'all', '-']:
+            """v12.26.2: Normalize location string to a frozenset of canonical store names.
+            Detects 'All Locations Except:' ANYWHERE in string, filters against known stores.
+            """
+            if not loc_str or str(loc_str).strip().lower() in ['all locations', 'all', '-', '', 'nan', 'none']:
                 return frozenset(['all'])
-            locs = [l.strip().lower() for l in loc_str.replace('\n', ',').split(',') if l.strip()]
+            s = str(loc_str).strip()
+            # v12.26.2: Detect "All Locations Except" anywhere in string
+            except_stores = _extract_except_stores(s)
+            if except_stores is not None:
+                if except_stores:
+                    exceptions_lower = {e.lower() for e in except_stores}
+                    all_lower = {st.lower() for st in ALL_STORES_SET}
+                    return frozenset(all_lower - exceptions_lower)
+                return frozenset(['all'])
+            locs = [normalize_store_name(l.strip()).lower() for l in s.replace('\n', ',').split(',') if l.strip()]
+            if len(locs) >= len(ALL_STORES_SET):
+                return frozenset(['all'])
             return frozenset(locs)
         
         # Collect all Google Sheet MIS IDs
@@ -25489,11 +25959,13 @@ def api_mis_cleanup_audit():
                 
                 # Collect entry data for full field matching
                 brand = str(row.get('Brand', '')).strip()
-                # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+                # v12.25.6: Updated column detection for Monthly section
                 if section_name == 'weekly':
                     weekday = str(get_col(row, ['Weekday', 'Day of Week'], '')).strip()
-                else:
-                    weekday = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                elif section_name == 'monthly':
+                    weekday = get_monthly_day_of_month(row)
+                else:  # sale
+                    weekday = str(get_col(row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
                 discount = parse_percentage(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
                 vendor_pct = parse_percentage(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
                 loc_raw, exc_raw = resolve_location_columns(row)
@@ -25544,8 +26016,10 @@ def api_mis_cleanup_audit():
             mis_weekday = str(mis_row.get('Weekday', '')).strip()
             mis_discount = float(mis_row.get('Daily Deal Discount', 0) or 0)
             mis_vendor = float(mis_row.get('Discount paid by vendor', 0) or 0)
-            mis_store = str(mis_row.get('Store', '')).strip()
-            mis_locs = normalize_location_set(mis_store if mis_store else 'All Locations')
+            mis_store_raw = str(mis_row.get('Store', '')).strip()
+            # v12.26.1: Normalize MIS store names to canonical format
+            mis_store = normalize_location_string(mis_store_raw)
+            mis_locs = normalize_location_set(mis_store)
             mis_start = str(mis_row.get('Start date', '')).strip()
             mis_end = str(mis_row.get('End date', '')).strip()
             
@@ -25558,7 +26032,7 @@ def api_mis_cleanup_audit():
                 'weekday': mis_weekday,
                 'discount': mis_discount,
                 'vendor_pct': mis_vendor,
-                'locations': mis_store if mis_store else 'All Locations',
+                'locations': mis_store,
                 'start_date': mis_start,
                 'end_date': mis_end,
                 'section': section
@@ -25588,7 +26062,10 @@ def api_mis_cleanup_audit():
                 
                 discount_match = abs(entry['discount'] - mis_discount) < 0.01
                 vendor_match = abs(entry['vendor_pct'] - mis_vendor) < 0.01
-                loc_match = entry['locations'] == mis_locs or 'all' in entry['locations'] or 'all' in mis_locs
+                # v12.26.3: Set-based location comparison (not string comparison)
+                loc_set_entry = resolve_to_store_set(entry['locations'])
+                loc_set_mis = resolve_to_store_set(mis_locs)
+                loc_match = loc_set_entry == loc_set_mis
                 
                 if weekday_match and discount_match and vendor_match and loc_match:
                     found_full_match = True
@@ -25986,8 +26463,9 @@ def api_mis_lookup_mis_id():
                             if not vendor_col_found:
                                 print(f"[MIS LOOKUP] [EMOJI] Could not find Vendor % column")
                             
-                            # Extract locations with "All Locations Except" handling
-                            locations_raw = str(base_row.get('Locations', 'All Locations')).strip()
+                            # v12.25.7: Use resolve_location_columns for smart column detection
+                            loc_raw, exc_raw = resolve_location_columns(base_row)
+                            locations_raw = format_location_display(loc_raw, exc_raw) if loc_raw else str(base_row.get('Locations', 'All Locations')).strip()
                             
                             # MULTI-BRAND HANDLING: Parse MIS ID position and use correct brand
                             brand_value = str(base_row.get('Brand', '')).strip()
@@ -26095,16 +26573,16 @@ def api_mis_lookup_mis_id():
                     
                     # v12.22.5: Inject checklist banner for visual checklist panel
                     inject_checklist_banner(driver, expected_data, mode='compare')
-                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Checklist banner injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Checklist banner injected for MIS ID {mis_id}")
                     
                     # v12.22.6: ALSO send message to existing validator to switch to automation mode
                     # The V2 validator may already be running (persistent from previous entry)
                     # This will send it the expected_data so it validates properly
                     inject_mis_validation(driver, expected_data=expected_data)
-                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Validator switched to automation mode")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Validator switched to automation mode")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] ÃƒÂ¢Ã‚ÂÃ…â€™ Could not inject checklist: {e}")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Could not inject checklist: {e}")
                     # Fallback to basic validation
                     inject_mis_validation(driver, expected_data=None)
             else:
@@ -26160,6 +26638,10 @@ def api_mis_validate_lookup():
                         sheet_mis_id = str(row.get(id_col, '')).strip()
                         if mis_id in sheet_mis_id or sheet_mis_id == mis_id:
                             # Found it!
+                            # v12.25.7: Use resolve_location_columns for smart column detection
+                            loc_raw, exc_raw = resolve_location_columns(row)
+                            locations_val = format_location_display(loc_raw, exc_raw) if loc_raw else str(row.get('Locations', 'All Locations')).strip()
+                            
                             found_data = {
                                 'brand': str(row.get('Brand', '')).strip(),
                                 'linked_brand': str(row.get('Linked Brand', '')).strip(),
@@ -26167,7 +26649,7 @@ def api_mis_validate_lookup():
                                 'categories': str(row.get('Categories', '')).strip(),
                                 'discount': str(row.get('Discount', '')).strip(),
                                 'vendor_contrib': str(row.get('Vendor %', '')).strip(),
-                                'locations': str(row.get('Locations', 'All Locations')).strip(),
+                                'locations': locations_val,
                                 'rebate_type': str(row.get('Rebate Type', '')).strip(),
                                 'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
                             }
@@ -26627,6 +27109,35 @@ def api_mis_compare_to_sheet():
         combined_weekday = date_info['weekday']
         all_expected_entries = date_info['all_entries']
         
+        # v12.26.0: MULTI-DAY GROUP DETECTION
+        # Check if this row is part of a multi-day deal group
+        multi_day_info = None
+        try:
+            multi_day_groups, row_to_group = detect_multi_day_groups(google_df, section_type)
+            base_sheet_row = int(base_row['_SHEET_ROW_NUM']) if '_SHEET_ROW_NUM' in base_row else None
+            
+            if base_sheet_row and base_sheet_row in row_to_group:
+                group_id = row_to_group[base_sheet_row]
+                if group_id in multi_day_groups:
+                    group_data = multi_day_groups[group_id]
+                    group_weekdays = [w for w in group_data.get('weekdays', []) if w and w.lower() not in ['', 'nan', 'none']]
+                    
+                    if len(group_data['rows']) > 1:
+                        # This IS a multi-day deal - override weekday with grouped weekdays
+                        combined_weekday = ', '.join(group_weekdays)
+                        multi_day_info = {
+                            'is_multi_day': True,
+                            'total_days': len(group_data['rows']),
+                            'weekdays': group_weekdays,
+                            'row_numbers': group_data['rows'],
+                            'group_id': group_id,
+                            'brand': group_data.get('brand', '')
+                        }
+                        print(f"[COMPARE-TO-SHEET] [EMOJI] MULTI-DAY DEAL DETECTED: {len(group_data['rows'])}-day deal ({combined_weekday})")
+                        print(f"[COMPARE-TO-SHEET] Group rows: {group_data['rows']}")
+        except Exception as e:
+            print(f"[COMPARE-TO-SHEET] Multi-day detection error (non-fatal): {e}")
+        
         print(f"[COMPARE-TO-SHEET] Calculated weekday(s): '{combined_weekday}'")
         print(f"[COMPARE-TO-SHEET] All expected entries: {len(all_expected_entries)}")
         
@@ -26757,7 +27268,9 @@ def api_mis_compare_to_sheet():
             'section_type': section_type,
             'all_expected_entries': serialized_entries,
             'raw_date_value': date_value,
-            'tab_name': tab_name
+            'tab_name': tab_name,
+            # v12.26.0: Multi-day deal group info
+            'multi_day_info': multi_day_info
         }
         
         print(f"[COMPARE-TO-SHEET] Brand: {expected_data['brand']}, Weekday: {expected_data['weekday']}")
@@ -26765,6 +27278,8 @@ def api_mis_compare_to_sheet():
         print(f"[COMPARE-TO-SHEET] Rebate Type: '{expected_data['rebate_type']}'")
         print(f"[COMPARE-TO-SHEET] Locations: '{expected_data['locations']}'")
         print(f"[COMPARE-TO-SHEET] Section: {section_type}, Expected entries: {len(serialized_entries)}")
+        if multi_day_info:
+            print(f"[COMPARE-TO-SHEET] Multi-day: {multi_day_info['total_days']}-day deal ({', '.join(multi_day_info['weekdays'])})")
         # v12.19: INJECT CHECKLIST BANNER IN COMPARE MODE
         # Instead of just returning JSON, inject the banner directly
         print(f"[COMPARE-TO-SHEET] [EMOJI] Injecting checklist banner in 'compare' mode")
@@ -27869,6 +28384,7 @@ def inject_mis_validation(driver, expected_data=None):
             }}
             
             // Weekday (ENHANCED with Extra/Missing detection)
+            // v12.26.0: Multi-day deal awareness
             if (EXPECTED_DATA.weekday) {{
                 const actual = getWeekdayValues();
                 const expectedStr = EXPECTED_DATA.weekday;
@@ -27877,12 +28393,18 @@ def inject_mis_validation(driver, expected_data=None):
                 const actualLower = actual.map(d => d.toLowerCase());
                 const expectedLower = expected.map(d => d.toLowerCase());
                 
+                // v12.26.0: Multi-day deal context
+                const multiDayInfo = EXPECTED_DATA.multi_day_info;
+                const multiDayPrefix = multiDayInfo && multiDayInfo.is_multi_day 
+                    ? `[Part of ${{multiDayInfo.total_days}}-day deal (${{multiDayInfo.weekdays.join(', ')}})] `
+                    : '';
+                
                 // Find extra and missing days
                 const extraDays = actual.filter(day => !expectedLower.includes(day.toLowerCase()));
                 const missingDays = expected.filter(day => !actualLower.includes(day.toLowerCase()));
                 
                 if (extraDays.length > 0 || missingDays.length > 0) {{
-                    let msg = `Weekday: Expected "${{expected.join(', ')}}", found "${{actual.join(', ')}}"`;
+                    let msg = `${{multiDayPrefix}}Weekday: Expected "${{expected.join(', ')}}", found "${{actual.join(', ')}}"`;
                     const notes = [];
                     if (extraDays.length > 0) notes.push('Extra: ' + extraDays.join(', '));
                     if (missingDays.length > 0) notes.push('Missing: ' + missingDays.join(', '));
@@ -27891,8 +28413,12 @@ def inject_mis_validation(driver, expected_data=None):
                     warnings.weekday = {{
                         expected: expected.join(', '),
                         actual: actual.join(', '),
-                        message: msg
+                        message: msg,
+                        multi_day: multiDayInfo || null
                     }};
+                }} else if (multiDayInfo && multiDayInfo.is_multi_day) {{
+                    // Even when matching, log that this is a multi-day deal for awareness
+                    log(`${{multiDayPrefix}}Weekday validation PASSED`, 'SUCCESS');
                 }}
             }}
             
@@ -28052,8 +28578,10 @@ def inject_mis_validation(driver, expected_data=None):
                 ];
                 
                 // Helper: Normalize store name from Google Sheet to MIS format
+                // v12.26.2: Also strips "The Artist Tree -" prefix for safety
                 function normalizeStoreName(name) {{
-                    const lower = name.toLowerCase().trim();
+                    let lower = name.toLowerCase().trim()
+                        .replace(/^(the artist tree|davisville business enterprises,?\s*inc\.?|club 420)\s*[-\u2013\u2014]?\s*/i, '');
                     return STORE_MAP[lower] || lower;
                 }}
                 
@@ -28096,20 +28624,22 @@ def inject_mis_validation(driver, expected_data=None):
                             .filter(s => s && s !== '');
                         
                         // Normalize exception names to MIS format
-                        const exceptionsNorm = rawExceptions.map(e => normalizeStoreName(e));
+                        // v12.26.2: Filter to only recognized MIS store names (discard garbage)
+                        const misStoresNorm = MASTER_STORES_MIS.map(s => normalizeStoreName(s));
+                        const exceptionsNorm = rawExceptions
+                            .map(e => normalizeStoreName(e))
+                            .filter(e => misStoresNorm.includes(e));
                         
                         log(`Store exceptions (raw): ${{rawExceptions.join(', ')}}`, 'DEBUG');
                         log(`Store exceptions (normalized): ${{exceptionsNorm.join(', ')}}`, 'DEBUG');
                         
                         // Build expected stores list: all stores EXCEPT the exceptions
+                        // v12.26.2: Use STRICT normalized equality only (not .includes())
+                        // Prevents "fresno" from falsely matching "fresno shaw"
                         const expectedStores = MASTER_STORES_MIS.filter(store => {{
-                            const storeNorm = store.toLowerCase();
-                            // Check if this store is in the exception list
-                            const isException = exceptionsNorm.some(exc => 
-                                storeNorm === exc || 
-                                storeNorm.includes(exc) || 
-                                exc.includes(storeNorm)
-                            );
+                            const storeNorm = normalizeStoreName(store);
+                            // Check if this store is in the exception list (strict match only)
+                            const isException = exceptionsNorm.some(exc => storeNorm === exc);
                             return !isException;
                         }});
                         
@@ -29938,14 +30468,20 @@ def api_mis_create_deal():
                     exceptions_text = match.group(1)
                     exceptions = [e.strip() for e in exceptions_text.split(',') if e.strip()]
                     
-                    # v12.21.3: Apply STORE_MAPPING to exceptions
-                    mapped_exceptions = [STORE_MAPPING.get(exc, exc) for exc in exceptions]
+                    # v12.26.1: Use STORE_NAME_MAP to convert Google Sheet names to MIS dropdown names
+                    # STORE_NAME_MAP: "Beverly Hills" → "Beverly", "Fresno (Palm)" → "Fresno", etc.
+                    mapped_exceptions = [STORE_NAME_MAP.get(exc, exc) for exc in exceptions]
+                    
+                    # v12.26.3: Use STRICT normalized equality (not loose .in matching)
+                    # Prevents "Fresno" from falsely excluding "Fresno Shaw"
+                    mapped_exceptions_lower = [exc.lower() for exc in mapped_exceptions]
                     
                     # Return master list minus exceptions
                     result = []
                     for store in MASTER_STORE_LIST:
-                        store_lower = store.lower()
-                        is_exception = any(exc.lower() in store_lower or store_lower in exc.lower() for exc in mapped_exceptions)
+                        store_mapped = STORE_NAME_MAP.get(store, store)
+                        store_lower = store_mapped.lower() if store_mapped else store.lower()
+                        is_exception = store_lower in mapped_exceptions_lower
                         if not is_exception:
                             result.append(store)
                     
@@ -29956,14 +30492,14 @@ def api_mis_create_deal():
             stores = [s.strip() for s in text.split(',') if s.strip()]
             
             # v12.21.3: Apply STORE_MAPPING to convert Settings tab names to MIS names
-            # Example: "Fresno (Palm)" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "Fresno"
+            # Example: "Fresno (Palm)" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Fresno"
             mapped_stores = []
             for store in stores:
-                mapped = STORE_MAPPING.get(store, store)  # Try mapping, else use original
+                mapped = STORE_NAME_MAP.get(store, store)  # v12.26.1: Clean→MIS dropdown name
                 if mapped:
                     mapped_stores.append(mapped)
                     if mapped != store:
-                        log(f"  Store mapping: '{store}' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ '{mapped}'", "DEBUG")
+                        log(f"  Store mapping: '{store}' ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ '{mapped}'", "DEBUG")
             
             log(f"Store logic: Specific stores = {mapped_stores}", "DEBUG")
             return mapped_stores
@@ -30404,11 +30940,13 @@ def api_gsheet_conflict_audit():
                 group_id = row_to_group.get(true_row)
                 
                 # --- EXTRACT DATA ---
-                # v12.22.4: Weekly uses Column A ('Weekday'), Monthly/Sale use Column K ('Weekday/ Day of Month')
+                # v12.25.6: Updated column detection for Monthly section
                 if section_key == 'weekly':
                     weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
-                else:
-                    weekday_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                elif section_key == 'monthly':
+                    weekday_raw = get_monthly_day_of_month(row) or '-'
+                else:  # sale
+                    weekday_raw = str(get_col(row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
                 discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
                 vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
@@ -30958,10 +31496,10 @@ def api_split_audit_planning():
                 # v88: Get google_row for interrupting deal Row button
                 true_row = int(row.get('_SHEET_ROW_NUM', idx + 2))
                 
-                # v12.13: Section-aware column detection for dates
+                # v12.25.6: Section-aware column detection for dates
                 if section_key == 'monthly':
-                    # Monthly: Read from Column K (ordinals like "1st, 10th")
-                    date_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                    # Monthly: Read from column containing "Contracted Duration" (ordinals like "1st, 10th")
+                    date_raw = get_monthly_day_of_month(row) or '-'
                 else:  # sale
                     # Sale: Read from Column C (dates like "01/16/26, 01/23/26")
                     date_raw = str(get_col(row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '-')).strip()
@@ -31147,8 +31685,8 @@ def api_split_audit_gap_check():
                         d_str = str(get_col(row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '')).strip()
                         dates = parse_sale_dates(d_str, target_month, target_year)
                     else:  # monthly
-                        # Monthly: Read ordinals from Column K
-                        d_str = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                        # v12.25.6: Monthly: Read ordinals from column containing "Contracted Duration"
+                        d_str = get_monthly_day_of_month(row)
                         dates = parse_monthly_dates(d_str, target_month, target_year)
                     if dates:
                         tier1_deals.append({'brand': brand, 'section': sec, 'expanded_dates': dates, 'locations': format_location_display(*resolve_location_columns(row))})
@@ -31287,10 +31825,12 @@ def api_split_audit_final():
                 brand = str(row.get('Brand', '')).strip()
                 if not brand: continue
                 if sec == 'sale':
-                    d_str = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                    # v12.25.6: Sale uses 'Contracted Duration' columns for date ranges
+                    d_str = str(get_col(row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '')).strip()
                     dates = parse_sale_dates(d_str, target_month, target_year)
-                else:
-                    d_str = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                else:  # monthly
+                    # v12.25.6: Monthly uses column containing "Contracted Duration" for day of month
+                    d_str = get_monthly_day_of_month(row)
                     dates = parse_monthly_dates(d_str, target_month, target_year)
                 for d in dates:
                     if d not in tier1_map: tier1_map[d] = []
@@ -31999,7 +32539,7 @@ def find_mis_entry_by_id(mis_df: pd.DataFrame, mis_id: str) -> Optional[Dict]:
         'vendor_pct': str(row.get('Discount paid by vendor', '')).strip(),
         'start_date': str(row.get('Start date', '')).strip(),
         'end_date': str(row.get('End date', '')).strip(),
-        'locations': str(row.get('Store', '')).strip(),
+        'locations': normalize_location_string(str(row.get('Store', '')).strip()),
         'weekday': str(row.get('Weekday', '')).strip(),
         'category': str(row.get('Category', '')).strip()
     }
@@ -32109,10 +32649,10 @@ def compare_deal_attributes(expected: Dict, actual: Dict) -> Tuple[bool, List[st
         
         # Fuzzy location comparison (they might be formatted differently)
         if exp_loc and act_loc:
-            # "All Locations" matches anything or empty
-            if exp_loc == 'all locations' or act_loc == 'all locations':
-                pass  # No issue - All Locations matches everything
-            elif fuzz.token_set_ratio(exp_loc, act_loc) < 80:
+            # v12.26.3: Set-based comparison handles all format variations
+            exp_set = resolve_to_store_set(exp_loc)
+            act_set = resolve_to_store_set(act_loc)
+            if exp_set != act_set:
                 issues.append(f"Locations: expected '{expected.get('locations')}', got '{actual.get('locations')}'")
     
     return len(issues) == 0, issues
@@ -32157,13 +32697,17 @@ def generate_fuzzy_suggestions(expected_deal: Dict, mis_df: pd.DataFrame, max_re
         if exp_vendor and act_vendor and exp_vendor == act_vendor:
             score += 10
         
-        # Location match (10 pts max)
-        act_locations = str(row.get('Store', '')).lower()
-        if exp_locations and act_locations:
-            loc_score = fuzz.token_set_ratio(exp_locations, act_locations)
-            if loc_score >= 80:
-                score += 10
-            elif loc_score >= 60:
+        # Location match (10 pts max) - v12.26.3: Set-based comparison
+        act_loc_str = normalize_location_string(str(row.get('Store', '')))
+        exp_loc_set = resolve_to_store_set(exp_locations)
+        act_loc_set = resolve_to_store_set(act_loc_str)
+        if exp_loc_set == act_loc_set:
+            score += 10
+        elif exp_loc_set & act_loc_set:  # Partial overlap
+            overlap_ratio = len(exp_loc_set & act_loc_set) / max(len(exp_loc_set), len(act_loc_set), 1)
+            if overlap_ratio >= 0.8:
+                score += 7
+            elif overlap_ratio >= 0.5:
                 score += 5
         
         # Only include if score is meaningful
@@ -32174,7 +32718,7 @@ def generate_fuzzy_suggestions(expected_deal: Dict, mis_df: pd.DataFrame, max_re
                 'brand': str(row.get('Brand', '')),
                 'discount': str(row.get('Daily Deal Discount', '')),
                 'vendor_pct': str(row.get('Discount paid by vendor', '')),
-                'locations': str(row.get('Store', '')),
+                'locations': normalize_location_string(str(row.get('Store', ''))),
                 'start_date': str(row.get('Start date', '')),
                 'end_date': str(row.get('End date', '')),
                 'weekday': str(row.get('Weekday', ''))
@@ -32311,10 +32855,10 @@ def api_split_audit_final_check():
                 
                 true_row = int(row.get('_SHEET_ROW_NUM', idx + 2))
                 
-                # v12.13: Section-aware column detection for dates
+                # v12.25.6: Section-aware column detection for dates
                 if section_key == 'monthly':
-                    # Monthly: Read from Column K (ordinals like "1st, 10th")
-                    date_raw = str(get_col(row, ['Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                    # Monthly: Read from column containing "Contracted Duration" (ordinals like "1st, 10th")
+                    date_raw = get_monthly_day_of_month(row) or '-'
                 else:  # sale
                     # Sale: Read from Column C (dates like "01/16/26, 01/23/26")
                     date_raw = str(get_col(row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '-')).strip()
@@ -32639,7 +33183,7 @@ def api_mis_conflict_audit():
                 'category': cat,
                 'discount': disc,
                 'weekday': weekday,
-                'locations': str(row.get('Store', 'All Locations')),
+                'locations': normalize_location_string(str(row.get('Store', 'All Locations'))),
                 'start': str(row.get('Start date', '')),
                 'end': str(row.get('End date', ''))
             })
@@ -33597,7 +34141,7 @@ def api_blaze_ecom_sync() -> dict:
     
     Flow:
         1. Get Blaze credentials (from request or GLOBAL_DATA)
-        2. Authenticate with Ecom API Ã¢â€ â€™ get JWT token
+        2. Authenticate with Ecom API ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ get JWT token
         3. Load store UUID from sync_keys.json
         4. POST sync request with token + UUID
     """
@@ -33607,13 +34151,13 @@ def api_blaze_ecom_sync() -> dict:
         
         # Validate store name
         if not store_name:
-            print("[ECOM-SYNC] Ã¢ÂÅ’ No store name provided")
+            print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ No store name provided")
             return jsonify({
                 'success': False,
                 'error': 'No store name provided. Please select a store.'
             })
         
-        print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
         print(f"[ECOM-SYNC] Starting sync for store: {store_name}")
         
         # Step 1: Get Blaze credentials
@@ -33627,7 +34171,7 @@ def api_blaze_ecom_sync() -> dict:
             password = password or blaze_creds.get('password', '')
         
         if not email or not password:
-            print("[ECOM-SYNC] Ã¢ÂÅ’ No Blaze credentials available")
+            print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ No Blaze credentials available")
             return jsonify({
                 'success': False,
                 'error': 'Blaze credentials required. Please enter email/password in Blaze Config.'
@@ -33637,7 +34181,7 @@ def api_blaze_ecom_sync() -> dict:
         store_data = load_sync_keys(store_name)
         if store_data is None:
             error_msg = f'No UUID found for {store_name}. Add it to secrets/sync_keys.json'
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ {error_msg}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ {error_msg}")
             return jsonify({
                 'success': False,
                 'error': error_msg
@@ -33651,7 +34195,7 @@ def api_blaze_ecom_sync() -> dict:
         token, auth_error = get_ecom_token(email, password)
         
         if token is None:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Authentication failed: {auth_error}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Authentication failed: {auth_error}")
             return jsonify({
                 'success': False,
                 'error': f'Authentication failed: {auth_error}'
@@ -33662,22 +34206,22 @@ def api_blaze_ecom_sync() -> dict:
         success, message = trigger_ecom_sync(store_uuid, token)
         
         if success:
-            print(f"[ECOM-SYNC] Ã¢Å“â€¦ Sync complete for {store_name}")
-            print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Sync complete for {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return jsonify({
                 'success': True,
                 'message': f'{store_name} sync triggered successfully'
             })
         else:
-            print(f"[ECOM-SYNC] Ã¢ÂÅ’ Sync failed: {message}")
-            print(f"[ECOM-SYNC] Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Sync failed: {message}")
+            print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
             return jsonify({
                 'success': False,
                 'error': message
             })
     
     except Exception as e:
-        print(f"[ECOM-SYNC] Ã¢ÂÅ’ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
         traceback.print_exc()
         return jsonify({
             'success': False,
@@ -34492,12 +35036,20 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
         
         // Header - mode-aware title
         const headerTitle = MODE === 'compare' ? '[EMOJI] Compare to Sheet' : '[EMOJI] Deal Entry Checklist';
+        // v12.26.0: Multi-day deal indicator
+        const multiDayBanner = EXPECTED.multi_day_info && EXPECTED.multi_day_info.is_multi_day
+            ? `<div style="background: #2d3a5e; border: 1px solid #4a90d9; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; font-size: 12px;">
+                <span style="color: #ffc107;">[EMOJI]</span> <strong style="color: #ffc107;">Multi-Day Deal:</strong>
+                <span style="color: #ccc;">${{EXPECTED.multi_day_info.total_days}}-day deal (${{EXPECTED.multi_day_info.weekdays.join(', ')}})</span>
+               </div>`
+            : '';
         const header = document.createElement('div');
         header.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #4a90d9;">
                 <span style="font-size: 16px; font-weight: 600; color: #4a90d9;">${{headerTitle}}</span>
                 <button id="checklist-close-btn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px;">[EMOJI]</button>
             </div>
+            ${{multiDayBanner}}
             <div style="font-size: 11px; color: #888; margin-bottom: 10px;">
                 [EMOJI] = Correct | [EMOJI] = Mismatch | [EMOJI] = Empty | [EMOJI] = Partial
             </div>
@@ -35008,21 +35560,15 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
 @app.route('/api/mis/automate-create-deal', methods=['POST'])
 def api_mis_automate_create_deal():
     """
-    v12.18.1: Automates creating a NEW deal with CHECKLIST BANNER approach.
+    v12.26.3: Automates creating a NEW deal with FULL FIELD AUTOMATION.
     
-    Auto-fills these fields:
+    Auto-fills ALL fields:
     - Brand, Linked Brand, Rebate Type, Discount, Vendor Rebate, Start Date, End Date
-    
-    Shows Checklist Banner for user to manually fill:
     - Weekday, Store/Locations, Category, After Wholesale
     
-    The checklist validates all fields in real-time with:
-    - Green checkmark ([EMOJI]) for correct values
-    - Yellow half-circle ([EMOJI]) for partial multi-select progress
-    - Red X ([EMOJI]) for mismatches
-    - Gray circle ([EMOJI]) for empty
-    
-    Blocks save if Weekday or Rebate Type is empty.
+    Uses char-by-char typing for React/Angular Select2 dropdowns.
+    Handles "All Locations Except" via set resolution to specific store list.
+    Shows Checklist Banner for real-time validation after automation.
     """
     try:
         print("\n" + "="*60)
@@ -35358,8 +35904,13 @@ def api_mis_automate_create_deal():
                     actions.click()
                     actions.perform()
                     time.sleep(0.1)
-                    search_input.send_keys(str(value))
+                    # v12.26.3: Char-by-char typing for React/Angular dropdowns
+                    search_input.clear()
+                    for char in str(value):
+                        search_input.send_keys(char)
+                        time.sleep(0.03)
                     time.sleep(0.5)
+                    log(f"  [{field_name}] Typed '{value}' char-by-char", "DEBUG")
                 
                 # Find and click the matching option
                 try:
@@ -35396,14 +35947,29 @@ def api_mis_automate_create_deal():
                         actions.perform()
                         log(f"  [{field_name}] Selected '{value}'", "SUCCESS")
                     else:
-                        # Fallback: keyboard navigation
-                        if search_input and search_is_visible:
-                            search_input.send_keys(Keys.ENTER)
-                        else:
-                            ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
-                            time.sleep(0.1)
-                            ActionChains(driver).send_keys(Keys.ENTER).perform()
-                        log(f"  [{field_name}] Selected '{value}' via keyboard", "SUCCESS")
+                        # v12.26.3: Enhanced fallback — try clicking first highlighted/visible option
+                        fallback_clicked = False
+                        try:
+                            highlighted = driver.find_element(By.CSS_SELECTOR, 
+                                ".select2-results__option--highlighted, .select2-results__option:first-child")
+                            if highlighted and highlighted.is_displayed():
+                                actions = ActionChains(driver)
+                                actions.move_to_element(highlighted)
+                                actions.click()
+                                actions.perform()
+                                fallback_clicked = True
+                                log(f"  [{field_name}] Selected first highlighted option", "SUCCESS")
+                        except:
+                            pass
+                        
+                        if not fallback_clicked:
+                            if search_input and search_is_visible:
+                                search_input.send_keys(Keys.ENTER)
+                            else:
+                                ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
+                                time.sleep(0.1)
+                                ActionChains(driver).send_keys(Keys.ENTER).perform()
+                            log(f"  [{field_name}] Selected '{value}' via keyboard", "SUCCESS")
                         
                 except Exception as e:
                     log(f"  [{field_name}] Click failed, using ENTER: {e}", "WARN")
@@ -35423,17 +35989,44 @@ def api_mis_automate_create_deal():
                 return False
 
         def atomic_multi_select(label_text, values, field_name):
-            """Fill a multi-select dropdown by CLICKING OPTIONS DIRECTLY."""
+            """v12.26.3: Fill a multi-select dropdown by CLICKING OPTIONS DIRECTLY.
+            Handles 'All Locations Except: X, Y' for Store field via set resolution.
+            """
             if not values:
                 log(f"Skipping {field_name} (no values)", "SKIP")
                 return True
             
             # Convert string to list if needed
             if isinstance(values, str):
-                if 'all' in values.lower() and field_name != 'Weekday':
+                val_lower = values.lower().strip()
+                
+                # v12.26.3: Store field — resolve "All Locations Except" to specific store list
+                if field_name == 'Store':
+                    if val_lower in ['all locations', 'all', '']:
+                        log(f"Skipping Store ('All Locations' = leave blank)", "SKIP")
+                        return True
+                    if 'except' in val_lower:
+                        # Parse "All Locations Except: X, Y" into MIS dropdown names
+                        import re
+                        match = re.search(r'except[:\s]*(.+?)(?:\)|$)', val_lower, re.IGNORECASE)
+                        if match:
+                            exceptions_raw = [e.strip() for e in match.group(1).split(',') if e.strip()]
+                            exceptions_mapped = [STORE_NAME_MAP.get(normalize_store_name(e), normalize_store_name(e)) for e in exceptions_raw]
+                            exceptions_lower = [e.lower() for e in exceptions_mapped]
+                            values = [s for s in MASTER_STORE_LIST if s.lower() not in exceptions_lower]
+                            log(f"Store: Resolved 'All Except' -> {len(values)} stores (excluding {exceptions_mapped})", "DEBUG")
+                        else:
+                            values = [v.strip() for v in values.split(',') if v.strip()]
+                    else:
+                        # Specific store list — map names to MIS dropdown format
+                        raw_stores = [v.strip() for v in values.split(',') if v.strip()]
+                        values = [STORE_NAME_MAP.get(normalize_store_name(s), normalize_store_name(s)) for s in raw_stores]
+                
+                elif field_name != 'Weekday' and 'all' in val_lower:
                     log(f"Skipping {field_name} ('All' detected)", "SKIP")
                     return True
-                values = [v.strip() for v in values.split(',') if v.strip()]
+                else:
+                    values = [v.strip() for v in values.split(',') if v.strip()]
             
             if not values:
                 log(f"Skipping {field_name} (empty list)", "SKIP")
@@ -35518,23 +36111,28 @@ def api_mis_automate_create_deal():
                     
                     log(f"  [{field_name}] Adding '{val_clean}'...", "DEBUG")
                     
-                    # Type to filter (dropdown already open, search field should be focused)
+                    # v12.26.3: Char-by-char typing for React/Angular dropdowns
                     if search_input:
                         try:
                             search_input.clear()
-                            search_input.send_keys(val_clean)
+                            for char in val_clean:
+                                search_input.send_keys(char)
+                                time.sleep(0.03)
                             time.sleep(0.4)
                         except:
                             # Re-acquire search field if stale
                             try:
                                 search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
                                 search_input.clear()
-                                search_input.send_keys(val_clean)
+                                for char in val_clean:
+                                    search_input.send_keys(char)
+                                    time.sleep(0.03)
                                 time.sleep(0.4)
                             except:
                                 pass
                     
-                    # Click option
+                    # Click option — try XPath text match first
+                    option_clicked = False
                     try:
                         option_xpath_value = build_xpath_contains(val_clean)
                         option_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
@@ -35544,9 +36142,27 @@ def api_mis_automate_create_deal():
                         actions.move_to_element(option)
                         actions.click()
                         actions.perform()
+                        option_clicked = True
                         log(f"    -> Added '{val_clean}'", "SUCCESS")
                     except:
-                        # Fallback: press Enter to select highlighted option
+                        pass
+                    
+                    # v12.26.3: Weekday fallback — try direct XPath //li[contains(text(), 'Monday')]
+                    if not option_clicked and field_name == 'Weekday':
+                        try:
+                            day_xpath = f"//li[contains(text(), '{val_clean}')]"
+                            day_option = WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, day_xpath)))
+                            actions = ActionChains(driver)
+                            actions.move_to_element(day_option)
+                            actions.click()
+                            actions.perform()
+                            option_clicked = True
+                            log(f"    -> Added '{val_clean}' via weekday XPath", "SUCCESS")
+                        except:
+                            pass
+                    
+                    # Final fallback: ENTER
+                    if not option_clicked:
                         ActionChains(driver).send_keys(Keys.ENTER).perform()
                         log(f"    -> Added '{val_clean}' via ENTER", "SUCCESS")
                     
@@ -35647,10 +36263,49 @@ def api_mis_automate_create_deal():
             else:
                 warnings.append('Could not fill End Date')
 
-        # v12.18: DO NOT automate these fields - show in checklist instead:
-        # - Weekday, Store/Locations, Category, After Wholesale
+        # =========================================================
+        # v12.26.3: AUTOMATE WEEKDAY, STORE, AND CATEGORY FIELDS
+        # (Previously checklist-only — now fully automated with set resolution)
+        # =========================================================
         
-        # v12.18: Lookup linked brand from Settings tab if not provided
+        # MIS dropdown store names (what appears in the Select2 dropdown)
+        MASTER_STORE_LIST = [
+            'Beverly', 'Davis', 'Dixon', 'El Sobrante', 'Fresno', 'Fresno Shaw',
+            'Hawthorne', 'Koreatown', 'Laguna Woods', 'Oxnard', 'Riverside', 'West Hollywood'
+        ]
+
+        # 9. WEEKDAY (multi-select) - AUTOMATE
+        if target_weekday:
+            if atomic_multi_select("Weekday", target_weekday, "Weekday"):
+                automated_fields.append('Weekday')
+            else:
+                warnings.append('Could not fill Weekday')
+
+        # 10. STORE / LOCATIONS (multi-select) - AUTOMATE
+        if target_locations:
+            if atomic_multi_select("Store", target_locations, "Store"):
+                automated_fields.append('Store')
+            else:
+                warnings.append('Could not fill Store')
+
+        # 11. CATEGORY (multi-select) - AUTOMATE
+        if target_category:
+            cat_lower = target_category.lower().strip()
+            if cat_lower not in ['all', 'all categories', '']:
+                if atomic_multi_select("Category", target_category, "Category"):
+                    automated_fields.append('Category')
+                else:
+                    warnings.append('Could not fill Category')
+
+        # 12. AFTER WHOLESALE (toggle) - AUTOMATE
+        after_wholesale_val = clean(sheet_data.get('after_wholesale')).upper() == 'TRUE'
+        if after_wholesale_val:
+            if atomic_toggle("rebate_wholesale_discount", True, "After Wholesale"):
+                automated_fields.append('After Wholesale')
+            else:
+                warnings.append('Could not toggle After Wholesale')
+        
+        # Lookup linked brand from Settings tab if not provided
         if not target_linked and target_brand:
             brand_settings = GLOBAL_DATA.get('brand_settings', {})
             target_linked = brand_settings.get(target_brand.lower(), '')
@@ -35660,10 +36315,9 @@ def api_mis_automate_create_deal():
                 print(f"[LINKED BRAND] Brand '{target_brand}' has no linked brand in Settings")
 
         print("\n" + "="*60)
-        print("[AUTOMATION] v12.18 PARTIAL AUTOMATION COMPLETE")
+        print("[AUTOMATION] v12.26.3 FULL AUTOMATION COMPLETE")
         print("="*60)
         print(f"[AUTOMATED] {len(automated_fields)} fields: {', '.join(automated_fields)}")
-        print(f"[MANUAL] User must fill: Weekday, Store, Category, After Wholesale")
         if warnings:
             print(f"[WARNINGS] {len(warnings)} issue(s): {', '.join(warnings)}")
         print("="*60 + "\n")
@@ -35686,7 +36340,7 @@ def api_mis_automate_create_deal():
         # Inject the checklist validation banner
         inject_checklist_banner(driver, expected_data)
         
-        result_msg = f'Form partially filled for {target_brand}. Review checklist and fill remaining fields.'
+        result_msg = f'Form filled for {target_brand}. Review all fields before saving.'
         if warnings:
             result_msg += f' ({len(warnings)} warning(s) - check console)'
         
