@@ -9019,16 +9019,18 @@ HTML_TEMPLATE = r"""
                 weekday: weekdayValue,
                 categories: sourceData.categories || '',
                 locations: sourceData.locations || '',
-                discount: (sourceData.discount || '').replace('%', ''),
-                vendor_contrib: (sourceData.vendor_contrib || '').replace('%', ''),
+                // v12.26.4: Use ?? (nullish coalescing) — 0 is valid, only null/undefined → ''
+                discount: String(sourceData.discount ?? '').replace('%', ''),
+                vendor_contrib: String(sourceData.vendor_contrib ?? '').replace('%', ''),
                 rebate_type: rebateType,
                 after_wholesale: sourceData.after_wholesale === 'TRUE',
                 start_date: startDate,
                 end_date: endDate
             };
 
-            if (step.discount) preFlightData.discount = step.discount.replace('%', '');
-            if (step.vendor_contrib) preFlightData.vendor_contrib = step.vendor_contrib.replace('%', '');
+            // v12.26.4: step overrides — check != null to allow 0 values
+            if (step.discount != null && String(step.discount) !== '') preFlightData.discount = String(step.discount).replace('%', '');
+            if (step.vendor_contrib != null && String(step.vendor_contrib) !== '') preFlightData.vendor_contrib = String(step.vendor_contrib).replace('%', '');
 
             console.log('[AUTOMATE] Pre-flight data:', preFlightData);
 
@@ -9105,8 +9107,8 @@ HTML_TEMPLATE = r"""
                         
                         // Step 2: Extract exceptions from "Except: X, Y, Z"
                         // Handle various formats: "Except:", "Except :", "(Except: X)", etc.
-                        const exceptMatch = locationStr.match(/except[:\s]+([^)]+)/i) || 
-                                          locationStr.match(/except[:\s]+(.*?)$/i);
+                        // v12.26.3: Use greedy (.+) to avoid truncating paren-containing store names
+                        const exceptMatch = locationStr.match(/except[:\s]+(.+)/i);
                         if (exceptMatch) {
                             const exceptionsStr = exceptMatch[1].trim();
                             console.log('[SMART-LOCATION] Raw exception string:', JSON.stringify(exceptionsStr));
@@ -12336,9 +12338,9 @@ HTML_TEMPLATE = r"""
             
             const categories = match.categories || '';
             const locations = match.locations || '';
-            // v12.21.1: Handle numeric values - convert to string before .replace()
-            const discount = String(match.discount || '').replace('%', '');
-            const vendorContrib = String(match.vendor_contrib || '').replace('%', '');
+            // v12.26.4: Use ?? (nullish coalescing) — 0 is valid, only null/undefined → ''
+            const discount = String(match.discount ?? '').replace('%', '');
+            const vendorContrib = String(match.vendor_contrib ?? '').replace('%', '');
             
             // Determine Rebate Type from checkboxes
             // v12.21.3: Check both 'Wholesale?' and 'Wholesale' (with and without ?)
@@ -26550,9 +26552,14 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
                 // Case 2: "All Categories (Except: X, Y)" - ignore "*" exceptions
                 else if (expectedText.toLowerCase().includes('except')) {{
-                    const exceptMatch = expectedText.match(/except[:\\s]*(.+?)(?:\\)|$)/i);
+                    // v12.26.3: Greedy capture to avoid truncating paren-containing names
+                    const exceptMatch = expectedText.match(/except[:\\s]*(.+)/i);
                     if (exceptMatch) {{
-                        const exceptionsText = exceptMatch[1];
+                        let exceptionsRaw = exceptMatch[1].trim();
+                        if (exceptionsRaw.endsWith(')') && !exceptionsRaw.match(/\\([^)]+\\)$/)) {{
+                            exceptionsRaw = exceptionsRaw.slice(0, -1).trim();
+                        }}
+                        const exceptionsText = exceptionsRaw;
                         const rawExceptions = exceptionsText.split(',').map(s => s.trim());
                         
                         // Filter out "*" (filler exception) and empty strings
@@ -26690,7 +26697,7 @@ def inject_mis_validation(driver, expected_data=None):
                 // v12.26.2: Also strips "The Artist Tree -" prefix for safety
                 function normalizeStoreName(name) {{
                     let lower = name.toLowerCase().trim()
-                        .replace(/^(the artist tree|davisville business enterprises,?\s*inc\.?|club 420)\s*[-\u2013\u2014]?\s*/i, '');
+                        .replace(/^(the artist tree|davisville business enterprises,?\\s*inc\\.?|club 420)\\s*[-\u2013\u2014]?\\s*/i, '');
                     return STORE_MAP[lower] || lower;
                 }}
                 
@@ -26723,10 +26730,16 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
                 // Case 2: "All Locations Except: X, Y"
                 else if (expectedLower.includes('except')) {{
-                    // Parse exceptions - handle various formats
-                    const exceptMatch = expectedText.match(/except[:\\s,]*(.+?)(?:\\)|$)/i);
+                    // v12.26.3: Greedy capture + strip trailing outer paren
+                    // Prevents truncating store names containing parens like "Fresno (Palm)"
+                    const exceptMatch = expectedText.match(/except[:\\s]*(.+)/i);
                     if (exceptMatch) {{
-                        const exceptionsText = exceptMatch[1];
+                        let exceptionsRaw = exceptMatch[1].trim();
+                        // Strip trailing ')' ONLY if it's an outer wrapper (not part of a store name)
+                        if (exceptionsRaw.endsWith(')') && !exceptionsRaw.match(/\\([^)]+\\)$/)) {{
+                            exceptionsRaw = exceptionsRaw.slice(0, -1).trim();
+                        }}
+                        const exceptionsText = exceptionsRaw;
                         // Split by comma, filter empty strings
                         const rawExceptions = exceptionsText.split(',')
                             .map(s => s.trim())
@@ -28413,58 +28426,106 @@ def api_mis_create_deal():
                     
                     log(f"  [{field_name}] ({i+1}/{len(values)}) Selecting '{value}'...", "DEBUG")
                     
-                    # Find the option directly in the results list
-                    option = None
-                    option_xpath_value = build_xpath_contains(value)
+                    # v12.26.4: Retry loop — verify selection stuck before moving on
+                    MAX_RETRIES = 3
+                    selection_confirmed = False
                     
-                    # Method A: Find by results list ID (most reliable)
-                    try:
-                        results_xpath = f"//ul[@id='{results_id}']//li[normalize-space(text())={option_xpath_value}]"
-                        option = WebDriverWait(driver, 1).until(
-                            EC.element_to_be_clickable((By.XPATH, results_xpath))
-                        )
-                        log(f"  [{field_name}] Found '{value}' via results list", "DEBUG")
-                    except:
-                        pass
-                    
-                    # Method B: Find by contains text in any visible option
-                    if not option:
-                        try:
-                            contains_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
-                            option = WebDriverWait(driver, 0.5).until(
-                                EC.element_to_be_clickable((By.XPATH, contains_xpath))
-                            )
-                            log(f"  [{field_name}] Found '{value}' via contains", "DEBUG")
-                        except:
-                            pass
-                    
-                    # Method C: If dropdown closed, reopen and try again
-                    if not option:
-                        log(f"  [{field_name}] Option not found, reopening dropdown...", "WARN")
-                        actions = ActionChains(driver)
-                        actions.move_to_element(container)
-                        actions.click()
-                        actions.perform()
-                        time.sleep(0.15)
+                    for attempt in range(1, MAX_RETRIES + 1):
+                        if attempt > 1:
+                            log(f"  [{field_name}] Retry {attempt}/{MAX_RETRIES} for '{value}'...", "WARN")
                         
+                        # v12.26.5: ALWAYS ensure dropdown is open before each value
                         try:
-                            results_xpath = f"//ul[@id='{results_id}']//li[contains(text(), {option_xpath_value})]"
+                            is_open = 'select2-container--open' in container.get_attribute('class')
+                        except:
+                            is_open = False
+                        if not is_open:
+                            actions = ActionChains(driver)
+                            actions.move_to_element(container)
+                            actions.click()
+                            actions.perform()
+                            time.sleep(0.25)
+                        
+                        # Find the option directly in the results list
+                        option = None
+                        option_xpath_value = build_xpath_contains(value)
+                        
+                        # Method A: Find by results list ID (most reliable)
+                        try:
+                            results_xpath = f"//ul[@id='{results_id}']//li[normalize-space(text())={option_xpath_value}]"
                             option = WebDriverWait(driver, 1).until(
                                 EC.element_to_be_clickable((By.XPATH, results_xpath))
                             )
+                            log(f"  [{field_name}] Found '{value}' via results list", "DEBUG")
                         except:
-                            log(f"  [{field_name}] Could not find option '{value}'!", "ERROR")
-                            continue
+                            pass
+                        
+                        # Method B: Find by contains text in any visible option
+                        if not option:
+                            try:
+                                contains_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
+                                option = WebDriverWait(driver, 0.5).until(
+                                    EC.element_to_be_clickable((By.XPATH, contains_xpath))
+                                )
+                                log(f"  [{field_name}] Found '{value}' via contains", "DEBUG")
+                            except:
+                                pass
+                        
+                        # Method C: If dropdown closed, reopen and try again
+                        if not option:
+                            log(f"  [{field_name}] Option not found, reopening dropdown...", "WARN")
+                            actions = ActionChains(driver)
+                            actions.move_to_element(container)
+                            actions.click()
+                            actions.perform()
+                            time.sleep(0.15)
+                            
+                            try:
+                                results_xpath = f"//ul[@id='{results_id}']//li[contains(text(), {option_xpath_value})]"
+                                option = WebDriverWait(driver, 1).until(
+                                    EC.element_to_be_clickable((By.XPATH, results_xpath))
+                                )
+                            except:
+                                log(f"  [{field_name}] Could not find option '{value}'!", "ERROR")
+                        
+                        if option:
+                            # Click the option using ActionChains
+                            actions = ActionChains(driver)
+                            actions.move_to_element(option)
+                            actions.click()
+                            actions.perform()
+                            time.sleep(0.15)
+                        
+                        # v12.26.4: VERIFY selection stuck by reading selection pills
+                        try:
+                            pills = container.find_elements(By.CSS_SELECTOR, ".select2-selection__choice")
+                            selected_texts = []
+                            for pill in pills:
+                                pill_text = pill.text.strip()
+                                # Strip the × remove button text
+                                if pill_text.startswith('\u00d7'):
+                                    pill_text = pill_text[1:].strip()
+                                elif pill_text.endswith('\u00d7'):
+                                    pill_text = pill_text[:-1].strip()
+                                selected_texts.append(pill_text.lower())
+                            
+                            val_lower = value.lower()
+                            if any(val_lower in st or st in val_lower for st in selected_texts):
+                                selection_confirmed = True
+                                log(f"  [{field_name}] Confirmed '{value}' in selection pills", "SUCCESS")
+                            else:
+                                log(f"  [{field_name}] '{value}' NOT found in pills: {selected_texts}", "WARN")
+                        except Exception as ve:
+                            # Can't read pills — trust the click
+                            selection_confirmed = True
+                            log(f"  [{field_name}] Could not verify pills ({ve}), trusting click", "DEBUG")
+                        
+                        if selection_confirmed:
+                            selected_count += 1
+                            break
                     
-                    if option:
-                        # Click the option using ActionChains
-                        actions = ActionChains(driver)
-                        actions.move_to_element(option)
-                        actions.click()
-                        actions.perform()
-                        selected_count += 1
-                        log(f"  [{field_name}] [EMOJI] Selected '{value}'", "SUCCESS")
-                        time.sleep(0.08)  # Very short pause between selections
+                    if not selection_confirmed:
+                        log(f"  [{field_name}] FAILED to confirm '{value}' after {MAX_RETRIES} attempts!", "ERROR")
                 
                 # Step 5: Close the dropdown after ALL selections
                 log(f"  [{field_name}] Selected {selected_count}/{len(values)} items, closing dropdown", "DEBUG")
@@ -28569,33 +28630,27 @@ def api_mis_create_deal():
             
             # Case 2: All Locations Except
             if 'except' in text_lower:
-                # Extract exceptions
-                # Handle formats like "All Locations (Except: X, Y)" or "All Locations Except: X, Y"
-                import re
-                match = re.search(r'except[:\s]*(.+?)(?:\)|$)', text_lower, re.IGNORECASE)
-                if match:
-                    exceptions_text = match.group(1)
-                    exceptions = [e.strip() for e in exceptions_text.split(',') if e.strip()]
-                    
-                    # v12.26.1: Use STORE_NAME_MAP to convert Google Sheet names to MIS dropdown names
-                    # STORE_NAME_MAP: "Beverly Hills" → "Beverly", "Fresno (Palm)" → "Fresno", etc.
-                    mapped_exceptions = [STORE_NAME_MAP.get(exc, exc) for exc in exceptions]
-                    
-                    # v12.26.3: Use STRICT normalized equality (not loose .in matching)
-                    # Prevents "Fresno" from falsely excluding "Fresno Shaw"
+                # v12.26.3: Delegate to _extract_except_stores for robust paren handling
+                # This correctly preserves "Fresno (Palm)" without truncating the closing paren
+                except_stores = _extract_except_stores(text)
+                if except_stores is not None:
+                    # Convert canonical Google Sheet names to MIS dropdown names
+                    mapped_exceptions = [STORE_NAME_MAP.get(s, s) for s in except_stores]
                     mapped_exceptions_lower = [exc.lower() for exc in mapped_exceptions]
                     
-                    # Return master list minus exceptions
+                    # Return master list minus exceptions (strict equality)
                     result = []
                     for store in MASTER_STORE_LIST:
                         store_mapped = STORE_NAME_MAP.get(store, store)
                         store_lower = store_mapped.lower() if store_mapped else store.lower()
-                        is_exception = store_lower in mapped_exceptions_lower
-                        if not is_exception:
+                        if store_lower not in mapped_exceptions_lower:
                             result.append(store)
                     
                     log(f"Store logic: All except {mapped_exceptions} = {result}", "DEBUG")
                     return result
+                
+                # Fallback: couldn't parse, treat as-is
+                log(f"Store logic: Could not parse 'except' in '{text}', treating as specific list", "WARN")
             
             # Case 3: Specific stores
             stores = [s.strip() for s in text.split(',') if s.strip()]
@@ -33182,6 +33237,9 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 // Empty string means "no value expected" (e.g., no linked brand)
                 if (expectedKey === 'linked_brand') {{
                     displayExpected = '(none - leave empty)';
+                // v12.26.4: For discount/vendor, empty means 0% — display "0" not "(not specified)"
+                }} else if (expectedKey === 'discount' || expectedKey === 'vendor_contrib') {{
+                    displayExpected = '0';
                 }} else {{
                     displayExpected = '(not specified)';
                 }}
@@ -33387,14 +33445,24 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             const actualLower = actualArr.map(s => s.toLowerCase());
             const expectedLower = expectedArr.map(s => s.toLowerCase());
             
+            // v12.26.7: Normalize store names — strip parens for comparison
+            // Sheet uses "Fresno (Shaw)" but MIS pill shows "Fresno Shaw"
+            function normStore(s) {{
+                return s.replace(/[()]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
+            }}
+            const actualNorm = actualArr.map(normStore);
+            const expectedNorm = expectedArr.map(normStore);
+            
             // Find matched and missing
             const matched = [];
             const missing = [];
             
             expectedArr.forEach((exp, idx) => {{
                 const expLower = expectedLower[idx];
-                const found = actualLower.some(act => 
-                    act === expLower || act.includes(expLower) || expLower.includes(act)
+                const expNorm = expectedNorm[idx];
+                const found = actualLower.some((act, ai) => 
+                    act === expLower || act.includes(expLower) || expLower.includes(act) ||
+                    actualNorm[ai] === expNorm || actualNorm[ai].includes(expNorm) || expNorm.includes(actualNorm[ai])
                 );
                 if (found) {{
                     matched.push(exp);
@@ -33404,10 +33472,12 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             }});
             
             // Find extra (selected but not expected)
-            const extra = actualArr.filter(act => {{
-                const actLower = act.toLowerCase();
-                return !expectedLower.some(exp => 
-                    exp === actLower || exp.includes(actLower) || actLower.includes(exp)
+            const extra = actualArr.filter((act, ai) => {{
+                const actLower = actualLower[ai];
+                const actNorm = actualNorm[ai];
+                return !expectedLower.some((exp, ei) => 
+                    exp === actLower || exp.includes(actLower) || actLower.includes(exp) ||
+                    expectedNorm[ei] === actNorm || expectedNorm[ei].includes(actNorm) || actNorm.includes(expectedNorm[ei])
                 );
             }});
             
@@ -33442,12 +33512,32 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             // Handle percentage fields
             if (expectedKey === 'discount' || expectedKey === 'vendor_contrib') {{
                 const actualNorm = normalizePercent(actual);
-                const expectedNorm = normalizePercent(expected);
+                // v12.26.4: For discount/vendor, empty expected means 0% (not "unspecified")
+                let expectedNorm = normalizePercent(expected);
+                if (!expectedNorm) expectedNorm = '0';
                 
-                if (!expectedNorm) return 'empty';  // No expected value
-                if (!actualNorm) return 'empty';   // No actual value
+                if (!actualNorm) return 'empty';   // No actual value yet (field not filled)
                 
                 return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
+            }}
+            
+            // v12.26.5: Handle date fields — normalize leading zeros
+            // "03/31/2026" (pre-flight) == "3/31/2026" (MIS input)
+            if (expectedKey === 'start_date' || expectedKey === 'end_date') {{
+                const actualVal = Array.isArray(actual) ? (actual[0] || '') : (actual || '');
+                if (!expected || expected === '') return 'empty';
+                if (!actualVal || actualVal.trim() === '') return 'empty';
+                
+                // Normalize: strip leading zeros from month and day parts
+                function normDate(d) {{
+                    const parts = String(d).trim().split('/');
+                    if (parts.length === 3) {{
+                        return parseInt(parts[0]) + '/' + parseInt(parts[1]) + '/' + parts[2];
+                    }}
+                    return String(d).trim();
+                }}
+                
+                return (normDate(actualVal) === normDate(expected)) ? 'correct' : 'mismatch';
             }}
             
             // Standard comparison
@@ -33756,7 +33846,8 @@ def api_mis_automate_create_deal():
         sheet_data = data.get('sheet_data', {})
         section_type = data.get('section_type', 'unknown')
         
-        def clean(val): return str(val).strip() if val else ""
+        # v12.26.4: 'val is not None' prevents numeric 0 from being treated as empty
+        def clean(val): return str(val).strip() if val is not None else ""
 
         target_brand = clean(sheet_data.get('brand'))
         target_linked = clean(sheet_data.get('linked_brand'))
@@ -34098,7 +34189,9 @@ def api_mis_automate_create_deal():
                 return False
 
         def atomic_multi_select(label_text, values, field_name):
-            """v12.26.3: Fill a multi-select dropdown by CLICKING OPTIONS DIRECTLY.
+            """v12.26.7: Fill a multi-select dropdown.
+            Restores the original working flow: open dropdown once, find search field once,
+            type + click for each value. Only re-acquires on verification failure.
             Handles 'All Locations Except: X, Y' for Store field via set resolution.
             """
             if not values:
@@ -34115,12 +34208,10 @@ def api_mis_automate_create_deal():
                         log(f"Skipping Store ('All Locations' = leave blank)", "SKIP")
                         return True
                     if 'except' in val_lower:
-                        # Parse "All Locations Except: X, Y" into MIS dropdown names
-                        import re
-                        match = re.search(r'except[:\s]*(.+?)(?:\)|$)', val_lower, re.IGNORECASE)
-                        if match:
-                            exceptions_raw = [e.strip() for e in match.group(1).split(',') if e.strip()]
-                            exceptions_mapped = [STORE_NAME_MAP.get(normalize_store_name(e), normalize_store_name(e)) for e in exceptions_raw]
+                        # v12.26.3: Delegate to _extract_except_stores for correct paren handling
+                        except_stores = _extract_except_stores(values)
+                        if except_stores is not None:
+                            exceptions_mapped = [STORE_NAME_MAP.get(s, s) for s in except_stores]
                             exceptions_lower = [e.lower() for e in exceptions_mapped]
                             values = [s for s in MASTER_STORE_LIST if s.lower() not in exceptions_lower]
                             log(f"Store: Resolved 'All Except' -> {len(values)} stores (excluding {exceptions_mapped})", "DEBUG")
@@ -34149,14 +34240,75 @@ def api_mis_automate_create_deal():
                 'Category': 'category_ids'
             }
             
-            select_id = FIELD_SELECT_MAP.get(field_name, field_name.lower().replace(' ', '_'))
+            # Build results list ID for XPath option finding
+            FIELD_RESULTS_MAP = {
+                'Weekday': 'select2-weekday_ids-results',
+                'Store': 'select2-store_ids-results',
+                'Category': 'select2-category_ids-results'
+            }
             
-            try:
+            select_id = FIELD_SELECT_MAP.get(field_name, field_name.lower().replace(' ', '_'))
+            results_id = FIELD_RESULTS_MAP.get(field_name, f"select2-{select_id}-results")
+            
+            # Weekday name normalization
+            day_map = {'mon':'Monday','tue':'Tuesday','wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday'}
+            
+            def open_dropdown_and_get_search():
+                """Open the dropdown and return (container, search_input) or (None, None)"""
+                nonlocal container
+                
+                # Close any existing dropdown first
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 time.sleep(0.1)
                 click_backdrop()
                 time.sleep(0.15)
                 
+                # Click selection area to open dropdown
+                try:
+                    selection_area = container.find_element(By.CSS_SELECTOR, ".select2-selection")
+                    selection_area.click()
+                except:
+                    ActionChains(driver).move_to_element(container).click().perform()
+                
+                time.sleep(0.3)
+                
+                # Find search field — try multiple selectors
+                si = None
+                
+                # Method 1: Global dropdown search (works for most Select2 multi-selects)
+                try:
+                    si = WebDriverWait(driver, 2).until(
+                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
+                    )
+                    log(f"  [{field_name}] Search field found (dropdown)", "DEBUG")
+                    return si
+                except:
+                    pass
+                
+                # Method 2: Container-scoped inline search (multi-select inline style)
+                try:
+                    si = container.find_element(By.CSS_SELECTOR, ".select2-search__field")
+                    if si and si.is_displayed():
+                        log(f"  [{field_name}] Search field found (inline)", "DEBUG")
+                        si.click()
+                        time.sleep(0.15)
+                        return si
+                except:
+                    pass
+                
+                # Method 3: Any open container's search
+                try:
+                    si = driver.find_element(By.CSS_SELECTOR, ".select2-container--open .select2-search__field")
+                    log(f"  [{field_name}] Search field found (open container)", "DEBUG")
+                    return si
+                except:
+                    pass
+                
+                log(f"  [{field_name}] Could not find search field!", "WARN")
+                return None
+            
+            try:
+                # Step 1: Find the Select2 container
                 container = None
                 
                 try:
@@ -34177,36 +34329,10 @@ def api_mis_automate_create_deal():
                     log(f"  [{field_name}] Could not find Select2 container!", "ERROR")
                     return False
                 
-                # Weekday name normalization
-                day_map = {'mon':'Monday','tue':'Tuesday','wed':'Wednesday','thu':'Thursday','fri':'Friday','sat':'Saturday','sun':'Sunday'}
+                # Step 2: Open dropdown ONCE and find search field
+                search_input = open_dropdown_and_get_search()
                 
-                # FIX v12.18: Open dropdown ONCE before iterating values
-                # This prevents accidentally clicking an option when reopening dropdown each iteration
-                log(f"  [{field_name}] Opening dropdown once for all {len(values)} values...", "DEBUG")
-                
-                # Click the selection area specifically (not options) to open dropdown
-                try:
-                    selection_area = container.find_element(By.CSS_SELECTOR, ".select2-selection")
-                    selection_area.click()
-                except:
-                    # Fallback to container click
-                    actions = ActionChains(driver)
-                    actions.move_to_element(container)
-                    actions.click()
-                    actions.perform()
-                
-                time.sleep(0.3)
-                
-                # Wait for dropdown to open and search field to be ready
-                search_input = None
-                try:
-                    search_input = WebDriverWait(driver, 2).until(
-                        EC.visibility_of_element_located((By.CSS_SELECTOR, ".select2-dropdown .select2-search__field"))
-                    )
-                    log(f"  [{field_name}] Dropdown open, search field ready", "DEBUG")
-                except:
-                    log(f"  [{field_name}] Warning: Could not find search field", "WARN")
-                
+                # Step 3: Select each value
                 for val in values:
                     val_clean = str(val).strip()
                     if not val_clean:
@@ -34218,72 +34344,131 @@ def api_mis_automate_create_deal():
                         if val_lower in day_map:
                             val_clean = day_map[val_lower]
                     
-                    log(f"  [{field_name}] Adding '{val_clean}'...", "DEBUG")
+                    log(f"  [{field_name}] Selecting '{val_clean}'...", "DEBUG")
                     
-                    # v12.26.3: Char-by-char typing for React/Angular dropdowns
-                    if search_input:
-                        try:
-                            search_input.clear()
-                            for char in val_clean:
-                                search_input.send_keys(char)
-                                time.sleep(0.03)
-                            time.sleep(0.4)
-                        except:
-                            # Re-acquire search field if stale
+                    MAX_RETRIES = 3
+                    selection_confirmed = False
+                    
+                    for attempt in range(1, MAX_RETRIES + 1):
+                        if attempt > 1:
+                            log(f"  [{field_name}] Retry {attempt}/{MAX_RETRIES} for '{val_clean}'...", "WARN")
+                            # Full reopen on retry — dropdown may have closed
+                            search_input = open_dropdown_and_get_search()
+                        
+                        # Type value to filter dropdown
+                        if search_input:
                             try:
-                                search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
                                 search_input.clear()
+                                time.sleep(0.05)
                                 for char in val_clean:
                                     search_input.send_keys(char)
                                     time.sleep(0.03)
-                                time.sleep(0.4)
-                            except:
-                                pass
-                    
-                    # Click option — try XPath text match first
-                    option_clicked = False
-                    try:
-                        option_xpath_value = build_xpath_contains(val_clean)
-                        option_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
-                        option = WebDriverWait(driver, 1.5).until(EC.element_to_be_clickable((By.XPATH, option_xpath)))
+                                time.sleep(0.5)
+                            except Exception as te:
+                                log(f"  [{field_name}] Search field stale ({te}), reopening...", "WARN")
+                                search_input = open_dropdown_and_get_search()
+                                if search_input:
+                                    try:
+                                        search_input.clear()
+                                        for char in val_clean:
+                                            search_input.send_keys(char)
+                                            time.sleep(0.03)
+                                        time.sleep(0.5)
+                                    except:
+                                        pass
                         
-                        actions = ActionChains(driver)
-                        actions.move_to_element(option)
-                        actions.click()
-                        actions.perform()
-                        option_clicked = True
-                        log(f"    -> Added '{val_clean}'", "SUCCESS")
-                    except:
-                        pass
-                    
-                    # v12.26.3: Weekday fallback — try direct XPath //li[contains(text(), 'Monday')]
-                    if not option_clicked and field_name == 'Weekday':
+                        # Click the matching option
+                        option_clicked = False
+                        option_xpath_value = build_xpath_contains(val_clean)
+                        
+                        # Try results list ID first (most reliable)
                         try:
-                            day_xpath = f"//li[contains(text(), '{val_clean}')]"
-                            day_option = WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, day_xpath)))
-                            actions = ActionChains(driver)
-                            actions.move_to_element(day_option)
-                            actions.click()
-                            actions.perform()
+                            results_xpath = f"//ul[@id='{results_id}']//li[contains(text(), {option_xpath_value})]"
+                            option = WebDriverWait(driver, 1.5).until(
+                                EC.element_to_be_clickable((By.XPATH, results_xpath))
+                            )
+                            ActionChains(driver).move_to_element(option).click().perform()
                             option_clicked = True
-                            log(f"    -> Added '{val_clean}' via weekday XPath", "SUCCESS")
                         except:
                             pass
+                        
+                        # Fallback: any visible option with matching text
+                        if not option_clicked:
+                            try:
+                                option_xpath = f"//li[contains(@class, 'select2-results__option') and contains(text(), {option_xpath_value})]"
+                                option = WebDriverWait(driver, 1).until(
+                                    EC.element_to_be_clickable((By.XPATH, option_xpath))
+                                )
+                                ActionChains(driver).move_to_element(option).click().perform()
+                                option_clicked = True
+                            except:
+                                pass
+                        
+                        # Direct text match (weekday names are unique)
+                        if not option_clicked:
+                            try:
+                                direct_xpath = f"//li[contains(text(), '{val_clean}')]"
+                                option = WebDriverWait(driver, 0.5).until(
+                                    EC.element_to_be_clickable((By.XPATH, direct_xpath))
+                                )
+                                ActionChains(driver).move_to_element(option).click().perform()
+                                option_clicked = True
+                            except:
+                                pass
+                        
+                        # ENTER as last resort
+                        if not option_clicked and search_input:
+                            ActionChains(driver).send_keys(Keys.ENTER).perform()
+                        
+                        time.sleep(0.3)
+                        
+                        # VERIFY selection stuck by reading selection pills
+                        try:
+                            pills = container.find_elements(By.CSS_SELECTOR, ".select2-selection__choice")
+                            selected_texts = []
+                            for pill in pills:
+                                pill_text = pill.text.strip()
+                                if pill_text.startswith('\u00d7'):
+                                    pill_text = pill_text[1:].strip()
+                                elif pill_text.endswith('\u00d7'):
+                                    pill_text = pill_text[:-1].strip()
+                                selected_texts.append(pill_text.lower())
+                            
+                            val_lower = val_clean.lower()
+                            if any(val_lower in st or st in val_lower for st in selected_texts):
+                                selection_confirmed = True
+                                log(f"    -> Confirmed '{val_clean}' in pills", "SUCCESS")
+                            else:
+                                log(f"    -> '{val_clean}' NOT in pills: {selected_texts}", "WARN")
+                        except Exception as ve:
+                            selection_confirmed = True
+                            log(f"    -> Could not read pills ({ve}), trusting click", "DEBUG")
+                        
+                        if selection_confirmed:
+                            break
                     
-                    # Final fallback: ENTER
-                    if not option_clicked:
-                        ActionChains(driver).send_keys(Keys.ENTER).perform()
-                        log(f"    -> Added '{val_clean}' via ENTER", "SUCCESS")
+                    if not selection_confirmed:
+                        log(f"  [{field_name}] FAILED to confirm '{val_clean}' after {MAX_RETRIES} attempts!", "ERROR")
                     
-                    time.sleep(0.2)
-                    
-                    # Clear search for next value (dropdown stays open for multi-select)
+                    # After clicking an option, Select2 may have closed/reopened the dropdown.
+                    # Re-acquire search field for next value using the SAME dropdown
+                    # (don't close and reopen — just re-find the field)
                     if search_input:
                         try:
                             search_input.clear()
                             time.sleep(0.1)
                         except:
-                            pass
+                            # Search field went stale — re-acquire
+                            try:
+                                search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
+                            except:
+                                try:
+                                    search_input = container.find_element(By.CSS_SELECTOR, ".select2-search__field")
+                                except:
+                                    try:
+                                        search_input = driver.find_element(By.CSS_SELECTOR, ".select2-container--open .select2-search__field")
+                                    except:
+                                        search_input = None
                 
                 # Close dropdown after all values selected
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
@@ -34345,14 +34530,16 @@ def api_mis_automate_create_deal():
             warnings.append('Rebate Type not determined from source data')
 
         # 5. DISCOUNT RATE (text input) - AUTOMATE
-        if target_discount:
+        # v12.26.4: Explicit check allows 0% values through
+        if target_discount is not None and target_discount != '':
             if atomic_text_input("discount_rate", target_discount, "Discount Rate"):
                 automated_fields.append('Discount')
             else:
                 warnings.append('Could not fill Discount Rate')
 
         # 6. VENDOR REBATE % (text input) - AUTOMATE
-        if target_vendor:
+        # v12.26.4: Explicit check allows 0% values through
+        if target_vendor is not None and target_vendor != '':
             if atomic_text_input("rebate_percent", target_vendor, "Vendor Rebate"):
                 automated_fields.append('Vendor Rebate')
             else:
