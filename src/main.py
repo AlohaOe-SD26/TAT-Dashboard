@@ -551,7 +551,7 @@ def load_sync_keys(store_name: str) -> dict | None:
     """
     try:
         if not SYNC_KEYS_FILE.exists():
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Sync keys file not found: {SYNC_KEYS_FILE}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Sync keys file not found: {SYNC_KEYS_FILE}")
             return None
         
         with open(SYNC_KEYS_FILE, 'r') as f:
@@ -561,24 +561,24 @@ def load_sync_keys(store_name: str) -> dict | None:
         store_upper = store_name.upper().strip()
         
         if store_upper not in all_keys:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â No UUID found for store: {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â No UUID found for store: {store_name}")
             return None
         
         store_data = all_keys[store_upper]
         
         # Validate required field
         if 'store_uuid' not in store_data:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Missing store_uuid for store: {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Missing store_uuid for store: {store_name}")
             return None
         
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded UUID for store: {store_name}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Loaded UUID for store: {store_name}")
         return store_data
     
     except json.JSONDecodeError as e:
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Invalid JSON in sync_keys.json: {e}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Invalid JSON in sync_keys.json: {e}")
         return None
     except Exception as e:
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Error loading sync keys: {e}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Error loading sync keys: {e}")
         return None
 
 
@@ -626,7 +626,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                 }
             }
         }
-        print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
         print(f"[ECOM-AUTH] Authenticating as: {email}")
         print(f"[ECOM-AUTH] Endpoint: {login_url}")
         print(f"[ECOM-AUTH] Content-Type: {headers['Content-Type']}")
@@ -651,14 +651,14 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
             auth_header = response.headers.get('Authorization')
             if auth_header:
                 token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else auth_header
-                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in Authorization header")
+                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in Authorization header")
             
             # Check Access-Token header (alternate pattern)
             if not token:
                 access_token = response.headers.get('Access-Token')
                 if access_token:
                     token = access_token
-                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in Access-Token header")
+                    print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in Access-Token header")
             
             # ===== METHOD 2: Check Response Body (multiple paths) =====
             if not token and response.text:
@@ -669,7 +669,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                     # PRIORITY: Check for "jwt" key (Blaze Ecom specific)
                     if 'jwt' in response_data:
                         token = response_data['jwt']
-                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in: jwt key")
+                        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in: jwt key")
                     
                     # Path 1: data.attributes.token
                     if not token and 'data' in response_data:
@@ -678,7 +678,7 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                             if 'attributes' in data and isinstance(data['attributes'], dict):
                                 token = data['attributes'].get('token')
                                 if token:
-                                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.attributes.token")
+                                    print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in data.attributes.token")
                             
                             # Path 2: data.id (some APIs return token as ID)
                             if not token and 'id' in data:
@@ -686,73 +686,73 @@ def get_ecom_token(email: str, password: str) -> tuple[str | None, str | None]:
                                 # Token IDs are typically long strings
                                 if isinstance(potential_token, str) and len(potential_token) > 20:
                                     token = potential_token
-                                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.id")
+                                    print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in data.id")
                             
                             # Path 3: data.token
                             if not token and 'token' in data:
                                 token = data['token']
-                                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in data.token")
+                                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in data.token")
                     
                     # Path 4: meta.token
                     if not token and 'meta' in response_data:
                         meta = response_data['meta']
                         if isinstance(meta, dict) and 'token' in meta:
                             token = meta['token']
-                            print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in meta.token")
+                            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in meta.token")
                     
                     # Path 5: top-level token
                     if not token and 'token' in response_data:
                         token = response_data['token']
-                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found at top level")
+                        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found at top level")
                     
                     # Path 6: access_token (OAuth style)
                     if not token and 'access_token' in response_data:
                         token = response_data['access_token']
-                        print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token found in access_token")
+                        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token found in access_token")
                         
                 except json.JSONDecodeError as e:
-                    print(f"[ECOM-AUTH] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not parse JSON response: {e}")
+                    print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Could not parse JSON response: {e}")
             
             if token:
-                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Token acquired (length: {len(token)})")
-                print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Token acquired (length: {len(token)})")
+                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
                 return token, None
             else:
-                print(f"[ECOM-AUTH] ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â 200 OK but no token found anywhere!")
-                print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â 200 OK but no token found anywhere!")
+                print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
                 return None, "Authentication succeeded but no token in response"
         
         elif response.status_code == 401:
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Invalid credentials (401)")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Invalid credentials (401)")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return None, "Invalid Blaze credentials"
         
         elif response.status_code == 403:
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Access forbidden")
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Access forbidden")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return None, "Access forbidden - check account permissions"
         
         elif response.status_code == 422:
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Unprocessable Entity (422) - payload format issue")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Unprocessable Entity (422) - payload format issue")
             print(f"[ECOM-AUTH] Response: {response.text[:500] if response.text else 'empty'}")
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return None, "Payload format rejected by API"
         
         else:
             error_text = response.text[:300] if response.text else 'No response body'
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Auth failed: {response.status_code} - {error_text}")
-            print(f"[ECOM-AUTH] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Auth failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return None, f"Auth failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Request timed out")
+        print("[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Request timed out")
         return None, "Authentication timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Connection error: {e}")
+        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Connection error: {e}")
         return None, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-AUTH] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
+        print(f"[ECOM-AUTH] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return None, f"Auth error: {str(e)}"
@@ -807,38 +807,38 @@ def trigger_ecom_sync(store_uuid: str, token: str) -> tuple[bool, str]:
         
         if response.status_code in [200, 201, 202]:
             response_data = response.json() if response.text else {}
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Sync triggered successfully")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Sync triggered successfully")
             return True, "Sync request accepted"
         
         elif response.status_code == 401:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Token expired or invalid")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Token expired or invalid")
             return False, "Token expired - try again"
         
         elif response.status_code == 403:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Forbidden - no permission for this store")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Forbidden - no permission for this store")
             return False, "No permission for this store"
         
         elif response.status_code == 404:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Store not found")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Store not found")
             return False, "Store UUID not found"
         
         elif response.status_code == 429:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Rate limited")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Rate limited")
             return False, "Rate limited - wait before retrying"
         
         else:
             error_text = response.text[:300] if response.text else 'No details'
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Sync failed: {response.status_code} - {error_text}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Sync failed: {response.status_code} - {error_text}")
             return False, f"Sync failed ({response.status_code})"
     
     except requests.exceptions.Timeout:
-        print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Request timed out")
+        print("[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Request timed out")
         return False, "Sync request timed out"
     except requests.exceptions.ConnectionError as e:
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Connection error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Connection error: {e}")
         return False, "Unable to connect to Blaze Ecom API"
     except Exception as e:
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Unexpected error: {e}")
         return False, f"Sync error: {str(e)}"
 
 # Default Tax Rates (Hardcoded - can be overridden via tax_config.json)
@@ -908,9 +908,9 @@ PRIORITY_MAP = {
 
 # MIS Store Mapping - UPDATED
 # v12.26.1: Canonical Store Name Normalization
-# Maps ALL known MIS/raw variations → Clean Google Sheet name
+# Maps ALL known MIS/raw variations â†’ Clean Google Sheet name
 STORE_MAPPING = {
-    # Raw MIS "The Artist Tree - X" → Clean Google Sheet name
+    # Raw MIS "The Artist Tree - X" â†’ Clean Google Sheet name
     "The Artist Tree - West Hollywood": "West Hollywood",
     "The Artist Tree - Beverly Hills": "Beverly Hills",
     "The Artist Tree - Beverly": "Beverly Hills",
@@ -925,7 +925,7 @@ STORE_MAPPING = {
     "The Artist Tree - Hawthorne": "Hawthorne",
     "The Artist Tree - Dixon": "Dixon",
     "The Artist Tree - Davis": "Davis",
-    # Short MIS CSV variations → Clean Google Sheet name
+    # Short MIS CSV variations â†’ Clean Google Sheet name
     "West Hollywood": "West Hollywood",
     "Beverly": "Beverly Hills",
     "Beverly Hills": "Beverly Hills",
@@ -963,8 +963,8 @@ CSV_TARGET_STORES = ALL_STORES
 
 def normalize_store_name(raw_name: str) -> str:
     """v12.26.1: Normalize any MIS/raw store name to canonical Google Sheet name.
-    Handles: 'The Artist Tree - Fresno Shaw' → 'Fresno (Shaw)',
-             'Beverly' → 'Beverly Hills', 'Fresno' → 'Fresno (Palm)', etc.
+    Handles: 'The Artist Tree - Fresno Shaw' â†’ 'Fresno (Shaw)',
+             'Beverly' â†’ 'Beverly Hills', 'Fresno' â†’ 'Fresno (Palm)', etc.
     """
     if not raw_name:
         return raw_name
@@ -1192,9 +1192,9 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         # Check if we have any credentials at all
         if not username or not password:
             if tab_type == 'mis':
-                raise Exception("[!] [EMOJI][EMOJI][EMOJI][EMOJI] MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
+                raise Exception("[!] Ὢ8Ὢ8Ὢ8Ὢ8 MIS Login Required\n\nPlease enter MIS credentials in Setup tab before using this feature.")
             elif tab_type == 'blaze':
-                raise Exception("[!] [EMOJI][EMOJI][EMOJI][EMOJI] Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
+                raise Exception("[!] Ὢ8Ὢ8Ὢ8Ὢ8 Blaze Login Required\n\nPlease enter Blaze credentials in Setup tab before using this feature.")
         
         # Attempt login
         if tab_type == 'mis':
@@ -1236,7 +1236,7 @@ def ensure_logged_in(driver, tab_type: str, gui_username: str = '', gui_password
         
         elif tab_type == 'blaze':
             # For Blaze, just raise exception - token-based login handled elsewhere
-            raise Exception("[!] [EMOJI][EMOJI][EMOJI][EMOJI] Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
+            raise Exception("[!] Ὢ8Ὢ8Ὢ8Ὢ8 Blaze Session Expired\n\nPlease click 'Initialize Blaze Browser' to refresh your session.")
     
     # Unknown state - proceed cautiously
     return True
@@ -1580,7 +1580,7 @@ def get_api_data(token_input):
             sample = list(colls.items())[:3]
             print(f"[API] Sample collections: {sample}")
         else:
-            print("[API] [!] [EMOJI][EMOJI][EMOJI][EMOJI] WARNING: Zero collections returned!")
+            print("[API] [!] Ὢ8Ὢ8Ὢ8Ὢ8 WARNING: Zero collections returned!")
             
     except Exception as e:
         print(f"[API] [ERROR] Collections fetch failed: {e}")
@@ -1781,6 +1781,56 @@ def scrape_blaze_data_from_browser():
         
         return requirements
     
+    # v12.26.7: Parse discountRequirements for BOGO/Bundle Buy/Get quantities
+    def parse_discount_requirements(promo_data: dict) -> dict:
+        """Extract Buy/Get quantities and smart collections from discountRequirements array.
+        
+        discountRequirements[0] = Buy requirement (minAmt = Buy X)
+        discountRequirements[1] = Get reward (minAmt = Get Y), or fallback to top-level discountAmt
+        Each entry may contain smartCollectionIds for product group targeting.
+        """
+        result = {
+            'buy_qty': 1,
+            'get_qty': 1,
+            'buy_collections': [],
+            'get_collections': [],
+        }
+        
+        reqs = promo_data.get('discountRequirements')
+        if not reqs or not isinstance(reqs, list):
+            return result
+        
+        try:
+            # Buy requirement (first entry)
+            if len(reqs) >= 1 and reqs[0]:
+                buy_req = reqs[0]
+                buy_amt = buy_req.get('minAmt')
+                if buy_amt is not None:
+                    result['buy_qty'] = int(float(buy_amt))
+                # Capture smart collections tied to buy requirement
+                for cid in buy_req.get('smartCollectionIds', []):
+                    result['buy_collections'].append({'id': cid, 'name': get_group_name(cid)})
+            
+            # Get reward (second entry or fallback)
+            if len(reqs) >= 2 and reqs[1]:
+                get_req = reqs[1]
+                get_amt = get_req.get('minAmt')
+                if get_amt is not None:
+                    result['get_qty'] = int(float(get_amt))
+                # Capture smart collections tied to get reward
+                for cid in get_req.get('smartCollectionIds', []):
+                    result['get_collections'].append({'id': cid, 'name': get_group_name(cid)})
+            else:
+                # Fallback: use top-level discountAmt as get quantity
+                target = promo_data.get('target', {})
+                disc_amt = target.get('discountAmt')
+                if disc_amt is not None:
+                    result['get_qty'] = int(float(disc_amt))
+        except (IndexError, ValueError, TypeError) as e:
+            print(f"[WARN] discountRequirements parse error: {e}")
+        
+        return result
+    
     # Helper: Format time constraint
     def parse_time_constraint(tc):
         if not tc:
@@ -1790,6 +1840,25 @@ def scrape_blaze_data_from_browser():
             'start_time': tc.get('startTime', ''),
             'end_time': tc.get('endTime', '')
         }
+    
+    # v12.26.7: Parse active days from term object (boolean dict)
+    def parse_active_days(promo_data: dict) -> list:
+        """Extract weekday schedule from term.activeDays boolean dictionary.
+        
+        API returns: term.activeDays = {"monday": true, "tuesday": false, ...}
+        Returns: ["Monday", "Wednesday", "Friday"] (only true days)
+        """
+        term = promo_data.get('term')
+        if not term or not isinstance(term, dict):
+            return []
+        
+        active_days = term.get('activeDays')
+        if not active_days or not isinstance(active_days, dict):
+            return []
+        
+        # Map API keys to display names
+        day_order = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        return [day.capitalize() for day in day_order if active_days.get(day, False)]
     
     # Helper: Parse priority with robust error handling
     def parse_priority(promo_data):
@@ -1838,6 +1907,36 @@ def scrape_blaze_data_from_browser():
                 'sales_channels': p.get('salesChannels', [])
             }
             time_constraint = parse_time_constraint(p.get('timeConstraint'))
+            
+            # v12.26.7: Description fallback chain
+            # displayDescription â†’ shopDescription â†’ description â†’ ''
+            description = (
+                p.get('displayDescription')
+                or p.get('shopDescription')
+                or p.get('description')
+                or ''
+            )
+            
+            # v12.26.7: Parse BOGO/Bundle quantities from discountRequirements
+            disc_reqs = parse_discount_requirements(p)
+            
+            # v12.26.7: Parse weekday schedule from term.activeDays
+            active_days = parse_active_days(p)
+            # Merge with time_constraint â€” active_days takes priority if non-empty
+            if active_days and time_constraint:
+                time_constraint['days'] = active_days
+            elif active_days:
+                time_constraint = {'days': active_days, 'start_time': '', 'end_time': ''}
+            
+            # v12.26.7: Merge discountRequirements collections into buy/get groups
+            if disc_reqs['buy_collections']:
+                for coll in disc_reqs['buy_collections']:
+                    if not any(bg['id'] == coll['id'] for bg in buy_groups):
+                        buy_groups.append(coll)
+            if disc_reqs['get_collections']:
+                for coll in disc_reqs['get_collections']:
+                    if not any(gg['id'] == coll['id'] for gg in get_groups):
+                        get_groups.append(coll)
 
             parsed.append({
                 'ID': p.get('id'),
@@ -1851,7 +1950,7 @@ def scrape_blaze_data_from_browser():
                 'Start Date': datetime.fromtimestamp(p.get('startDate', 0)/1000).strftime('%Y-%m-%d') if p.get('startDate') else '',
                 'End Date': datetime.fromtimestamp(p.get('endDate', 0)/1000).strftime('%Y-%m-%d') if p.get('endDate') else '',
                 'auto_apply': auto_apply,
-                'description': p.get('description', ''),
+                'description': description,
                 'buy_requirements': buy_requirements,
                 'target_type': target.get('discountType', ''),
                 'target_value': target.get('discountAmt', ''),
@@ -1864,6 +1963,9 @@ def scrape_blaze_data_from_browser():
                 'max_uses_per_consumer': p.get('maxUsesPerConsumer', 'Unlimited'),
                 'restrictions': restrictions,
                 'time_constraint': time_constraint,
+                # v12.26.7: BOGO/Bundle quantities from discountRequirements
+                'buy_qty': disc_reqs['buy_qty'],
+                'get_qty': disc_reqs['get_qty'],
             })
         except Exception as inner_e:
             print(f"[ERROR] Parsing promotion failed: {inner_e}")
@@ -1896,6 +1998,42 @@ def update_single_promotion_in_memory(promo_id: str):
         p = r.json()
         target = p.get('target', {})
         
+        # v12.26.7: Description fallback chain
+        description = (
+            p.get('displayDescription')
+            or p.get('shopDescription')
+            or p.get('description')
+            or ''
+        )
+        
+        # v12.26.7: BOGO/Bundle quantities from discountRequirements
+        buy_qty = 1
+        get_qty = 1
+        disc_reqs = p.get('discountRequirements')
+        if disc_reqs and isinstance(disc_reqs, list):
+            try:
+                if len(disc_reqs) >= 1 and disc_reqs[0]:
+                    amt = disc_reqs[0].get('minAmt')
+                    if amt is not None:
+                        buy_qty = int(float(amt))
+                if len(disc_reqs) >= 2 and disc_reqs[1]:
+                    amt = disc_reqs[1].get('minAmt')
+                    if amt is not None:
+                        get_qty = int(float(amt))
+                elif target.get('discountAmt') is not None:
+                    get_qty = int(float(target['discountAmt']))
+            except (ValueError, TypeError):
+                pass
+        
+        # v12.26.7: Weekday schedule from term.activeDays
+        term = p.get('term')
+        active_days_list = []
+        if term and isinstance(term, dict):
+            ad = term.get('activeDays')
+            if ad and isinstance(ad, dict):
+                day_order = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                active_days_list = [d.capitalize() for d in day_order if ad.get(d, False)]
+        
         # Construct the row update (Matches structure of full scrape)
         new_row = {
             'ID': p.get('id'),
@@ -1907,6 +2045,11 @@ def update_single_promotion_in_memory(promo_id: str):
             'Discount Value': target.get('discountAmt'),
             'Start Date': datetime.fromtimestamp(p.get('startDate', 0)/1000).strftime('%Y-%m-%d') if p.get('startDate') else '',
             'End Date': datetime.fromtimestamp(p.get('endDate', 0)/1000).strftime('%Y-%m-%d') if p.get('endDate') else '',
+            'description': description,
+            'buy_qty': buy_qty,
+            'get_qty': get_qty,
+            # v12.26.7: Weekday schedule from term.activeDays
+            'time_constraint': {'days': active_days_list, 'start_time': '', 'end_time': ''} if active_days_list else None,
         }
         
         # UPDATE THE DATAFRAME IN MEMORY
@@ -1923,6 +2066,12 @@ def update_single_promotion_in_memory(promo_id: str):
                 df.at[row_idx, 'Discount Value'] = new_row['Discount Value']
                 df.at[row_idx, 'Start Date'] = new_row['Start Date']
                 df.at[row_idx, 'End Date'] = new_row['End Date']
+                # v12.26.7: Update new API-mapped fields
+                df.at[row_idx, 'description'] = new_row['description']
+                df.at[row_idx, 'buy_qty'] = new_row['buy_qty']
+                df.at[row_idx, 'get_qty'] = new_row['get_qty']
+                if new_row.get('time_constraint'):
+                    df.at[row_idx, 'time_constraint'] = new_row['time_constraint']
                 
                 print(f"[SYNC] Successfully updated row {promo_id} in memory.")
                 
@@ -2464,7 +2613,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         is_logged_in = len(driver.find_elements(By.ID, "daily-discount")) > 0
         
         if is_logged_in:
-            print(f"[MIS-READY] [EMOJI] Already logged in to MIS")
+            print(f"[MIS-READY] ✅ Already logged in to MIS")
             return True
         
         if is_logged_out:
@@ -2486,7 +2635,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
             # Verify we have credentials
             if not username or not password:
                 raise Exception(
-                    "[EMOJI] MIS Login Required\n\n"
+                    "🔒 MIS Login Required\n\n"
                     "MIS session has expired and no credentials are saved.\n\n"
                     "Please enter your MIS credentials in the Setup tab and try again."
                 )
@@ -2520,7 +2669,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                     EC.presence_of_element_located((By.ID, "daily-discount"))
                 )
                 
-                print(f"[MIS-READY] [EMOJI] Login successful!")
+                print(f"[MIS-READY] ✅ Login successful!")
                 
                 # Set table to show all records
                 try:
@@ -2534,7 +2683,7 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
                 
             except Exception as login_error:
                 raise Exception(
-                    f"[EMOJI] MIS Login Failed\n\n"
+                    f"❌ MIS Login Failed\n\n"
                     f"Could not log in to MIS. Please check your credentials in the Setup tab.\n\n"
                     f"Error: {str(login_error)}"
                 )
@@ -2546,13 +2695,13 @@ def ensure_mis_ready(driver, gui_username: str = '', gui_password: str = '') -> 
         
         # Check again
         if len(driver.find_elements(By.ID, "daily-discount")) > 0:
-            print(f"[MIS-READY] [EMOJI] MIS is ready")
+            print(f"[MIS-READY] ✅ MIS is ready")
             return True
         elif len(driver.find_elements(By.NAME, "email")) > 0:
             # Recursively call self to handle login
             return ensure_mis_ready(driver, gui_username, gui_password)
         else:
-            raise Exception("[EMOJI] Could not determine MIS page state. Please try Initialize again.")
+            raise Exception("⚠️ Could not determine MIS page state. Please try Initialize again.")
             
     except Exception as e:
         print(f"[MIS-READY] Error: {e}")
@@ -2763,6 +2912,15 @@ def fetch_google_sheet_data(tab_name: str) -> Dict[str, pd.DataFrame]:
             else:
                 df = pd.DataFrame(columns=clean_cols)
             final_dfs[sec] = df
+        
+        # v12.27.0: Scan for bracket headers and build alias map
+        # Reset bracket maps for fresh scan on each sheet load
+        GLOBAL_DATA['mis']['bracket_map'] = {}
+        GLOBAL_DATA['mis']['prefix_map'] = {}
+        GLOBAL_DATA['mis']['rebate_type_columns'] = []
+        for sec in final_dfs:
+            if not final_dfs[sec].empty:
+                final_dfs[sec] = scan_bracket_headers(final_dfs[sec], section_name=sec)
             
         GLOBAL_DATA['mis']['current_sheet'] = tab_name
         return final_dfs
@@ -2798,10 +2956,173 @@ def fetch_tax_rates() -> dict:
     return tax_rates
 
 def get_col(row: pd.Series, possible_names: List[str], default: Any = '') -> Any:
+    """
+    v12.27.0: Enhanced with bracket header alias resolution + prefix fallback.
+    
+    Resolution order for each name in possible_names:
+      1. bracket_map: '[Weekday]' → 'Weekday [Weekday]'
+      2. Exact match: 'Weekday' in row.index
+      3. prefix_map:  'Weekday' → 'Weekday [Weekday]' (catches old names when brackets added)
+    
+    Falls through to next name if current name doesn't resolve.
+    """
+    mis_data = GLOBAL_DATA.get('mis', {})
+    bracket_map = mis_data.get('bracket_map', {})
+    prefix_map = mis_data.get('prefix_map', {})
+    
     for name in possible_names:
-        if name in row.index and pd.notna(row[name]):
-            return row[name]
+        # 1. Bracket alias resolution: '[Weekday]' → 'Weekday [Weekday]'
+        resolved = bracket_map.get(name)
+        if resolved and resolved in row.index:
+            val = row[resolved]
+            # Guard against duplicate columns returning a Series
+            if isinstance(val, pd.Series):
+                val = val.iloc[0]
+            if pd.notna(val):
+                return val
+        
+        # 2. Exact match
+        if name in row.index:
+            val = row[name]
+            if isinstance(val, pd.Series):
+                val = val.iloc[0]
+            if pd.notna(val):
+                return val
+        
+        # 3. Prefix fallback: 'Weekday' → 'Weekday [Weekday]', 'Wholesale?' → 'Wholesale? [Rebate type]'
+        resolved_prefix = prefix_map.get(name)
+        if resolved_prefix and resolved_prefix in row.index:
+            val = row[resolved_prefix]
+            if isinstance(val, pd.Series):
+                val = val.iloc[0]
+            if pd.notna(val):
+                return val
+    
     return default
+
+
+def scan_bracket_headers(df: pd.DataFrame, section_name: str = '') -> pd.DataFrame:
+    """
+    v12.27.0: Build bracket alias maps from DataFrame column names.
+    
+    Bracket headers are embedded in the SAME cell as the original header on a new line.
+    After clean_cols (\\n → space), column names look like:
+        "Weekday [Weekday]", "Brand [Brand]", "Wholesale? [Rebate type]"
+    
+    Builds:
+        - bracket_map:  bracket name → full column name  ('[Weekday]' → 'Weekday [Weekday]')
+        - prefix_map:   old short name → full column name ('Weekday' → 'Weekday [Weekday]')
+        - rebate_type_columns: list of full column names containing [Rebate type]
+    
+    No rows are dropped — brackets are in column headers, not data rows.
+    """
+    import re
+    bracket_re = re.compile(r'\[([^\]]+)\]')
+    
+    if df.empty:
+        return df
+    
+    # Initialize maps
+    GLOBAL_DATA.setdefault('mis', {})
+    if 'bracket_map' not in GLOBAL_DATA['mis']:
+        GLOBAL_DATA['mis']['bracket_map'] = {}
+    if 'prefix_map' not in GLOBAL_DATA['mis']:
+        GLOBAL_DATA['mis']['prefix_map'] = {}
+    if 'rebate_type_columns' not in GLOBAL_DATA['mis']:
+        GLOBAL_DATA['mis']['rebate_type_columns'] = []
+    
+    for col_name in df.columns:
+        col_str = str(col_name)
+        match = bracket_re.search(col_str)
+        if not match:
+            continue
+        
+        bracket_text = match.group(1)        # e.g., "Weekday", "Rebate type"
+        bracket_name = f"[{bracket_text}]"   # e.g., "[Weekday]", "[Rebate type]"
+        prefix = col_str[:match.start()].strip()  # e.g., "Weekday", "Wholesale?"
+        
+        # v12.27.0: [Rebate type] appears under multiple columns (case-insensitive)
+        if bracket_text.lower() == 'rebate type':
+            if col_str not in GLOBAL_DATA['mis']['rebate_type_columns']:
+                GLOBAL_DATA['mis']['rebate_type_columns'].append(col_str)
+                print(f"[BRACKET-SCAN] {section_name}: [Rebate type] found in column '{col_str}'")
+        else:
+            # Map bracket name → full column name (store multiple case variants)
+            GLOBAL_DATA['mis']['bracket_map'][bracket_name] = col_str
+            GLOBAL_DATA['mis']['bracket_map'][f"[{bracket_text.lower()}]"] = col_str
+            GLOBAL_DATA['mis']['bracket_map'][f"[{bracket_text.title()}]"] = col_str
+            GLOBAL_DATA['mis']['bracket_map'][f"[{bracket_text.upper()}]"] = col_str
+            print(f"[BRACKET-SCAN] {section_name}: '{bracket_name}' → column '{col_str}' (prefix='{prefix}')")
+        
+        # Map prefix → full column name (backward compat with old get_col calls)
+        if prefix:
+            GLOBAL_DATA['mis']['prefix_map'][prefix] = col_str
+            print(f"[BRACKET-SCAN] {section_name}: prefix '{prefix}' → column '{col_str}'")
+    
+    if GLOBAL_DATA['mis']['bracket_map']:
+        print(f"[BRACKET-SCAN] {section_name}: bracket_map keys = {list(GLOBAL_DATA['mis']['bracket_map'].keys())}")
+    if GLOBAL_DATA['mis']['rebate_type_columns']:
+        print(f"[BRACKET-SCAN] {section_name}: rebate_type_columns = {GLOBAL_DATA['mis']['rebate_type_columns']}")
+    
+    return df
+
+
+def resolve_rebate_type(row: pd.Series) -> str:
+    """
+    v12.27.0: Resolve Rebate Type from bracket header system.
+    
+    When [Rebate Type] appears under both 'Wholesale?' and 'Retail?' columns,
+    this checks which column has TRUE for the given row.
+    
+    Falls back to legacy behavior (checking 'Wholesale'/'Retail' columns directly)
+    if bracket system is not active.
+    
+    Returns:
+        'Wholesale', 'Retail', or '' if neither/both are set.
+    """
+    rebate_columns = GLOBAL_DATA.get('mis', {}).get('rebate_type_columns', [])
+    truthy_values = {'TRUE', 'YES', '1', 'X', '✔', 'CHECKED'}
+    
+    if rebate_columns:
+        # v12.27.0: Bracket-based resolution — columns are full names like 'Wholesale? [Rebate type]'
+        results: Dict[str, bool] = {}
+        for col_name in rebate_columns:
+            if col_name in row.index:
+                raw_val = row[col_name]
+                if isinstance(raw_val, pd.Series):
+                    raw_val = raw_val.iloc[0]
+                val = str(raw_val).strip().upper()
+                is_true = val in truthy_values
+                # Determine label from column name prefix
+                col_lower = col_name.lower()
+                if 'wholesale' in col_lower:
+                    results['Wholesale'] = is_true
+                elif 'retail' in col_lower:
+                    results['Retail'] = is_true
+        
+        if results.get('Wholesale') and not results.get('Retail'):
+            return 'Wholesale'
+        elif results.get('Retail') and not results.get('Wholesale'):
+            return 'Retail'
+        elif results.get('Wholesale') and results.get('Retail'):
+            print(f"[REBATE-TYPE] ⚠️ Both Wholesale AND Retail are TRUE!")
+            return ''
+        else:
+            return ''
+    
+    # Legacy fallback: check Wholesale/Retail columns directly
+    wholesale_val = str(get_col(row, ['Wholesale', 'Wholesale?'], '')).strip().upper()
+    retail_val = str(get_col(row, ['Retail', 'Retail?'], '')).strip().upper()
+    
+    is_wholesale = wholesale_val in truthy_values
+    is_retail = retail_val in truthy_values
+    
+    if is_wholesale and not is_retail:
+        return 'Wholesale'
+    elif is_retail and not is_wholesale:
+        return 'Retail'
+    return ''
+
 
 def find_column_by_header_contains(row: pd.Series, search_text: str, case_sensitive: bool = False) -> Any:
     """
@@ -3150,7 +3471,7 @@ def get_all_weekdays_for_multiday_group(group_data: Dict, section_df: pd.DataFra
     weekdays = group_data.get('weekdays', [])
     
     for weekday in weekdays:
-        if weekday and weekday != '[!] [EMOJI][EMOJI]  MISSING':
+        if weekday and weekday != '[!] ⚠️⚠️  MISSING':
             dates = expand_weekday_to_dates(weekday, target_month, target_year)
             all_dates.extend(dates)
     
@@ -3169,28 +3490,28 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
     
     for g_idx, g_row in google_df.iterrows():
         # Standard Logic for all sections (Removed Sale Swap)
-        brand_raw = str(g_row.get('Brand', '')).strip()
+        brand_raw = str(get_col(g_row, ['[Brand]', 'Brand'], '')).strip()
         # v12.25.6: Updated column detection for Monthly section
         # Weekly: Uses 'Weekday', 'Day of Week' columns
         # Monthly: Uses column containing "Contracted Duration" in header (was 'Weekday/ Day of Month')
         # Sale: Uses 'Sale Runs:', 'Contracted Duration' for date ranges
         if section_type == 'weekly':
-            weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
+            weekday_raw = str(get_col(g_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip().title()
         elif section_type == 'monthly':
             weekday_raw = get_monthly_day_of_month(g_row).title()
         else:  # sale
-            weekday_raw = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+            weekday_raw = str(get_col(g_row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
         
         true_sheet_row = int(g_row['_SHEET_ROW_NUM']) if '_SHEET_ROW_NUM' in g_row else g_idx + 2
         
-        discount = parse_percentage(get_col(g_row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
-        vendor_contrib = parse_percentage(get_col(g_row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
+        discount = parse_percentage(get_col(g_row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], ''))
+        vendor_contrib = parse_percentage(get_col(g_row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
         loc_raw, exc_raw = resolve_location_columns(g_row)
         locations = format_location_display(loc_raw, exc_raw)
-        categories = format_category_display(g_row.get('Categories', ''), g_row.get('Category Exceptions', ''))
+        categories = format_category_display(get_col(g_row, ['[Category]', 'Categories'], ''), get_col(g_row, ['Category Exceptions'], ''))
         special_notes = str(g_row.get('SPECIAL NOTES', '')).strip()
         deal_info = str(get_col(g_row, ['Deal Information', 'Deal Info'], '')).strip()
         
@@ -3211,7 +3532,7 @@ def detect_multi_day_groups(google_df: pd.DataFrame, section_type: str = 'weekly
             }
         
         groups[group_id]['rows'].append(true_sheet_row)
-        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] [EMOJI][EMOJI]  MISSING')
+        groups[group_id]['weekdays'].append(weekday_raw if weekday_raw else '[!] ⚠️⚠️  MISSING')
         
         if has_missing_weekday:
             groups[group_id]['has_missing_weekday'] = True
@@ -3324,14 +3645,14 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
             continue
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
-        brand_raw = str(g_row.get('Brand', '')).strip()
+        brand_raw = str(get_col(g_row, ['[Brand]', 'Brand'], '')).strip()
         # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
-            weekday_raw = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
+            weekday_raw = str(get_col(g_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()
         elif section_type == 'monthly':
             weekday_raw = get_monthly_day_of_month(g_row)
         else:  # sale
-            weekday_raw = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+            weekday_raw = str(get_col(g_row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand_raw:
             continue
@@ -3357,9 +3678,9 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
 
         weekday_target = get_target_day(weekday_raw)
         
-        discount = parse_percentage(get_col(g_row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
-        vendor_contrib = parse_percentage(get_col(g_row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
-        category_raw = str(g_row.get('Categories', '')).strip()
+        discount = parse_percentage(get_col(g_row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], ''))
+        vendor_contrib = parse_percentage(get_col(g_row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
+        category_raw = str(get_col(g_row, ['[Category]', 'Categories'], '')).strip()
         current_sheet_id = str(get_col(g_row, ['MIS ID', 'ID'], '')).strip()
         
         # v12.1: Parse multi-brand - create separate entries for each brand
@@ -3612,12 +3933,12 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 elif match_type == 'fuzzy_partial':
                     reasoning_parts.append("(fuzzy - similar name)")
                 if linked_brand_match:
-                    reasoning_parts.append("[LB[EMOJI]]")  # Linked Brand matched
+                    reasoning_parts.append("[LB✓]")  # Linked Brand matched
                 # v12.26.0: Temporal relevance indicator
                 if temporal_tag == 'current':
-                    reasoning_parts.append("[EMOJI]Current")
+                    reasoning_parts.append("✅Current")
                 elif temporal_tag == 'expired':
-                    reasoning_parts.append("[EMOJI]Expired")
+                    reasoning_parts.append("❌Expired")
             
                 suggestions.append({
                     'mis_id': clean_mis_id,
@@ -3666,6 +3987,20 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 except:
                     pass  # Skip problematic columns
             
+            # v12.27.0: Add backward-compat alias keys for bracket columns
+            # e.g., 'Wholesale? [Rebate type]' → also add 'Wholesale?' as alias
+            # This ensures JS code using raw_row_data?.['Retail?'] still works
+            import re as _re
+            _bracket_re = _re.compile(r'\[([^\]]+)\]')
+            alias_additions = {}
+            for key, val in raw_row_data.items():
+                match = _bracket_re.search(key)
+                if match:
+                    prefix = key[:match.start()].strip()
+                    if prefix and prefix not in raw_row_data:
+                        alias_additions[prefix] = val
+            raw_row_data.update(alias_additions)
+            
             matches.append({
                 'google_row': true_sheet_row,
                 'brand': current_brand,  # v12.1: Individual brand, not full multi-brand string
@@ -3685,15 +4020,15 @@ def enhanced_match_mis_ids(google_df: pd.DataFrame, mis_df: pd.DataFrame, brand_
                 'status': status,
                 'suggestions': suggestions,
                 'locations': format_location_display(*resolve_location_columns(g_row)),
-                'categories': format_category_display(g_row.get('Categories'), g_row.get('Category Exceptions')),
+                'categories': format_category_display(get_col(g_row, ['[Category]', 'Categories'], ''), get_col(g_row, ['Category Exceptions'], '')),
                 'special_notes': str(g_row.get('SPECIAL NOTES', '')),
                 'deal_info': str(get_col(g_row, ['Deal Information', 'Deal Info'], '')),
                 'blaze_discount_title': str(get_col(g_row, ['Blaze Discount Title'], '')),  # v12.7: For auto-loading
                 'multi_day_group': group_metadata,
                 'raw_row_data': raw_row_data,  # v12.1: All Google Sheet columns for More Info
                 # v12.17: Add fields for Rebate Type auto-fill in Create popup
-                'retail': str(get_col(g_row, ['Retail'], '')).strip(),
-                'wholesale': str(get_col(g_row, ['Wholesale'], '')).strip(),
+                'retail': str(get_col(g_row, ['Retail?', 'Retail'], '')).strip(),
+                'wholesale': str(get_col(g_row, ['Wholesale?', 'Wholesale'], '')).strip(),
                 'after_wholesale': str(get_col(g_row, ['Rebate After Wholesale', 'After Wholesale', 'After Wholesale Discount', 'Rebate after Wholesale?'], '')).strip(),
                 'min_weight': str(get_col(g_row, ['Min Weight', 'Minimum Weight', 'Min'], '')).strip(),
                 'max_weight': str(get_col(g_row, ['Max Weight', 'Maximum Weight', 'Max'], '')).strip(),
@@ -3718,28 +4053,28 @@ def audit_google_vs_mis(google_df: pd.DataFrame, mis_df: pd.DataFrame, section_t
             continue
         
         # v12.13 FIX: NO COLUMN SWAPPING - use columns as-is for ALL sections
-        brand = str(g_row.get('Brand', '')).strip()
+        brand = str(get_col(g_row, ['[Brand]', 'Brand'], '')).strip()
         # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
-            weekday = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip()
+            weekday = str(get_col(g_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()
         elif section_type == 'monthly':
             weekday = get_monthly_day_of_month(g_row)
         else:  # sale
-            weekday = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+            weekday = str(get_col(g_row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
 
         if not brand:
             continue
         
         true_sheet_row = int(g_row['_SHEET_ROW_NUM']) if '_SHEET_ROW_NUM' in g_row else GLOBAL_DATA['mis'].get('header_row_idx', 0) + g_idx + 2
         
-        discount = parse_percentage(get_col(g_row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
+        discount = parse_percentage(get_col(g_row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], ''))
         special_notes = str(g_row.get('SPECIAL NOTES', '')).strip()
         deal_info = str(get_col(g_row, ['Deal Information', 'Deal Info'], '')).strip()
-        vendor_contrib = parse_percentage(get_col(g_row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
+        vendor_contrib = parse_percentage(get_col(g_row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
         
         loc_raw, exc_raw = resolve_location_columns(g_row)
         locations = format_location_display(loc_raw, exc_raw)
-        categories = format_category_display(g_row.get('Categories', ''), g_row.get('Category Exceptions', ''))
+        categories = format_category_display(get_col(g_row, ['[Category]', 'Categories'], ''), get_col(g_row, ['Category Exceptions'], ''))
         
         mis_ids_str = str(get_col(g_row, ['MIS ID', 'ID'], '')).strip()
         
@@ -3999,13 +4334,23 @@ def load_brand_settings(spreadsheet_id: str) -> Dict[str, str]:
         print("\n[DEBUG] --- Loading Brand Settings ---")
         for s in metadata.get('sheets', []):
             title = s['properties']['title']
-            if 'setting' in title.lower():
+            # v12.26.7: Check "Brand Rebate Agreements" tab first, then fall back to Settings
+            if 'brand rebate' in title.lower() or 'rebate agreement' in title.lower():
                 settings_tab_name = title
-                print(f"[DEBUG] Found settings tab: '{title}'")
+                print(f"[DEBUG] Found Brand Rebate Agreements tab: '{title}'")
                 break
         
+        # Fallback: try Settings tab if no Brand Rebate Agreements tab found
         if not settings_tab_name:
-            print("[WARN] Could not find any tab with 'Settings' in the name.")
+            for s in metadata.get('sheets', []):
+                title = s['properties']['title']
+                if 'setting' in title.lower():
+                    settings_tab_name = title
+                    print(f"[DEBUG] Fallback to settings tab: '{title}'")
+                    break
+        
+        if not settings_tab_name:
+            print("[WARN] Could not find 'Brand Rebate Agreements' or 'Settings' tab.")
             return {}
 
         # 2. Fetch data
@@ -4093,52 +4438,54 @@ def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
             print("[WARN] No sheets_service available for dropdown data")
             return result
         
-        # 1. Find the Settings tab
+        # 1. Find the Settings tab (for stores/categories) and Brand Rebate Agreements tab (for brand mapping)
         metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
         settings_tab_name = None
+        brand_rebate_tab_name = None
         
         for s in metadata.get('sheets', []):
             title = s['properties']['title']
-            if 'setting' in title.lower():
+            if 'brand rebate' in title.lower() or 'rebate agreement' in title.lower():
+                brand_rebate_tab_name = title
+            elif 'setting' in title.lower() and not settings_tab_name:
                 settings_tab_name = title
-                break
         
-        if not settings_tab_name:
-            print("[WARN] Could not find Settings tab for dropdown data")
+        # v12.26.7: Brand mapping comes from Brand Rebate Agreements tab first, Settings as fallback
+        brand_source_tab = brand_rebate_tab_name or settings_tab_name
+        # Stores/categories still come from Settings tab
+        dropdown_source_tab = settings_tab_name or brand_rebate_tab_name
+        
+        if not dropdown_source_tab:
+            print("[WARN] Could not find Settings or Brand Rebate Agreements tab for dropdown data")
             return result
         
-        # 2. Fetch entire Settings tab
+        print(f"[SETTINGS-DROPDOWN] Dropdown source: '{dropdown_source_tab}', Brand mapping source: '{brand_source_tab}'")
+        
+        # 2. Fetch Settings tab for stores/categories
         fetch_result = service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range=f"'{settings_tab_name}'!A1:Z500"
+            range=f"'{dropdown_source_tab}'!A1:Z500"
         ).execute()
         rows = fetch_result.get('values', [])
         if not rows:
             return result
         
-        print(f"[SETTINGS-DROPDOWN] Fetched {len(rows)} rows from Settings tab")
+        print(f"[SETTINGS-DROPDOWN] Fetched {len(rows)} rows from '{dropdown_source_tab}'")
         
-        # 3. Find column indices from header (row 1)
-        # Settings tab structure: A=Store Name, C=Categories, G=Brand, H=Linked Brand
+        # 3. Find column indices from header (row 1) for stores/categories
         header = rows[0] if rows else []
         header_lower = [str(h).lower().strip() for h in header]
         
         store_col_idx = -1
         category_col_idx = -1
-        brand_col_idx = -1
-        linked_brand_col_idx = -1
         
         for idx, h in enumerate(header_lower):
             if 'store name' in h or h == 'store':
                 store_col_idx = idx
             elif 'categor' in h and category_col_idx == -1:
                 category_col_idx = idx
-            elif 'linked' in h and 'brand' in h:
-                linked_brand_col_idx = idx
-            elif 'brand' in h and 'linked' not in h and 'contribution' not in h and brand_col_idx == -1:
-                brand_col_idx = idx
         
-        print(f"[SETTINGS-DROPDOWN] Columns - Store:{store_col_idx}, Category:{category_col_idx}, Brand:{brand_col_idx}, LinkedBrand:{linked_brand_col_idx}")
+        print(f"[SETTINGS-DROPDOWN] Columns - Store:{store_col_idx}, Category:{category_col_idx}")
         
         # 4. Extract Stores (skip header row, filter special values)
         if store_col_idx >= 0:
@@ -4161,14 +4508,51 @@ def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
                             result['categories'].append(category)
         
         # 6. Extract Brand -> Linked Brand map
-        if brand_col_idx >= 0 and linked_brand_col_idx >= 0:
-            for row in rows[1:]:
+        # v12.26.7: Brand mapping may come from a different tab (Brand Rebate Agreements)
+        brand_rows = rows  # Default: same tab as stores/categories
+        brand_header = header
+        brand_header_lower = header_lower
+        
+        if brand_source_tab and brand_source_tab != dropdown_source_tab:
+            # Fetch brand mapping from separate tab
+            try:
+                brand_fetch = service.spreadsheets().values().get(
+                    spreadsheetId=spreadsheet_id,
+                    range=f"'{brand_source_tab}'!A1:Z500"
+                ).execute()
+                brand_rows = brand_fetch.get('values', [])
+                if brand_rows:
+                    brand_header = brand_rows[0] if brand_rows else []
+                    brand_header_lower = [str(h).lower().strip() for h in brand_header]
+                    print(f"[SETTINGS-DROPDOWN] Fetched {len(brand_rows)} rows from '{brand_source_tab}' for brand mapping")
+                else:
+                    brand_rows = rows  # Fall back to settings rows
+                    brand_header_lower = header_lower
+            except Exception as be:
+                print(f"[WARN] Failed to fetch Brand Rebate Agreements tab: {be}")
+                brand_rows = rows
+                brand_header_lower = header_lower
+        
+        # Dynamic column detection for brand mapping
+        brand_col_idx_map = -1
+        linked_brand_col_idx_map = -1
+        
+        for idx, h in enumerate(brand_header_lower):
+            if 'linked' in h and 'brand' in h:
+                linked_brand_col_idx_map = idx
+            elif 'brand' in h and 'linked' not in h and 'contribution' not in h and brand_col_idx_map == -1:
+                brand_col_idx_map = idx
+        
+        print(f"[SETTINGS-DROPDOWN] Brand mapping columns - Brand:{brand_col_idx_map}, LinkedBrand:{linked_brand_col_idx_map}")
+        
+        if brand_col_idx_map >= 0 and linked_brand_col_idx_map >= 0:
+            for row in brand_rows[1:]:
                 brand_name = ''
                 linked_name = ''
-                if brand_col_idx < len(row):
-                    brand_name = str(row[brand_col_idx]).strip()
-                if linked_brand_col_idx < len(row):
-                    linked_name = str(row[linked_brand_col_idx]).strip()
+                if brand_col_idx_map < len(row):
+                    brand_name = str(row[brand_col_idx_map]).strip()
+                if linked_brand_col_idx_map < len(row):
+                    linked_name = str(row[linked_brand_col_idx_map]).strip()
                 
                 if brand_name and brand_name.lower() not in ['', 'nan', 'none', '-', 'brand', '* all *', '#hashtag']:
                     result['brand_linked_map'][brand_name.lower()] = linked_name
@@ -4185,6 +4569,7 @@ def load_settings_dropdown_data(spreadsheet_id: str) -> Dict[str, any]:
 def resolve_location_columns(row: pd.Series) -> Tuple[str, str]:
     """
     Logic Router for Location Columns.
+    v12.27.0: Checks [Store] bracket alias first.
     v12.25.7: Prioritizes column header containing "(Discount Applies At)" using FUZZY matching.
     Falls back to 'Locations' column if needed.
     
@@ -4192,10 +4577,19 @@ def resolve_location_columns(row: pd.Series) -> Tuple[str, str]:
     Handles multi-line headers where "Locations" and "(Discount Applies At)" are on separate lines.
     This makes the function resilient to column position changes in Google Sheet.
     """
+    # v12.27.0: Check bracket alias first
+    bracket_map = GLOBAL_DATA.get('mis', {}).get('bracket_map', {})
+    bracket_store_col = bracket_map.get('[Store]')
+    
     # 1. FUZZY FIND the "Master Switch" column
     # v12.25.7: Enhanced to handle multi-line headers and various formats
     master_col_name = None
     fallback_locations_col = None  # Pure "Locations" column (not Marketing)
+    
+    # v12.27.0: Bracket alias takes priority
+    if bracket_store_col and bracket_store_col in row.index:
+        master_col_name = bracket_store_col
+        print(f"[LOCATION] v12.27.0: Using [Store] bracket → column '{bracket_store_col}'")
     
     # DEBUG: Print all column names once per unique set (helps diagnose column detection)
     debug_cols = [str(col) for col in row.index]
@@ -4203,26 +4597,28 @@ def resolve_location_columns(row: pd.Series) -> Tuple[str, str]:
         resolve_location_columns._logged_cols = debug_cols
         print(f"[LOCATION-DEBUG] Available columns: {debug_cols}")
     
-    for col in row.index:
-        col_str = str(col)
-        c_lower = col_str.lower().replace('\n', ' ')  # Normalize newlines to spaces
-        
-        # Primary match: "(discount applies at)" with parentheses
-        if '(discount applies at)' in c_lower:
-            master_col_name = col
-            print(f"[LOCATION] Found primary match: '{col_str}'")
-            break
-        # Secondary match: "discount applies" without parentheses
-        if master_col_name is None and 'discount' in c_lower and 'applies' in c_lower:
-            master_col_name = col
-            print(f"[LOCATION] Found secondary match (discount+applies): '{col_str}'")
-        # Fallback: "locations" column that is NOT the marketing column
-        if fallback_locations_col is None:
-            if 'locations' in c_lower and 'marketing' not in c_lower:
-                # Check if it starts with "locations" or is primarily a locations column
-                if c_lower.startswith('locations') or 'locations' in c_lower.split()[0] if c_lower.split() else False:
-                    fallback_locations_col = col
-                    print(f"[LOCATION] Found fallback 'Locations' column: '{col_str}'")
+    # v12.27.0: Only do fuzzy scan if bracket alias didn't resolve
+    if master_col_name is None:
+        for col in row.index:
+            col_str = str(col)
+            c_lower = col_str.lower().replace('\n', ' ')  # Normalize newlines to spaces
+            
+            # Primary match: "(discount applies at)" with parentheses
+            if '(discount applies at)' in c_lower:
+                master_col_name = col
+                print(f"[LOCATION] Found primary match: '{col_str}'")
+                break
+            # Secondary match: "discount applies" without parentheses
+            if master_col_name is None and 'discount' in c_lower and 'applies' in c_lower:
+                master_col_name = col
+                print(f"[LOCATION] Found secondary match (discount+applies): '{col_str}'")
+            # Fallback: "locations" column that is NOT the marketing column
+            if fallback_locations_col is None:
+                if 'locations' in c_lower and 'marketing' not in c_lower:
+                    # Check if it starts with "locations" or is primarily a locations column
+                    if c_lower.startswith('locations') or 'locations' in c_lower.split()[0] if c_lower.split() else False:
+                        fallback_locations_col = col
+                        print(f"[LOCATION] Found fallback 'Locations' column: '{col_str}'")
     
     # Use fallback if no primary match found
     if master_col_name is None and fallback_locations_col is not None:
@@ -4320,14 +4716,14 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
             continue
         
         # Standard Logic for all sections (Removed Sale Swap)
-        brand_raw = str(g_row.get('Brand', '')).strip()
+        brand_raw = str(get_col(g_row, ['[Brand]', 'Brand'], '')).strip()
         # v12.25.6: Updated column detection for Monthly section
         if section_type == 'weekly':
-            weekday_val_input = str(get_col(g_row, ['Weekday', 'Day of Week'], '')).strip().title()
+            weekday_val_input = str(get_col(g_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip().title()
         elif section_type == 'monthly':
             weekday_val_input = get_monthly_day_of_month(g_row).title()
         else:  # sale
-            weekday_val_input = str(get_col(g_row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
+            weekday_val_input = str(get_col(g_row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip().title()
 
         if not brand_raw:
             continue
@@ -4350,7 +4746,7 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
             ref_row = google_df[google_df['_SHEET_ROW_NUM'] == ref_row_num].iloc[0]
             
             # Combine weekdays
-            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] [EMOJI][EMOJI]  MISSING']
+            raw_weekdays = [w for w in group_data['weekdays'] if w and w != '[!] ⚠️⚠️  MISSING']
             # For sale dates, sort by date logic? For now, keep simple sort.
             unique_weekdays = sorted(list(set(raw_weekdays)), key=get_weekday_sort_key)
             weekday_val = ', '.join(unique_weekdays)
@@ -4368,7 +4764,7 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
                 row_day_combo.append(f"(Row {r_num}) ({d_name})")
             
             multi_day_details.append({
-                'brand': str(ref_row.get('Brand', '')).strip(), # Note: This might need swap logic if ref_row used directly
+                'brand': str(get_col(ref_row, ['[Brand]', 'Brand'], '')).strip(),  # v12.27.0
                 'title_meta': f"({len(unique_weekdays)} Days)",
                 'body_data': ", ".join(row_day_combo)
             })
@@ -4378,10 +4774,10 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
                 
                 # Handle swap for notes
                 if section_type == 'sale':
-                    day_val = str(sub_row.get('Brand', '')).strip()
+                    day_val = str(get_col(sub_row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 elif section_type == 'weekly':
                     # v12.25.6: Weekly uses 'Weekday', 'Day of Week' columns
-                    day_val = str(get_col(sub_row, ['Weekday', 'Day of Week'], '')).strip()
+                    day_val = str(get_col(sub_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()
                 else:
                     # v12.25.6: Monthly uses column containing "Contracted Duration"
                     day_val = get_monthly_day_of_month(sub_row)
@@ -4405,11 +4801,11 @@ def generate_mis_csv_with_multiday(google_df: pd.DataFrame, section_type: str = 
             info_val = str(get_col(g_row, ['Deal Information', 'Deal Info'], '')).strip()
             if info_val: deal_info_package.append({'row': true_sheet_row, 'day': weekday_val, 'info': info_val})
             
-        discount = parse_percentage(get_col(data_source, ['Deal Discount Value/Type', 'Deal Discount'], ''))
-        vendor_contrib = parse_percentage(get_col(data_source, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
+        discount = parse_percentage(get_col(data_source, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], ''))
+        vendor_contrib = parse_percentage(get_col(data_source, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
         
-        cat_raw = str(data_source.get('Categories', ''))
-        cat_exc = str(data_source.get('Category Exceptions', ''))
+        cat_raw = str(get_col(data_source, ['[Category]', 'Categories'], ''))  # v12.27.0
+        cat_exc = str(get_col(data_source, ['Category Exceptions'], ''))
         categories = format_csv_categories(cat_raw, cat_exc)
         
         start_date, end_date = parse_end_date(get_col(data_source, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration'], ''))
@@ -4655,11 +5051,11 @@ class BlazeInventoryReporter:
                     if start > total_server and total_server > 0:
                         break
                 else:
-                    self.log(f"[!] [EMOJI][EMOJI] API Error {r.status_code}: {r.text[:50]}")
+                    self.log(f"[!] ⚠️⚠️ API Error {r.status_code}: {r.text[:50]}")
                     break
                     
             except Exception as e:
-                self.log(f"[!] [EMOJI][EMOJI] Connection Error: {e}")
+                self.log(f"[!] ⚠️⚠️ Connection Error: {e}")
                 break
                 
         return all_products
@@ -6549,7 +6945,7 @@ HTML_TEMPLATE = r"""
                 </div>
                 <div id="conflict-section" class="sub-section">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h2>[!] [EMOJI][EMOJI] Conflict Audit</h2>
+                        <h2>[!] ⚠️⚠️ Conflict Audit</h2>
                         <div>
                             <span id="conflict-stats" class="badge bg-secondary fs-6 me-2">Ready to Scan</span>
                             <button class="btn btn-warning fw-bold" onclick="runConflictAudit()">
@@ -7191,7 +7587,7 @@ HTML_TEMPLATE = r"""
                                         <input class="form-check-input" type="checkbox" id="invHideZeroQty" 
                                                onchange="applyInventoryFilters()">
                                         <label class="form-check-label small" for="invHideZeroQty">
-                                            &#x261E;[EMOJI][EMOJI] Hide 0 Qty
+                                            &#x261E; Hide 0 Qty
                                         </label>
                                     </div>
                                 </div>
@@ -7239,7 +7635,7 @@ HTML_TEMPLATE = r"""
     <div id="brand-sticky-popup" class="brand-popup">
         <div class="brand-popup-header">
             <span>Select Brand</span>
-            <span class="brand-popup-close" onclick="closeBrandPopup()">X[EMOJI][EMOJI]</span>
+            <span class="brand-popup-close" onclick="closeBrandPopup()">✕</span>
         </div>
         <div class="brand-popup-body" id="brand-popup-list"></div>
     </div>
@@ -7274,8 +7670,8 @@ HTML_TEMPLATE = r"""
                         </div>
                         <div class="alert alert-info mt-3 small">
                             <strong>&#x1F4A1; Export Format:</strong><br>
-                            &#x2022; 1 tab selected ->[EMOJI] CSV file<br>
-                            &#x2022; Multiple tabs ->[EMOJI] Excel workbook (.xlsx) with separate sheets
+                            &#x2022; 1 tab selected → CSV file<br>
+                            &#x2022; Multiple tabs → Excel workbook (.xlsx) with separate sheets
                         </div>
                     </div>
                 </div>
@@ -7493,7 +7889,7 @@ HTML_TEMPLATE = r"""
             
             try {
                 // Update button to show loading state
-                btn.innerHTML = '[EMOJI] Injecting...';
+                btn.innerHTML = '⏳ Injecting...';
                 btn.disabled = true;
                 btn.style.opacity = '0.7';
                 
@@ -7506,7 +7902,7 @@ HTML_TEMPLATE = r"""
                 
                 if (result.success) {
                     // Success - flash green
-                    btn.innerHTML = '[EMOJI] Injected!';
+                    btn.innerHTML = '✅ Injected!';
                     btn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
                     
                     // Show notification
@@ -7519,7 +7915,7 @@ HTML_TEMPLATE = r"""
                     }, 2000);
                 } else {
                     // Error
-                    btn.innerHTML = '[EMOJI] Failed';
+                    btn.innerHTML = '❌ Failed';
                     btn.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
                     
                     showToast(result.error || 'Failed to inject validation code', 'error');
@@ -7533,7 +7929,7 @@ HTML_TEMPLATE = r"""
                 }
             } catch (error) {
                 console.error('Re-inject validation error:', error);
-                btn.innerHTML = '[EMOJI] Error';
+                btn.innerHTML = '❌ Error';
                 btn.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
                 
                 showToast('Failed to connect to server. Is the browser initialized?', 'error');
@@ -7807,7 +8203,7 @@ HTML_TEMPLATE = r"""
                             element: row,
                             members: memberRows
                         });
-                        console.log(`[BREAKDOWN]   [EMOJI] Added group to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   ✅ Added group to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -7855,7 +8251,7 @@ HTML_TEMPLATE = r"""
                                     days: abbrDays,
                                     brandRowMap: brandRowMap
                                 });
-                                console.log(`[BREAKDOWN]   [EMOJI] Added header note to ${day} bucket`);
+                                console.log(`[BREAKDOWN]   ✅ Added header note to ${day} bucket`);
                             }
                         });
                         
@@ -7876,7 +8272,7 @@ HTML_TEMPLATE = r"""
                                         members: dayMembers,
                                         firstWeekday: firstWeekday
                                     });
-                                    console.log(`[BREAKDOWN]   [EMOJI] Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
+                                    console.log(`[BREAKDOWN]   ✅ Added multi-day reference to ${day} bucket (${dayMembers.length} members)`);
                                 }
                             }
                         });
@@ -7908,7 +8304,7 @@ HTML_TEMPLATE = r"""
                             type: 'dom',
                             element: row
                         });
-                        console.log(`[BREAKDOWN]   [EMOJI] Added single row to ${firstWeekday} bucket`);
+                        console.log(`[BREAKDOWN]   ✅ Added single row to ${firstWeekday} bucket`);
                     } else {
                         console.log(`[BREAKDOWN]   ERROR: Bucket "${firstWeekday}" not found!`);
                     }
@@ -8000,7 +8396,7 @@ HTML_TEMPLATE = r"""
                         <td colspan="14" style="padding:6px 10px; background:#ffe6f0; cursor:pointer; border:2px solid #ff69b4;" 
                             onclick="toggleMultiDayRefs('${day}')">
                             <div style="display:flex; align-items:center; gap:10px;">
-                                <span id="multi-day-toggle-${day}" style="font-size:1em; color:#c2185b;">[EMOJI]</span>
+                                <span id="multi-day-toggle-${day}" style="font-size:1em; color:#c2185b;">▶</span>
                                 <strong style="color:#c2185b; font-size:0.95em;">Multi Day Deals Present:</strong>
                                 <span style="color:#c2185b; font-size:0.85em;">${brandsList}</span>
                             </div>
@@ -8170,7 +8566,7 @@ HTML_TEMPLATE = r"""
                 <td colspan="14" style="padding:8px 10px; background:#00ffff; cursor:pointer;" onclick="toggleWeekdaySection('${weekday}')">
                     <div style="display:flex; align-items:flex-start; gap:15px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span id="weekday-toggle-${weekday}" style="font-size:1.2em; color:#003366;">[EMOJI]</span>
+                            <span id="weekday-toggle-${weekday}" style="font-size:1.2em; color:#003366;">▶</span>
                             <strong style="font-size:1.4em; color:#003366; min-width:120px;">${weekday}</strong>
                         </div>
                         <span style="color:#003366; font-size:0.9em; align-self:center;">${statusText}</span>
@@ -8228,7 +8624,7 @@ HTML_TEMPLATE = r"""
             
             // Update toggle icon
             if (toggleIcon) {
-                toggleIcon.textContent = isCurrentlyVisible ? '[EMOJI]' : '[EMOJI]';
+                toggleIcon.textContent = isCurrentlyVisible ? '▼' : '▶';
             }
         }
         
@@ -8247,7 +8643,7 @@ HTML_TEMPLATE = r"""
             
             // Update toggle icon
             if (toggleIcon) {
-                toggleIcon.textContent = isCurrentlyVisible ? '[EMOJI]' : '[EMOJI]';
+                toggleIcon.textContent = isCurrentlyVisible ? '▼' : '▶';
             }
         }
         
@@ -8476,7 +8872,7 @@ HTML_TEMPLATE = r"""
                     html += '</div>';
                     
                     // TABLE 2: Conflict Deal (Interrupting)
-                    html += '<h6 class="text-danger mb-2">[!][EMOJI] Conflict Deal (' + split.interrupting_deal_type + ')</h6>';
+                    html += '<h6 class="text-danger mb-2">[!]⚠️ Conflict Deal (' + split.interrupting_deal_type + ')</h6>';
                     html += '<div class="table-responsive mb-3">';
                     html += '<table class="table table-sm table-bordered" style="font-size:0.85em; table-layout:fixed; width:100%;">';
                     html += '<thead class="table-warning"><tr>';
@@ -8932,7 +9328,7 @@ HTML_TEMPLATE = r"""
                 document.getElementById('automate-loading')?.remove();
                 
                 if (data.success) {
-                    alert('[EMOJI] End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('✅ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                     
                     // Visual feedback on the row
                     const row = document.getElementById('split-row-' + splitIdx + '-' + stepIdx);
@@ -9019,7 +9415,7 @@ HTML_TEMPLATE = r"""
                 weekday: weekdayValue,
                 categories: sourceData.categories || '',
                 locations: sourceData.locations || '',
-                // v12.26.4: Use ?? (nullish coalescing) — 0 is valid, only null/undefined → ''
+                // v12.26.4: Use ?? (nullish coalescing) â€” 0 is valid, only null/undefined â†’ ''
                 discount: String(sourceData.discount ?? '').replace('%', ''),
                 vendor_contrib: String(sourceData.vendor_contrib ?? '').replace('%', ''),
                 rebate_type: rebateType,
@@ -9028,7 +9424,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
 
-            // v12.26.4: step overrides — check != null to allow 0 values
+            // v12.26.4: step overrides â€” check != null to allow 0 values
             if (step.discount != null && String(step.discount) !== '') preFlightData.discount = String(step.discount).replace('%', '');
             if (step.vendor_contrib != null && String(step.vendor_contrib) !== '') preFlightData.vendor_contrib = String(step.vendor_contrib).replace('%', '');
 
@@ -9094,7 +9490,7 @@ HTML_TEMPLATE = r"""
                 if (!locationStr) return [];
                 
                 // Handle "All Locations Except:" logic
-                // Example: "All Locations Except: Davis, Hawthorne" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Returns 10 stores (all except Davis, Hawthorne)
+                // Example: "All Locations Except: Davis, Hawthorne" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Returns 10 stores (all except Davis, Hawthorne)
                 if (locationStr.toLowerCase().includes('all locations')) {
                     if (locationStr.toLowerCase().includes('except')) {
                         // v12.21.4: FIXED - Return all stores EXCEPT the listed ones
@@ -9118,7 +9514,7 @@ HTML_TEMPLATE = r"""
                                 .map(s => s.trim())
                                 .filter(s => s.length > 0);  // Remove empty strings
                             
-                            // Step 3: Expand exception codes (e.g., "DV" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Davis")
+                            // Step 3: Expand exception codes (e.g., "DV" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ "Davis")
                             const exceptions = exceptionsRaw.map(code => 
                                 locationCodeMap[code.toLowerCase()] || code
                             );
@@ -9137,24 +9533,24 @@ HTML_TEMPLATE = r"""
                                     const excLower = exc.toLowerCase();
                                     const matches = excLower === storeLower;
                                     if (matches) {
-                                        console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ EXCLUDING: "${store}" (matches exception "${exc}")`);
+                                        console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ EXCLUDING: "${store}" (matches exception "${exc}")`);
                                     }
                                     return matches;
                                 });
                                 
                                 if (!isExcluded) {
-                                    console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ KEEPING: "${store}"`);
+                                    console.log(`  ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ KEEPING: "${store}"`);
                                 }
                                 
                                 return !isExcluded;
                             });
                             
                             console.log('  Final Result (Master - Exceptions):', result);
-                            console.log(`  Summary: ${masterList.length} total ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ${exceptions.length} excluded ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ ${result.length} remaining`);
+                            console.log(`  Summary: ${masterList.length} total ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ ${exceptions.length} excluded ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ ${result.length} remaining`);
                             return result;
                         }
                     }
-                    // Just "All Locations" with no exceptions ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ return empty array (auto-selects all)
+                    // Just "All Locations" with no exceptions ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ return empty array (auto-selects all)
                     console.log('[SMART-LOCATION] All Locations (no exceptions) - returning empty array');
                     return [];
                 }
@@ -9166,7 +9562,7 @@ HTML_TEMPLATE = r"""
                     return locationCodeMap[codeLower] || code; // Use mapping or original if not found
                 });
                 
-                console.log('[SMART-LOCATION] Expanded:', locationStr, 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢', expanded);
+                console.log('[SMART-LOCATION] Expanded:', locationStr, 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢', expanded);
                 return expanded;
             }
             
@@ -9289,7 +9685,7 @@ HTML_TEMPLATE = r"""
                 linkedBrandOptionsHtml += brandOptions.map(opt => {
                     const sel = data.linked_brand && opt.toLowerCase() === data.linked_brand.toLowerCase() ? ' selected' : '';
                     if (sel) {
-                        console.log(`[LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
+                        console.log(`[LINKED-BRAND-DROPDOWN] ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ SELECTED: "${opt}" (matches data.linked_brand: "${data.linked_brand}")`);
                     }
                     return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
@@ -9298,7 +9694,7 @@ HTML_TEMPLATE = r"""
             console.log('[LINKED-BRAND-DROPDOWN] Final linkedBrandOptionsHtml length:', linkedBrandOptionsHtml.length);
             
             popup.innerHTML = '<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:2px solid #4a90d9;border-radius:12px;padding:25px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;color:#fff;">' +
-                '<h3 style="margin:0 0 20px 0;color:#4a90d9;">[EMOJI] Pre-Flight Confirmation <span style="font-size:12px;color:#888;">(Row ' + googleRow + ')</span></h3>' +
+                '<h3 style="margin:0 0 20px 0;color:#4a90d9;">🚀 Pre-Flight Confirmation <span style="font-size:12px;color:#888;">(Row ' + googleRow + ')</span></h3>' +
                 '<p style="color:#aaa;font-size:13px;margin-bottom:20px;">Review and modify values. <strong style="color:#ffc107;">Ctrl+Click for multi-select</strong></p>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">' +
                 '<div><label style="font-size:12px;color:#aaa;">Brand</label><select id="pf-brand" style="width:100%;padding:8px;border:1px solid #4a90d9;border-radius:4px;background:#2a2a4a;color:#fff;">' + brandOptionsHtml + '</select></div>' +
@@ -9344,13 +9740,13 @@ HTML_TEMPLATE = r"""
                 '<input type="hidden" id="pf-original-rebate-type" value="' + (data.rebate_type || '') + '">' +
                 '<input type="hidden" id="pf-original-after-wholesale" value="' + (data.after_wholesale ? 'true' : 'false') + '">' +
                 '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:25px;padding-top:15px;border-top:1px solid #4a90d9;">' +
-                '<button id="pf-cancel" style="padding:10px 25px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:6px;cursor:pointer;">[EMOJI] Cancel</button>' +
-                '<button id="pf-continue" style="padding:10px 25px;border:none;background:linear-gradient(135deg,#28a745,#20c997);color:white;border-radius:6px;cursor:pointer;font-weight:600;">[EMOJI] Continue to MIS</button>' +
+                '<button id="pf-cancel" style="padding:10px 25px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:6px;cursor:pointer;">❌ Cancel</button>' +
+                '<button id="pf-continue" style="padding:10px 25px;border:none;background:linear-gradient(135deg,#28a745,#20c997);color:white;border-radius:6px;cursor:pointer;font-weight:600;">🚀 Continue to MIS</button>' +
                 '</div></div>';
             
             document.body.appendChild(popup);
             
-            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years)
+            // v12.20: Initialize date dropdowns (Day: 1-31, Year: current ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±2 years)
             const currentYear = new Date().getFullYear();
             const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
             
@@ -10468,9 +10864,9 @@ HTML_TEMPLATE = r"""
                         // Badge text: show days and brands info for multi-brand
                         let badgeText = '';
                         if (isMultiBrandGroup) {
-                            badgeText = `[EMOJI] ${groupData.total_days}-Day [EMOJI] ${totalBrands}-Brand Deal`;
+                            badgeText = `📅 ${groupData.total_days}-Day 🏷 ${totalBrands}-Brand Deal`;
                         } else {
-                            badgeText = `[EMOJI] ${groupData.total_days}-Day Deal`;
+                            badgeText = `📅 ${groupData.total_days}-Day Deal`;
                         }
                         
                         // Button text: use total entries for multi-brand
@@ -10748,7 +11144,7 @@ HTML_TEMPLATE = r"""
             
             if (toggleIcon) {
                 toggleIcon.classList.toggle('collapsed');
-                toggleIcon.textContent = toggleIcon.classList.contains('collapsed') ? '->[EMOJI]' : '->[EMOJI]';
+                toggleIcon.textContent = toggleIcon.classList.contains('collapsed') ? '▶' : '▼';
             }
         }
 
@@ -10977,7 +11373,7 @@ HTML_TEMPLATE = r"""
                         brands: existingBrands,
                         section: match.section || 'weekly',
                         is_multi_brand: true,
-                        blaze_titles: existingBlazeTitles  // [EMOJI] PRESERVE blaze_titles
+                        blaze_titles: existingBlazeTitles  // 💾 PRESERVE blaze_titles
                     };
                     console.log(`[MULTI-BRAND] Row ${match.google_row}: Added ${match.brand} (${newMisId}). Total: ${existingIds.length} brands`);
                 } else {
@@ -10997,7 +11393,7 @@ HTML_TEMPLATE = r"""
                     brands: [match.brand],
                     section: match.section || 'weekly',
                     is_multi_brand: match.is_multi_brand || false,
-                    blaze_titles: existingBlazeTitles  // [EMOJI] PRESERVE blaze_titles
+                    blaze_titles: existingBlazeTitles  // 💾 PRESERVE blaze_titles
                 };
             }
             
@@ -11518,7 +11914,7 @@ HTML_TEMPLATE = r"""
             // --- v12.24.8: ASSIGNED MIS ID SECTION (supports multiple IDs, proper comparison) ---
             const assignedMisIdRaw = match.current_sheet_id ? String(match.current_sheet_id).trim() : '';
             
-            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ "12345")
+            // v12.24.7: Helper to clean MIS ID by stripping tag prefixes (e.g., "W1 12345" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "12345")
             const cleanMisId = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -11532,7 +11928,7 @@ HTML_TEMPLATE = r"""
                 return str;
             };
             
-            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ "W1")
+            // v12.24.8: Extract tag from raw MIS ID (e.g., "W1 12345" ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ "W1")
             const extractTag = (rawId) => {
                 if (!rawId) return '';
                 const str = String(rawId).trim();
@@ -11716,7 +12112,7 @@ HTML_TEMPLATE = r"""
                 const sheet = parseLocationSet(sheetLocations);
                 const mis = parseLocationSet(misLocations);
 
-                // Both All → GREEN
+                // Both All â†’ GREEN
                 if (sheet.isAll && mis.isAll) return GREEN;
 
                 // Compare as normalized sets (handles All Except vs explicit list)
@@ -11732,7 +12128,7 @@ HTML_TEMPLATE = r"""
                 html += `
                     <div style="margin-bottom:20px;">
                         <h6 style="color:#198754; margin-bottom:10px; border-bottom:2px solid #198754; padding-bottom:5px;">
-                            ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Currently Assigned in Google Sheet
+                            ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Currently Assigned in Google Sheet
                             ${assignedMisIds.length > 1 ? '<small style="color:#6c757d; font-weight:normal;"> (' + assignedMisIds.length + ' IDs)</small>' : ''}
                         </h6>
                         <div style="overflow-x:auto;">
@@ -11840,7 +12236,7 @@ HTML_TEMPLATE = r"""
                                             <select id="end-day-assigned-${aIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                             <select id="end-year-assigned-${aIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                             <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate('assigned', ${aIdx}, '${cleanId}')">Update</button>
-                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢</button>
+                                            <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor('assigned', ${aIdx})">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</button>
                                         </div>
                                     </div>
                                 </td>
@@ -11979,7 +12375,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Add warning if MIS needs linked brand
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Needs Linked Brand</span>';
                     }
                 } else {
                     // Not a Continue - show as NEW ENTRY
@@ -11997,7 +12393,7 @@ HTML_TEMPLATE = r"""
                     }
                     // v12.1: Also show needs linked brand warning for NEW ENTRY
                     if (continueCheck.needsLinkedBrand) {
-                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Needs Linked Brand</span>';
+                        continueIndicator += '<br><span style="color:#856404; font-size:0.65em; background:#fff3cd; padding:1px 3px; border-radius:2px;" title="Google Sheet has Linked Brand but MIS entry does not">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Needs Linked Brand</span>';
                     }
                 }
                 
@@ -12051,7 +12447,7 @@ HTML_TEMPLATE = r"""
                                     <select id="end-day-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:55px; padding:2px;"></select>
                                     <select id="end-year-${rowIdx}-${sIdx}" class="form-select form-select-sm" style="width:70px; padding:2px;"></select>
                                     <button class="btn btn-sm btn-success py-0 px-2" onclick="updateMisEndDate(${rowIdx}, ${sIdx}, '${s.mis_id}')">Update</button>
-                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢</button>
+                                    <button class="btn btn-sm btn-secondary py-0 px-1" onclick="cancelEndDateEditor(${rowIdx}, ${sIdx})">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</button>
                                 </div>
                             </div>
                         </td>
@@ -12275,7 +12671,7 @@ HTML_TEMPLATE = r"""
                     // Update the display in the Suggestions popup
                     const displayEl = document.getElementById(`end-date-display-${rowIdx}-${sIdx}`);
                     if (displayEl) {
-                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${newEndDate}</span>`;
+                        displayEl.innerHTML = `<span style="color:#155724; font-weight:bold;">ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ ${newEndDate}</span>`;
                     }
                     
                     // Hide the editor
@@ -12284,7 +12680,7 @@ HTML_TEMPLATE = r"""
                         editorEl.style.display = 'none';
                     }
                     
-                    alert('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
+                    alert('ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ End Date updated to ' + newEndDate + '\\n\\nPlease review and click Save in MIS if everything looks correct.\\n\\nValidation is active - check the banner for any warnings.');
                 } else {
                     alert('Error updating end date: ' + (data.error || 'Unknown error'));
                 }
@@ -12298,7 +12694,7 @@ HTML_TEMPLATE = r"""
         // v12.3: CREATE DEAL IN MIS - Functions
         // ============================================
         
-        // v12.21: Adapter function for ID Matcher ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ Unified Pre-Flight
+        // v12.21: Adapter function for ID Matcher ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Unified Pre-Flight
         async function useUnifiedPreFlightForIDMatcher(rowIdx) {
             const match = matchesData[rowIdx];
             if (!match) {
@@ -12338,7 +12734,7 @@ HTML_TEMPLATE = r"""
             
             const categories = match.categories || '';
             const locations = match.locations || '';
-            // v12.26.4: Use ?? (nullish coalescing) — 0 is valid, only null/undefined → ''
+            // v12.26.4: Use ?? (nullish coalescing) â€” 0 is valid, only null/undefined â†’ ''
             const discount = String(match.discount ?? '').replace('%', '');
             const vendorContrib = String(match.vendor_contrib ?? '').replace('%', '');
             
@@ -12449,7 +12845,7 @@ HTML_TEMPLATE = r"""
                 end_date: endDate
             };
             
-            console.log('[ID-MATCHER ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ PRE-FLIGHT] Converted data:', preFlightData);
+            console.log('[ID-MATCHER ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ PRE-FLIGHT] Converted data:', preFlightData);
             
             // Call unified Pre-Flight popup
             openUnifiedPreFlight(preFlightData, match.google_row, match.section_type || 'weekly', null, null);
@@ -12484,7 +12880,7 @@ HTML_TEMPLATE = r"""
             let parsedEndDate = null;
             const dateRaw = match.date_raw || '';
             if (dateRaw) {
-                const rangeMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-[EMOJI]]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+                const rangeMatch = dateRaw.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-–]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
                 if (rangeMatch) {
                     parsedStartDate = {
                         month: rangeMatch[1].padStart(2, '0'),
@@ -12575,7 +12971,7 @@ HTML_TEMPLATE = r"""
             popup.innerHTML = `
                 <h5 style="margin-bottom:15px; color:${titleColor}; border-bottom:2px solid ${titleColor}; padding-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
                     <span><i class="bi bi-plus-circle"></i> ${popupTitle}</span>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="loadSettingsDropdownData(true).then(() => alert('Settings refreshed!'))" title="Refresh Settings">[EMOJI]</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="loadSettingsDropdownData(true).then(() => alert('Settings refreshed!'))" title="Refresh Settings">🔄</button>
                 </h5>
                 
                 <div class="alert alert-secondary" style="font-size:0.85em; padding:10px;">
@@ -12959,9 +13355,9 @@ HTML_TEMPLATE = r"""
                 document.getElementById('create-deal-loading')?.remove();
                 
                 if (data.success) {
-                    let message = '[EMOJI] Deal created in MIS!\\n\\n';
+                    let message = '✅ Deal created in MIS!\\n\\n';
                     if (data.warnings && data.warnings.length > 0) {
-                        message += '[EMOJI] Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
+                        message += '⚠️ Warnings:\\n' + data.warnings.join('\\n') + '\\n\\n';
                     }
                     message += 'Please review and click Save in MIS if everything looks correct.';
                     alert(message);
@@ -13481,7 +13877,7 @@ HTML_TEMPLATE = r"""
                 <div style="margin-bottom: 15px;">
                     <h6 style="color: #6c757d; border-bottom: 1px solid #6c757d; padding-bottom: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px;" 
                         onclick="toggleFullLibrary()">
-                        <span id="library-toggle-icon">[EMOJI]</span>
+                        <span id="library-toggle-icon">▼</span>
                         <i class="bi bi-collection"></i> Full Library (${blazeModalData.allPromotions.length})
                     </h6>
                     <div id="full-library-content" style="display: none;">
@@ -13961,7 +14357,7 @@ HTML_TEMPLATE = r"""
             
             const isCurrentlyVisible = content.style.display !== 'none';
             content.style.display = isCurrentlyVisible ? 'none' : 'block';
-            icon.textContent = isCurrentlyVisible ? '[EMOJI]' : '[EMOJI]';
+            icon.textContent = isCurrentlyVisible ? '▼' : '▶';
         }
         
         // v12.7: Create Blaze Discount Modal and Automation
@@ -14296,13 +14692,13 @@ HTML_TEMPLATE = r"""
                             renderedGroups.add(groupId);
                             const groupData = r.multi_day_group;
                             const hasMissingWeekday = groupData.has_missing_weekday;
-                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] [EMOJI][EMOJI] </span>' : '';
+                            const warningIcon = hasMissingWeekday ? '<span class="weekday-missing-icon">[!] ⚠️⚠️ </span>' : '';
                             
                             sectionHtml += `<tr class="group-header-row" onclick="toggleGroup('${groupId}')" title="Click to collapse/expand">`;
                             sectionHtml += `<td colspan="13">`;
-                            sectionHtml += `<span class="group-toggle-icon" id="toggle-${groupId}">->[EMOJI]</span>`;
+                            sectionHtml += `<span class="group-toggle-icon" id="toggle-${groupId}">→</span>`;
                             sectionHtml += `${warningIcon}<strong>${r.brand}</strong>`;
-                            sectionHtml += `<span class="multi-day-badge">&#x3030;[EMOJI][EMOJI][EMOJI][EMOJI] ${groupData.total_days}-Day Deal</span>`;
+                            sectionHtml += `<span class="multi-day-badge">&#x3030;📅 ${groupData.total_days}-Day Deal</span>`;
                             sectionHtml += ` (Rows: ${groupData.row_numbers.join(', ')})`;
                             sectionHtml += `</td></tr>`;
                             
@@ -14500,7 +14896,7 @@ async function autoAuthenticateGoogle() {
                     document.getElementById('auth-status').innerHTML = '<p class="alert alert-success">[OK] Auto-authenticated successfully!</p>';
                     console.log('[AUTO-AUTH] Google Sheets authenticated');
                 } else {
-                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] [EMOJI][EMOJI]  Auto-auth failed. Please authenticate manually.</p>';
+                    document.getElementById('auth-status').innerHTML = '<p class="alert alert-warning">[!] ⚠️⚠️  Auto-auth failed. Please authenticate manually.</p>';
                     console.log('[AUTO-AUTH] Failed:', data.error);
                 }
             } catch (error) {
@@ -14554,7 +14950,7 @@ async function autoAuthenticateGoogle() {
             
             let weekdayDisplay = r.weekday || '-';
             if (!r.weekday || r.weekday.trim() === '') {
-                weekdayDisplay = '<span class="weekday-missing-icon">[!] [EMOJI][EMOJI] </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
+                weekdayDisplay = '<span class="weekday-missing-icon">[!] ⚠️⚠️ </span><span style="color:#dc3545; font-style:italic;">MISSING</span>';
             }
             
             const hasDiscrepancies = r.discrepancies && r.discrepancies.length > 0;
@@ -14826,7 +15222,7 @@ function handleMISCSV(input) {
                     document.getElementById('mis-csv').value = ''; 
                     document.getElementById('mis-csv-status').innerHTML = `
                         <div class="alert alert-success p-2 mb-0" style="font-size: 0.9rem;">
-                            <strong>[OK][EMOJI][EMOJI][EMOJI][EMOJI] Active CSV:</strong> ${data.filename}
+                            <strong>[OK]✅ Active CSV:</strong> ${data.filename}
                             <br><small class="text-muted">This CSV will be automatically used by ID Matcher and Audit tabs</small>
                         </div>
                     `;
@@ -15017,7 +15413,7 @@ function handleMISCSV(input) {
                         }
 
                         const flagBadge = isMultiDay 
-                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;[EMOJI][EMOJI][EMOJI][EMOJI] ${flagContent}</span>`
+                            ? `<span style="background:#ffc107; padding:4px 8px; border-radius:12px; font-size:0.75em; font-weight:bold; display:inline-block; text-align:center; line-height:1.1;">&#x3030;📅 ${flagContent}</span>`
                             : '<span style="color:#999;">-</span>';
                         
                         const displayCat = r.DISPLAY_CATEGORY || r.Category || '-';
@@ -15025,9 +15421,9 @@ function handleMISCSV(input) {
                         let warningEmoji = '';
                         const rebateType = r.UI_REBATE_DISPLAY || r['Rebate type'] || '';
                         if (rebateType === 'Retail') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">[EMOJI][EMOJI][EMOJI][EMOJI]</span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Retail Rebate Reporting">🚨🚨🚨🚨</span>';
                         } else if (!rebateType || rebateType.trim() === '') {
-                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] [EMOJI][EMOJI] </span>';
+                            warningEmoji = '<span style="font-size:1.2em; margin-right:5px;" title="Wholesale/Retail Value = BLANK">[!] ⚠️⚠️ </span>';
                         }
 
                         sectionHtml += `<tr style="${bgStyle}">`;
@@ -15128,13 +15524,13 @@ function handleMISCSV(input) {
                     const folderPath = data.folder;
                     const counts = data.counts;
                     
-                    let message = '[OK][EMOJI] Newsletter files generated successfully!\\n\\n';
+                    let message = '[OK]✅ Newsletter files generated successfully!\\n\\n';
                     message += ' Saved to:\\n' + folderPath + '\\n\\n';
                     message += ' Files created:\\n';
                     if (data.files.excel) message += '  &#x2022; Excel (6 tabs)\\n';
                     if (data.files.club420_docx) message += '  &#x2022; CLUB420_Newsletter.docx\\n';
                     if (data.files.tat_legacy_docx) message += '  &#x2022; TAT_LEGACY_Newsletter.docx\\n';
-                    message += '\\n[EMOJI] Deal counts:\\n';
+                    message += '\\n📊 Deal counts:\\n';
                     message += '  CLUB420: Weekly=' + counts.club420.weekly + ', Monthly=' + counts.club420.monthly + ', Sale=' + counts.club420.sale + '\\n';
                     message += '  TAT LEGACY: Weekly=' + counts.tat_legacy.weekly + ', Monthly=' + counts.tat_legacy.monthly + ', Sale=' + counts.tat_legacy.sale;
                     
@@ -15985,9 +16381,9 @@ function renderAuditOverview() {
 // Get badge for audit status
 function getAuditStatusBadge(status) {
     if (!status) return '<span class="badge bg-secondary">Pending</span>';
-    if (status === 'verified') return '<span class="badge bg-success">Ã¢Å“â€œ Verified</span>';
-    if (status === 'attention') return '<span class="badge bg-warning text-dark">Ã¢Å¡Â  Attention</span>';
-    if (status === 'skipped') return '<span class="badge bg-secondary">Ã¢ÂÂ­ Skipped</span>';
+    if (status === 'verified') return '<span class="badge bg-success">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Verified</span>';
+    if (status === 'attention') return '<span class="badge bg-warning text-dark">ÃƒÂ¢Ã…Â¡Ã‚Â  Attention</span>';
+    if (status === 'skipped') return '<span class="badge bg-secondary">ÃƒÂ¢Ã‚ÂÃ‚Â­ Skipped</span>';
     return `<span class="badge bg-secondary">${status}</span>`;
 }
 
@@ -16568,8 +16964,8 @@ function getWeekdayStyleForAudit(srcWeekday, tgtWeekdays) {
 
 // v12.26.0: SET-BASED category comparison + asymmetric blank handling
 // srcCat = Google Sheet, tgtCat = MIS Entry
-// MIS blank = "All Categories" (acceptable) → can match GREEN
-// Google Sheet blank = "Not Specified" (needs review) → always ORANGE
+// MIS blank = "All Categories" (acceptable) â†’ can match GREEN
+// Google Sheet blank = "Not Specified" (needs review) â†’ always ORANGE
 function getCategoryStyleForAudit(srcCat, tgtCat) {
     const s = String(srcCat || '').toLowerCase().trim();
     const t = String(tgtCat || '').toLowerCase().trim();
@@ -16587,7 +16983,7 @@ function getCategoryStyleForAudit(srcCat, tgtCat) {
     // Google Sheet "All Categories" (explicit) 
     const srcAll = srcAllExplicit;
     
-    // v12.26.0: Google Sheet blank = "Not Specified" → ORANGE (needs review/data entry)
+    // v12.26.0: Google Sheet blank = "Not Specified" â†’ ORANGE (needs review/data entry)
     if (srcBlank && !srcAllExplicit) {
         return 'background:#fff3cd; color:#856404;';
     }
@@ -16656,7 +17052,7 @@ function getLocationStyleForAudit(srcLoc, tgtLoc) {
     const src = _auditParseLocSet(srcLoc);
     const tgt = _auditParseLocSet(tgtLoc);
 
-    // Both All → GREEN
+    // Both All â†’ GREEN
     if (src.isAll && tgt.isAll) return GREEN;
 
     // Compare as normalized sets (handles All Except vs explicit list)
@@ -17207,11 +17603,11 @@ async function runGSheetConflictAudit() {
             const conflictCount = data.conflicts ? data.conflicts.length : 0;
             if (conflictCount > 0) {
                 document.getElementById('gsheet-audit-stats').innerText = 
-                    `[!] [EMOJI][EMOJI] ${conflictCount} Cross-Section Conflicts Found`;
+                    `[!] ⚠️⚠️ ${conflictCount} Cross-Section Conflicts Found`;
                 document.getElementById('gsheet-audit-stats').className = 'badge bg-warning text-dark fs-6 me-2';
             } else {
                 document.getElementById('gsheet-audit-stats').innerText = 
-                    `[OK][EMOJI] No Cross-Section Conflicts`;
+                    `[OK]✅ No Cross-Section Conflicts`;
                 document.getElementById('gsheet-audit-stats').className = 'badge bg-success fs-6 me-2';
             }
         } else {
@@ -17243,7 +17639,7 @@ function displayGSheetConflictResults(data) {
                 <div class="card mb-4 shadow-sm">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <strong> Sheet Analysis Summary</strong>
-                        <span class="badge bg-dark fs-6">[EMOJI] Context: ${dateContext}</span>
+                        <span class="badge bg-dark fs-6">📅 Context: ${dateContext}</span>
                     </div>
                     <div class="card-body">
                         <div class="row text-center">
@@ -17469,7 +17865,7 @@ function displayGSheetConflictResults(data) {
                     <td style="${wrapStyle}">${locDisplay}</td>
                     <td style="${wrapStyle}">${notes}</td>
                     <td style="${cellStyle}">${misLink}</td>
-                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row ->[EMOJI][EMOJI][EMOJI]</button></td>
+                    <td style="${cellStyle}"><button class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size: 0.8em;" onclick="openSheetRow(${row.row_num})">Row →📋</button></td>
                 </tr>`;
             });
             table += `</tbody></table>`;
@@ -17963,11 +18359,11 @@ function showOtdModal(rowIndex) {
                     // Match Logic
                     if (diff < 0.009) {
                         // Exact Match (Green)
-                        auditInfo = ` <span style="color:#198754; font-size:0.8em;">([OK][EMOJI] Target: $${targetOtd.toFixed(2)})</span>`;
+                        auditInfo = ` <span style="color:#198754; font-size:0.8em;">([OK]✅ Target: $${targetOtd.toFixed(2)})</span>`;
                     } else if (diff <= 0.019) {
                         // Penny Variance (Orange)
                         rowColor = "color:#fd7e14;";
-                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] [EMOJI][EMOJI] Target: $${targetOtd.toFixed(2)})</span>`;
+                        auditInfo = ` <span style="color:#fd7e14; font-size:0.8em;">([!] ⚠️⚠️ Target: $${targetOtd.toFixed(2)})</span>`;
                     } else {
                         // Mismatch (Red)
                         rowColor = "color:#dc3545; font-weight:bold;";
@@ -18294,11 +18690,11 @@ function showOtdModal(rowIndex) {
                         if (maxDiff >= 0.02) {
                             // Mismatch (> 2 cents): RED TEXT + CAUTION
                             btnStyle = "color:#dc3545; border:1px solid #dc3545;"; 
-                            btnEmoji = "[!] [EMOJI][EMOJI]";
+                            btnEmoji = "[!] ⚠️⚠️";
                         } else if (maxDiff > 0.009) {
                             // Penny Variance: ORANGE TEXT + CAUTION
                             btnStyle = "color:#fd7e14; border:1px solid #fd7e14;"; 
-                            btnEmoji = "[!] [EMOJI][EMOJI]";
+                            btnEmoji = "[!] ⚠️⚠️";
                         }
                     }
                     // --- AUDIT LOGIC END ---
@@ -18717,7 +19113,7 @@ function runManualCleanup() {
     
     // Change button to "Finish Cleanup"
     const btn = document.getElementById('zombieCleanupBtn');
-    btn.innerHTML = '[OK][EMOJI] Finish Cleanup';
+    btn.innerHTML = '[OK]✅ Finish Cleanup';
     btn.classList.add('cleanup-mode');
     btn.onclick = finishZombieCleanup;
 }
@@ -18764,13 +19160,13 @@ async function runAutoCleanup() {
             if (!result.success) {
                 console.error(`Failed to disable ${promoId}: ${result.error}`);
                 document.getElementById('zombieProgressText').textContent = 
-                    `[!] [EMOJI][EMOJI] Error on ID ${promoId}: ${result.error}. Continuing...`;
+                    `[!] ⚠️❌ Error on ID ${promoId}: ${result.error}. Continuing...`;
                 await new Promise(r => setTimeout(r, 2000));
             }
         } catch (e) {
             console.error(`Error disabling ${promoId}:`, e);
             document.getElementById('zombieProgressText').textContent = 
-                `[!] [EMOJI][EMOJI] Network error on ID ${promoId}. Continuing...`;
+                `[!] ⚠️⚠️ Network error on ID ${promoId}. Continuing...`;
             await new Promise(r => setTimeout(r, 2000));
         }
         
@@ -18780,7 +19176,7 @@ async function runAutoCleanup() {
     
     // Complete
     document.getElementById('zombieProgressText').textContent = 
-        `[OK][EMOJI] Completed! Disabled ${total} zombie deal(s).`;
+        `[OK]✅ Completed! Disabled ${total} zombie deal(s).`;
     document.getElementById('zombieProgressFill').style.width = '100%';
     document.getElementById('zombieProgressFill').style.background = '#28a745';
     
@@ -19360,7 +19756,7 @@ function getBlazeColumnIndex(columnName) {
                         console.log("[AUTO] Sync failed: " + errorMsg);
                         // Notify user in the setup tab without popup
                         if(statusDiv) {
-                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] [EMOJI][EMOJI][EMOJI][EMOJI] ${errorMsg}</span>`;
+                            statusDiv.innerHTML = `<span class="text-danger fw-bold">[!] 🚨🚨🚨🚨 ${errorMsg}</span>`;
                         }
                     } else {
                         alert("Sync Failed: " + errorMsg);
@@ -19506,10 +19902,17 @@ function showDetailModal(row, isPinned = false) {
         bodyHTML += '<div class="data-row"><span class="data-label">Buy Requirements:</span> None</div>';
     }
     
+    // v12.26.7: BOGO/Bundle quantities from discountRequirements
+    if (row.buy_qty || row.get_qty) {
+        const buyQ = row.buy_qty || 1;
+        const getQ = row.get_qty || 1;
+        bodyHTML += `<div class="data-row"><span class="data-label">Buy/Get Qty:</span> Buy ${buyQ} / Get ${getQ}</div>`;
+    }
+    
     bodyHTML += `<div class="data-row"><span class="data-label">Get/Target:</span> ${row.target_type || 'N/A'} - ${row.target_value || 'N/A'}</div>`;
     
     // ADVANCED SECTION
-    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;[EMOJI][EMOJI] ADVANCED</div>';
+    bodyHTML += '<div class="section-header" style="color: #cc6600;">&#x2699;️ ADVANCED</div>';
     bodyHTML += `<div class="data-row"><span class="data-label">Auto Apply:</span> ${row.auto_apply ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Stackable:</span> ${row.stackable ? 'Yes' : 'No'}</div>`;
     bodyHTML += `<div class="data-row"><span class="data-label">Lowest Price First:</span> ${row.apply_lowest_price_first ? 'Yes' : 'No'}</div>`;
@@ -19622,7 +20025,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="detailModalBackdrop"></div>
     <div id="detailModal">
         <div class="modal-header">
-            <button class="close-btn" onclick="closeDetailModal()">X[EMOJI][EMOJI]</button>
+            <button class="close-btn" onclick="closeDetailModal()">✕</button>
             <div class="modal-title" id="detailModalTitle"></div>
             <div class="modal-id" id="detailModalId"></div>
             <div class="modal-type" id="detailModalType"></div>
@@ -19713,7 +20116,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="calc-content">
             <div class="calc-header">
                 <h2> Tax Calculator</h2>
-                <button class="calc-close" onclick="toggleCalcModal()">X[EMOJI][EMOJI]</button>
+                <button class="calc-close" onclick="toggleCalcModal()">✕</button>
             </div>
             
             <div class="store-selector">
@@ -19796,7 +20199,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <div id="calc-reprice" class="calc-section" style="display:none;">
-                <h3>[!][EMOJI][EMOJI] Reprice / Stack Fixer</h3>
+                <h3>[!] ⚠️⚠️ Reprice / Stack Fixer</h3>
                 <p style="color: #6c757d; font-size: 0.9em; margin-bottom: 10px;">
                     Calculate required flat discount to bridge the gap between current price and desired % off. (Example: Is 45% Off but needs to be 50% Off)<br>
                     <strong>(PRE-TAX VALUES ONLY)</strong>
@@ -19891,8 +20294,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <ol class="mb-0">
                                 <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
                                 <li>Create a project and enable <strong>Google Sheets API</strong></li>
-                                <li>Go to <strong>OAuth Consent Screen</strong> [EMOJI] Add your email as a Test User</li>
-                                <li>Go to <strong>Credentials</strong> [EMOJI] Create <strong>OAuth Client ID</strong> (Desktop App)</li>
+                                <li>Go to <strong>OAuth Consent Screen</strong> → Add your email as a Test User</li>
+                                <li>Go to <strong>Credentials</strong> → Create <strong>OAuth Client ID</strong> (Desktop App)</li>
                                 <li>Download the JSON and rename it as shown above</li>
                                 <li>Place it in the <code>config/google_credentials/</code> folder</li>
                             </ol>
@@ -20120,24 +20523,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h5 class="text-primary border-bottom pb-2"><i class="bi bi-folder2-open"></i> Directory Structure</h5>
                             <p class="text-muted">The script automatically creates this structure on first run:</p>
                             <pre class="bg-dark text-light p-3 rounded" style="font-size: 0.85em;">project_folder/
-[EMOJI] DASHBOARD.py                    # Main script
-[EMOJI] config/
-[EMOJI]   [EMOJI] google_credentials/         # OAuth JSON files
-[EMOJI]   [EMOJI]   [EMOJI] credentials_john.doe.json
-[EMOJI]   [EMOJI]   [EMOJI] credentials_jane.smith.json
-[EMOJI]   [EMOJI] tokens/                     # Google auth tokens (auto-generated)
-[EMOJI]   [EMOJI]   [EMOJI] token_john.doe.json
-[EMOJI]   [EMOJI]   [EMOJI] token_jane.smith.json
-[EMOJI]   [EMOJI] blaze_configs/              # MIS/Blaze credentials per profile
-[EMOJI]       [EMOJI] blaze_config_john.doe.json
-[EMOJI]       [EMOJI] blaze_config_jane.smith.json
-[EMOJI] chrome_profiles/                # Isolated browser profiles
-[EMOJI]   [EMOJI] chrome_john.doe/
-[EMOJI]   [EMOJI] chrome_jane.smith/
-[EMOJI] reports/
-    [EMOJI] MIS_CSV_REPORTS/            # Downloaded MIS exports
-    [EMOJI] BLAZE_CSV_REPORTS/
-        [EMOJI] INVENTORY/              # Inventory scan results</pre>
+📂 DASHBOARD.py                    # Main script
+📂 config/
+├──   ├── google_credentials/         # OAuth JSON files
+└──   └──   └── credentials_john.doe.json
+└──   └──   └── credentials_jane.smith.json
+├──   ├── tokens/                     # Google auth tokens (auto-generated)
+└──   └──   └── token_john.doe.json
+└──   └──   └── token_jane.smith.json
+├──   ├── blaze_configs/              # MIS/Blaze credentials per profile
+└──       └── blaze_config_john.doe.json
+└──       └── blaze_config_jane.smith.json
+📂 chrome_profiles/                # Isolated browser profiles
+├──   ├── chrome_john.doe/
+└──   └── chrome_jane.smith/
+📂 reports/
+    📂 MIS_CSV_REPORTS/            # Downloaded MIS exports
+    📂 BLAZE_CSV_REPORTS/
+        📂 INVENTORY/              # Inventory scan results</pre>
 
                             <h5 class="text-success mt-4 border-bottom pb-2">Files You Provide</h5>
                             <table class="table table-sm table-bordered">
@@ -20782,7 +21185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 async function runTierUpdate(btn) {
-        if (!confirm("[!] [EMOJI][EMOJI][EMOJI][EMOJI] This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
+        if (!confirm("[!] 🚨🚨🚨🚨 This will take control of the browser to update 'Bag Day' tags across all valid stores.\n\nEnsure you are not actively using the browser.\n\nProceed?")) return;
         
         btn.disabled = true;
         const originalHtml = btn.innerHTML;
@@ -20824,7 +21227,7 @@ async function runTierUpdate(btn) {
         
         // Validate store selection
         if (!selectedStore) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Please select a store first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Please select a store first</span>';
             return;
         }
         
@@ -20833,7 +21236,7 @@ async function runTierUpdate(btn) {
         const blazePassword = document.getElementById('blaze-password').value.trim();
         
         if (!blazeEmail || !blazePassword) {
-            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Enter Blaze email/password above first</span>';
+            statusDiv.innerHTML = '<span style="color: #dc3545;">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Enter Blaze email/password above first</span>';
             return;
         }
         
@@ -20847,7 +21250,7 @@ async function runTierUpdate(btn) {
         storeSelect.disabled = true;
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Syncing...';
-        statusDiv.innerHTML = '<span style="color: #0d6efd;">ÃƒÂ¢Ã‚ÂÃ‚Â³ Authenticating...</span>';
+        statusDiv.innerHTML = '<span style="color: #0d6efd;">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â³ Authenticating...</span>';
         
         try {
             const response = await fetch('/api/blaze/ecom-sync', {
@@ -20863,7 +21266,7 @@ async function runTierUpdate(btn) {
             const data = await response.json();
             
             if (data.success) {
-                statusDiv.innerHTML = `<span style="color: #198754;">ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${data.message || 'Sync Complete'}</span>`;
+                statusDiv.innerHTML = `<span style="color: #198754;">ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ ${data.message || 'Sync Complete'}</span>`;
                 console.log('[ECOM-SYNC] Success:', data);
             } else {
                 // Differentiate error types for better UX
@@ -20871,18 +21274,18 @@ async function runTierUpdate(btn) {
                 let errorColor = '#dc3545';
                 
                 if (errorMsg.includes('credentials') || errorMsg.includes('Authentication')) {
-                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Ëœ ' + errorMsg;
+                    errorMsg = 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ ' + errorMsg;
                 } else if (errorMsg.includes('UUID') || errorMsg.includes('not found')) {
-                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â ' + errorMsg;
+                    errorMsg = 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€šÃ‚Â ' + errorMsg;
                 } else if (errorMsg.includes('permission')) {
-                    errorMsg = 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« ' + errorMsg;
+                    errorMsg = 'ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â« ' + errorMsg;
                 }
                 
-                statusDiv.innerHTML = `<span style="color: ${errorColor};">ÃƒÂ¢Ã‚ÂÃ…â€™ ${errorMsg}</span>`;
+                statusDiv.innerHTML = `<span style="color: ${errorColor};">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ ${errorMsg}</span>`;
                 console.error('[ECOM-SYNC] Error:', data.error);
             }
         } catch (e) {
-            statusDiv.innerHTML = `<span style="color: #dc3545;">ÃƒÂ¢Ã‚ÂÃ…â€™ Network Error: ${e.message}</span>`;
+            statusDiv.innerHTML = `<span style="color: #dc3545;">ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Network Error: ${e.message}</span>`;
             console.error('[ECOM-SYNC] Network Error:', e);
         } finally {
             btn.disabled = false;
@@ -21151,7 +21554,7 @@ async function fetchInventoryData() {
         const fetchData = await fetchResponse.json();
 
         if (!fetchData.success) {
-            addDebugLog(`[OK][EMOJI][EMOJI] Error: ${fetchData.error || 'Unknown error'}`, 'error');
+            addDebugLog(`[OK]✅❌ Error: ${fetchData.error || 'Unknown error'}`, 'error');
             alert(`Failed to fetch data: ${fetchData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
             return;
@@ -21189,12 +21592,12 @@ async function fetchInventoryData() {
             addDebugLog('[OK] All done!', 'success');
             setTimeout(() => hideDebugLog(), 3000);
         } else {
-            addDebugLog(`[OK][EMOJI][EMOJI] Error loading from cache: ${loadData.error}`, 'error');
+            addDebugLog(`[OK]✅❌ Error loading from cache: ${loadData.error}`, 'error');
             alert(`Failed to load data: ${loadData.error || 'Unknown error'}`);
             setTimeout(() => hideDebugLog(), 5000);
         }
     } catch (err) {
-        addDebugLog(`[OK][EMOJI][EMOJI] Network error: ${err.message}`, 'error');
+        addDebugLog(`[OK]⚠️ Network error: ${err.message}`, 'error');
         alert(`Network error: ${err.message}`);
         setTimeout(() => hideDebugLog(), 5000);
     } finally {
@@ -22027,7 +22430,7 @@ def api_init_all():
         # V2: Inject persistent validator if MIS login successful
         if mis_success and driver:
             try:
-                print("[INIT] [EMOJI] Injecting Validation V2 (persistent, message-passing)")
+                print("[INIT] ⏳ Injecting Validation V2 (persistent, message-passing)")
                 # Find MIS tab and inject V2 validator + listeners
                 for handle in driver.window_handles:
                     try:
@@ -22035,13 +22438,13 @@ def api_init_all():
                         if 'daily-discount' in driver.current_url:
                             inject_mis_validation(driver, expected_data=None)  # Inject with manual mode
                             inject_mis_browser_click_listeners(driver)  # Inject click detection
-                            print("[INIT] [EMOJI] Validation V2 + MIS Browser listeners injected")
+                            print("[INIT] ✅ Validation V2 + MIS Browser listeners injected")
                             messages.append("Validation V2 ready")
                             break
                     except:
                         continue
             except Exception as e:
-                print(f"[INIT] [EMOJI] Could not inject V2 validator: {e}")
+                print(f"[INIT] ❌ Could not inject V2 validator: {e}")
         
         # SILENT OPERATION: Return to original tab
         if original_tab and driver:
@@ -23223,7 +23626,7 @@ def diagnose_issue(summary, results):
     else:
         count = results.get('collections', {}).get('count', 0)
         if count == 0:
-            diagnosis.append("[!] [EMOJI][EMOJI][EMOJI][EMOJI] Collections endpoint works but returns 0 items")
+            diagnosis.append("[!] 🚨🚨🚨🚨 Collections endpoint works but returns 0 items")
             diagnosis.append("   Check: Are there actually Smart Collections in Blaze admin?")
         else:
             diagnosis.append(f"[SUCCESS] Collections working correctly ({count} items found)")
@@ -23290,16 +23693,16 @@ def api_mis_match():
         GLOBAL_DATA['sections_data'] = sections_data
         
         # v12.12.5: AGGRESSIVE DEBUG
-        print(f"\n{'[EMOJI]'*30}")
-        print(f"[MATCHER] [EMOJI] STORING COMBINED DATAFRAME [EMOJI]")
+        print(f"\n{'⭐'*30}")
+        print(f"[MATCHER] ⭐ STORING COMBINED DATAFRAME ⭐")
         print(f"[MATCHER] Combined DataFrame shape: {combined_df.shape}")
         print(f"[MATCHER] Weekly rows: {len(sections_data.get('weekly', pd.DataFrame()))}")
         print(f"[MATCHER] Monthly rows: {len(sections_data.get('monthly', pd.DataFrame()))}")
         print(f"[MATCHER] Sale rows: {len(sections_data.get('sale', pd.DataFrame()))}")
         GLOBAL_DATA['google_df'] = combined_df  # Store for MIS lookup's SMART FALLBACK
-        print(f"[MATCHER] [EMOJI] Stored in GLOBAL_DATA['google_df']")
+        print(f"[MATCHER] ✅ Stored in GLOBAL_DATA['google_df']")
         print(f"[MATCHER] Verification: GLOBAL_DATA['google_df'] is None? {GLOBAL_DATA.get('google_df') is None}")
-        print(f"{'[EMOJI]'*30}\n")
+        print(f"{'⭐'*30}\n")
         
         # Check if all empty
         if all(df.empty for df in sections_data.values()):
@@ -23807,14 +24210,14 @@ def api_mis_maudit():
             
             for idx, row in df.iterrows():
                 row_num = idx + 2  # Account for header row
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 mis_id_cell = str(row.get('MIS ID', '')).strip()
-                discount = str(row.get('Discount', '')).strip()
-                vendor_pct = str(row.get('Vendor %', row.get('Vendor', ''))).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount', 'Discount'], '')).strip()  # v12.27.0
+                vendor_pct = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution', 'Vendor %'], '')).strip()  # v12.27.0
                 # v12.25.7: Use resolve_location_columns for smart column detection
                 loc_raw, exc_raw = resolve_location_columns(row)
-                locations = format_location_display(loc_raw, exc_raw) if loc_raw else str(row.get('Location', row.get('Locations', ''))).strip()
-                weekday = str(row.get('Weekday', '')).strip() if section_name == 'weekly' else ''
+                locations = format_location_display(loc_raw, exc_raw) if loc_raw else 'All Locations'  # v12.27.0
+                weekday = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip() if section_name == 'weekly' else ''  # v12.27.0
                 start_date = str(row.get('Start Date', '')).strip() if section_name != 'weekly' else ''
                 end_date = str(row.get('End Date', '')).strip() if section_name != 'weekly' else ''
                 
@@ -24069,16 +24472,15 @@ def api_mis_cleanup_audit():
                     all_sheet_mis_ids.add(str(mid).strip())
                 
                 # Collect entry data for full field matching
-                brand = str(row.get('Brand', '')).strip()
-                # v12.25.6: Updated column detection for Monthly section
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if section_name == 'weekly':
-                    weekday = str(get_col(row, ['Weekday', 'Day of Week'], '')).strip()
+                    weekday = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()
                 elif section_name == 'monthly':
                     weekday = get_monthly_day_of_month(row)
                 else:  # sale
-                    weekday = str(get_col(row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
-                discount = parse_percentage(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], ''))
-                vendor_pct = parse_percentage(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
+                    weekday = str(get_col(row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '')).strip()
+                discount = parse_percentage(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], ''))
+                vendor_pct = parse_percentage(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], ''))
                 loc_raw, exc_raw = resolve_location_columns(row)
                 locations = normalize_location_set(format_location_display(loc_raw, exc_raw))
                 
@@ -24482,11 +24884,11 @@ def api_mis_lookup_mis_id():
         # v12.12.5: AGGRESSIVE DEBUG
         google_df = GLOBAL_DATA.get('google_df')
         if google_df is not None:
-            print(f"[MIS LOOKUP] [EMOJI] Google Sheet IS LOADED [EMOJI]")
+            print(f"[MIS LOOKUP] 🔍 Google Sheet IS LOADED ✅")
             print(f"[MIS LOOKUP] DataFrame shape: {google_df.shape}")
             print(f"[MIS LOOKUP] DataFrame columns: {list(google_df.columns)[:5]}...")
         else:
-            print(f"[MIS LOOKUP] [EMOJI] GOOGLE SHEET IS NONE [EMOJI]")
+            print(f"[MIS LOOKUP] 🔍 GOOGLE SHEET IS NONE ❌")
             print(f"[MIS LOOKUP] GLOBAL_DATA keys: {list(GLOBAL_DATA.keys())}")
         
         print(f"{'='*60}")
@@ -24517,7 +24919,7 @@ def api_mis_lookup_mis_id():
                                 matching_rows.append(row)
                         
                         if matching_rows:
-                            print(f"[MIS LOOKUP] [EMOJI] Found {len(matching_rows)} matching row(s) for MIS ID {mis_id}")
+                            print(f"[MIS LOOKUP] 🔍 Found {len(matching_rows)} matching row(s) for MIS ID {mis_id}")
                             
                             # Use first row as base, but combine weekdays from all rows
                             base_row = matching_rows[0]
@@ -24525,38 +24927,46 @@ def api_mis_lookup_mis_id():
                             # MULTI-DAY HANDLING: Combine weekdays from all matching rows
                             all_weekdays = []
                             for match_row in matching_rows:
-                                weekday = str(match_row.get('Weekday', '')).strip()
+                                weekday = str(get_col(match_row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()  # v12.27.0
                                 if weekday and weekday not in all_weekdays:
                                     all_weekdays.append(weekday)
                             
                             combined_weekday = ', '.join(all_weekdays) if len(all_weekdays) > 1 else all_weekdays[0] if all_weekdays else ''
                             
                             # DEBUG: Print column names
-                            print(f"[MIS LOOKUP] [EMOJI] Available columns: {list(google_df.columns)}")
+                            print(f"[MIS LOOKUP] 🔍 Available columns: {list(google_df.columns)}")
                             
                             # ENHANCED COLUMN DETECTION: Search for columns CONTAINING keywords
                             # This handles newlines, extra spaces, and variations
                             
                             # Find Discount column (handles "Deal Discount Value/Type", "Discount %", etc.)
+                            # v12.27.0: Also matches "[Daily Deal Discount]" bracket pattern
                             # IMPORTANT: Exclude "After Wholesale Discount" by requiring value/rate/% keywords
                             discount_value = ''
                             discount_col_found = None
                             for col in google_df.columns:
                                 col_lower = col.lower()
+                                # v12.27.0: Bracket pattern match first
+                                if 'daily deal discount' in col_lower:
+                                    discount_value = str(base_row.get(col, '')).strip()
+                                    if discount_value:
+                                        discount_col_found = col
+                                        print(f"[MIS LOOKUP] 🔍 Found Discount in column '{col}': '{discount_value}'")
+                                        break
                                 # Look for columns with "discount" AND ("value" OR "rate" OR "%")
                                 # Exclude columns with "wholesale" or "type"
-                                if ('discount' in col_lower and 
+                                if (not discount_col_found and 'discount' in col_lower and 
                                     ('value' in col_lower or 'rate' in col_lower or '%' in col_lower) and
                                     'wholesale' not in col_lower and 
                                     'type' not in col_lower):
                                     discount_value = str(base_row.get(col, '')).strip()
                                     if discount_value:
                                         discount_col_found = col
-                                        print(f"[MIS LOOKUP] [EMOJI] Found Discount in column '{col}': '{discount_value}'")
+                                        print(f"[MIS LOOKUP] 🔍 Found Discount in column '{col}': '{discount_value}'")
                                         break
                             
                             if not discount_col_found:
-                                print(f"[MIS LOOKUP] [EMOJI] Could not find Discount column")
+                                print(f"[MIS LOOKUP] ⚠️ Could not find Discount column")
                             
                             # Find Vendor % column (handles "Brand Contribution % (Credit)", "Vendor %", etc.)
                             vendor_value = ''
@@ -24568,24 +24978,24 @@ def api_mis_lookup_mis_id():
                                     vendor_value = str(base_row.get(col, '')).strip()
                                     if vendor_value:
                                         vendor_col_found = col
-                                        print(f"[MIS LOOKUP] [EMOJI] Found Vendor % in column '{col}': '{vendor_value}'")
+                                        print(f"[MIS LOOKUP] 🔍 Found Vendor % in column '{col}': '{vendor_value}'")
                                         break
                             
                             if not vendor_col_found:
-                                print(f"[MIS LOOKUP] [EMOJI] Could not find Vendor % column")
+                                print(f"[MIS LOOKUP] ⚠️ Could not find Vendor % column")
                             
                             # v12.25.7: Use resolve_location_columns for smart column detection
                             loc_raw, exc_raw = resolve_location_columns(base_row)
-                            locations_raw = format_location_display(loc_raw, exc_raw) if loc_raw else str(base_row.get('Locations', 'All Locations')).strip()
+                            locations_raw = format_location_display(loc_raw, exc_raw) if loc_raw else 'All Locations'  # v12.27.0: resolve_location_columns handles bracket columns
                             
                             # MULTI-BRAND HANDLING: Parse MIS ID position and use correct brand
-                            brand_value = str(base_row.get('Brand', '')).strip()
+                            brand_value = str(get_col(base_row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                             
                             # Check if this is a multi-brand deal (MIS ID contains W1/W2 format)
                             sheet_mis_id = str(base_row.get(id_col, '')).strip()
                             if ',' in sheet_mis_id and ':' in sheet_mis_id:
                                 # Multi-brand deal: "W1: 771, W2: 772"
-                                print(f"[MIS LOOKUP] [EMOJI] Multi-brand deal detected in MIS ID: {sheet_mis_id}")
+                                print(f"[MIS LOOKUP] 📋 Multi-brand deal detected in MIS ID: {sheet_mis_id}")
                                 
                                 # Parse to find which position our MIS ID is in
                                 parts = [p.strip() for p in sheet_mis_id.split(',')]
@@ -24610,7 +25020,7 @@ def api_mis_lookup_mis_id():
                                         brand_value = brands[mis_position]
                                         print(f"[MIS LOOKUP] Using brand at position {mis_position}: '{brand_value}'")
                                     else:
-                                        print(f"[MIS LOOKUP] [EMOJI] Position {mis_position} out of range for brands: {brands}")
+                                        print(f"[MIS LOOKUP] ⚠️ Position {mis_position} out of range for brands: {brands}")
                             
                             # Find After Wholesale Discount column
                             after_wholesale_value = False
@@ -24623,39 +25033,39 @@ def api_mis_lookup_mis_id():
                                     after_ws_col_found = col
                                     # Check for TRUE/checked/yes/1
                                     after_wholesale_value = cell_value.lower() in ['yes', 'true', '1', 'checked', 'x', 'TRUE']
-                                    print(f"[MIS LOOKUP] Found After Wholesale in column '{col}': '{cell_value}' [EMOJI] {after_wholesale_value}")
+                                    print(f"[MIS LOOKUP] Found After Wholesale in column '{col}': '{cell_value}' → {after_wholesale_value}")
                                     break
                             
                             if not after_ws_col_found:
-                                print(f"[MIS LOOKUP] [EMOJI] Could not find After Wholesale Discount column")
+                                print(f"[MIS LOOKUP] ⚠️ Could not find After Wholesale Discount column")
                             
                             # Found it! Extract row data
                             row_data = {
                                 'brand': brand_value,
                                 'linked_brand': str(base_row.get('Linked Brand', '')).strip(),
                                 'weekday': combined_weekday,
-                                'categories': str(base_row.get('Categories', '')).strip(),
+                                'categories': str(get_col(base_row, ['[Category]', 'Categories'], '')).strip(),  # v12.27.0
                                 'discount': discount_value,
                                 'vendor_contrib': vendor_value,
                                 'locations': locations_raw,
-                                'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
+                                'rebate_type': resolve_rebate_type(base_row),  # v12.27.0
                                 'after_wholesale': after_wholesale_value
                             }
                             
-                            print(f"[MIS LOOKUP] [EMOJI] Found row data in Google Sheet!")
+                            print(f"[MIS LOOKUP] 🔍 Found row data in Google Sheet!")
                             print(f"[MIS LOOKUP] Brand: {row_data['brand']}, Weekday: {row_data['weekday']}")
                             print(f"[MIS LOOKUP] Discount: '{row_data['discount']}', Vendor %: '{row_data['vendor_contrib']}'")
                             print(f"[MIS LOOKUP] Locations: {row_data['locations']}")
                             
                             if len(matching_rows) > 1:
-                                print(f"[MIS LOOKUP] [EMOJI] Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
+                                print(f"[MIS LOOKUP] 📋 Multi-day deal detected! Combined {len(matching_rows)} weekdays: {combined_weekday}")
                             
                     else:
-                        print(f"[MIS LOOKUP] [EMOJI] Could not find MIS ID column in Google Sheet")
+                        print(f"[MIS LOOKUP] ⚠️ Could not find MIS ID column in Google Sheet")
                 else:
-                    print(f"[MIS LOOKUP] [EMOJI] No Google Sheet data available")
+                    print(f"[MIS LOOKUP] ⚠️ No Google Sheet data available")
             except Exception as e:
-                print(f"[MIS LOOKUP] [EMOJI] Error searching Google Sheet: {e}")
+                print(f"[MIS LOOKUP] ❌ Error searching Google Sheet: {e}")
         else:
             print(f"[MIS LOOKUP] Row data provided by frontend")
         
@@ -24684,16 +25094,16 @@ def api_mis_lookup_mis_id():
                     
                     # v12.22.5: Inject checklist banner for visual checklist panel
                     inject_checklist_banner(driver, expected_data, mode='compare')
-                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Checklist banner injected for MIS ID {mis_id}")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Checklist banner injected for MIS ID {mis_id}")
                     
                     # v12.22.6: ALSO send message to existing validator to switch to automation mode
                     # The V2 validator may already be running (persistent from previous entry)
                     # This will send it the expected_data so it validates properly
                     inject_mis_validation(driver, expected_data=expected_data)
-                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Validator switched to automation mode")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Validator switched to automation mode")
                     
                 except Exception as e:
-                    print(f"[MIS LOOKUP] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Could not inject checklist: {e}")
+                    print(f"[MIS LOOKUP] ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Could not inject checklist: {e}")
                     # Fallback to basic validation
                     inject_mis_validation(driver, expected_data=None)
             else:
@@ -24738,7 +25148,7 @@ def api_mis_validate_lookup():
         google_df = GLOBAL_DATA.get('google_df')
         
         if google_df is not None and not google_df.empty:
-            print(f"[V2-LOOKUP] [EMOJI] Searching Google Sheet for MIS ID {mis_id}")
+            print(f"[V2-LOOKUP] 🔍 Searching Google Sheet for MIS ID {mis_id}")
             
             # Search for MIS ID in sheet
             found_data = None
@@ -24751,20 +25161,21 @@ def api_mis_validate_lookup():
                             # Found it!
                             # v12.25.7: Use resolve_location_columns for smart column detection
                             loc_raw, exc_raw = resolve_location_columns(row)
-                            locations_val = format_location_display(loc_raw, exc_raw) if loc_raw else str(row.get('Locations', 'All Locations')).strip()
+                            locations_val = format_location_display(loc_raw, exc_raw) if loc_raw else 'All Locations'
                             
                             found_data = {
-                                'brand': str(row.get('Brand', '')).strip(),
-                                'linked_brand': str(row.get('Linked Brand', '')).strip(),
-                                'weekday': str(row.get('Weekday', '')).strip(),
-                                'categories': str(row.get('Categories', '')).strip(),
-                                'discount': str(row.get('Discount', '')).strip(),
-                                'vendor_contrib': str(row.get('Vendor %', '')).strip(),
+                                # v12.27.0: Use get_col for bracket-aware column resolution
+                                'brand': str(get_col(row, ['[Brand]', 'Brand'], '')).strip(),
+                                'linked_brand': str(get_col(row, ['Linked Brand'], '')).strip(),
+                                'weekday': str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip(),
+                                'categories': str(get_col(row, ['[Category]', 'Categories'], '')).strip(),
+                                'discount': str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount', 'Discount'], '')).strip(),
+                                'vendor_contrib': str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution', 'Vendor %'], '')).strip(),
                                 'locations': locations_val,
-                                'rebate_type': str(row.get('Rebate Type', '')).strip(),
-                                'after_wholesale': str(row.get('After Wholesale', '')).strip().lower() in ['yes', 'true', '1']
+                                'rebate_type': resolve_rebate_type(row),
+                                'after_wholesale': str(get_col(row, ['After Wholesale Discount', 'After Wholesale'], '')).strip().lower() in ['yes', 'true', '1']
                             }
-                            print(f"[V2-LOOKUP] [EMOJI] Found in Google Sheet!")
+                            print(f"[V2-LOOKUP] 🔍 Found in Google Sheet!")
                             print(f"[V2-LOOKUP] Brand: {found_data['brand']}, Weekday: {found_data['weekday']}")
                             break
                 if found_data:
@@ -24779,7 +25190,7 @@ def api_mis_validate_lookup():
                     'message': f'MIS ID {mis_id} found in Google Sheet - automation mode activated'
                 })
             else:
-                print(f"[V2-LOOKUP] [EMOJI] MIS ID {mis_id} not found in Google Sheet")
+                print(f"[V2-LOOKUP] 🔍 MIS ID {mis_id} not found in Google Sheet")
                 # Send manual message
                 send_validation_message(driver, action='manual')
                 return jsonify({
@@ -24788,7 +25199,7 @@ def api_mis_validate_lookup():
                     'message': f'MIS ID {mis_id} not in Google Sheet - manual mode'
                 })
         else:
-            print(f"[V2-LOOKUP] [EMOJI] No Google Sheet data available")
+            print(f"[V2-LOOKUP] ⚠️ No Google Sheet data available")
             # Send manual message
             send_validation_message(driver, action='manual')
             return jsonify({
@@ -24798,7 +25209,7 @@ def api_mis_validate_lookup():
             })
     
     except Exception as e:
-        print(f"[V2-LOOKUP] [EMOJI] Error: {e}")
+        print(f"[V2-LOOKUP] ❌ Error: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -24990,6 +25401,25 @@ def find_weekday_column_value(row, columns, section_type):
     
     else:
         # Weekly - use standard Weekday column
+        # v12.27.0: Check bracket/prefix maps first, then fallback to exact names
+        prefix_map = GLOBAL_DATA.get('mis', {}).get('prefix_map', {})
+        bracket_map = GLOBAL_DATA.get('mis', {}).get('bracket_map', {})
+        
+        # Try bracket resolution first
+        bracket_resolved = bracket_map.get('[Weekday]')
+        if bracket_resolved and bracket_resolved in columns:
+            val = clean_value(row.get(bracket_resolved, ""))
+            if val:
+                return (val, bracket_resolved)
+        
+        # Try prefix resolution
+        prefix_resolved = prefix_map.get('Weekday')
+        if prefix_resolved and prefix_resolved in columns:
+            val = clean_value(row.get(prefix_resolved, ""))
+            if val:
+                return (val, prefix_resolved)
+        
+        # Legacy exact match
         weekday_cols = ['Weekday', 'Day', 'Days']
         for col_name in weekday_cols:
             if col_name in columns:
@@ -25148,14 +25578,14 @@ def api_mis_compare_to_sheet():
             return jsonify({'success': False, 'error': 'Browser not initialized'})
         
         print(f"\n{'='*60}")
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Manual comparison requested for MIS ID: {mis_id}")
+        print(f"[COMPARE-TO-SHEET] 🔍 Manual comparison requested for MIS ID: {mis_id}")
         print(f"{'='*60}")
         
         # Check if Google Sheet data available
         google_df = GLOBAL_DATA.get('google_df')
         
         if google_df is None or google_df.empty:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] No Google Sheet data loaded")
+            print(f"[COMPARE-TO-SHEET] ⚠️ No Google Sheet data loaded")
             return jsonify({
                 'success': False, 
                 'error': 'No Google Sheet loaded. Please run Audit first.'
@@ -25187,7 +25617,7 @@ def api_mis_compare_to_sheet():
                 matching_rows.append(row)
         
         if not matching_rows:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] MIS ID {mis_id} not found in Google Sheet")
+            print(f"[COMPARE-TO-SHEET] 🔍 MIS ID {mis_id} not found in Google Sheet")
             # Switch to manual mode
             inject_mis_validation(driver, expected_data=None)
             return jsonify({
@@ -25197,7 +25627,7 @@ def api_mis_compare_to_sheet():
             })
         
         # Found it! Extract data (same logic as lookup)
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Found {len(matching_rows)} matching row(s)")
+        print(f"[COMPARE-TO-SHEET] 🔍 Found {len(matching_rows)} matching row(s)")
         
         base_row = matching_rows[0]
         
@@ -25244,7 +25674,7 @@ def api_mis_compare_to_sheet():
                             'group_id': group_id,
                             'brand': group_data.get('brand', '')
                         }
-                        print(f"[COMPARE-TO-SHEET] [EMOJI] MULTI-DAY DEAL DETECTED: {len(group_data['rows'])}-day deal ({combined_weekday})")
+                        print(f"[COMPARE-TO-SHEET] 📋 MULTI-DAY DEAL DETECTED: {len(group_data['rows'])}-day deal ({combined_weekday})")
                         print(f"[COMPARE-TO-SHEET] Group rows: {group_data['rows']}")
         except Exception as e:
             print(f"[COMPARE-TO-SHEET] Multi-day detection error (non-fatal): {e}")
@@ -25283,7 +25713,7 @@ def api_mis_compare_to_sheet():
                 break
         
         if not discount_value:
-            print(f"[COMPARE-TO-SHEET] [EMOJI] No discount value found. Columns searched: {discount_col_candidates}")
+            print(f"[COMPARE-TO-SHEET] ⚠️ No discount value found. Columns searched: {discount_col_candidates}")
         
         # Find Vendor % column
         vendor_value = ''
@@ -25336,7 +25766,7 @@ def api_mis_compare_to_sheet():
             print(f"[COMPARE-TO-SHEET] WARNING: No After Wholesale column found. Available columns with 'wholesale': {[c for c in google_df.columns if 'wholesale' in c.lower()]}")
         
         # v12.18: Enhanced multi-brand handling using get_brand_for_mis_id()
-        brand_value = str(base_row.get('Brand', '')).strip()
+        brand_value = str(get_col(base_row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
         sheet_mis_id = str(base_row.get(id_col, '')).strip()
         
         # Check if this is a multi-brand row (has commas in MIS ID column)
@@ -25369,11 +25799,11 @@ def api_mis_compare_to_sheet():
             # v12.17: Try row first, then fall back to Settings tab brand_settings
             'linked_brand': str(base_row.get('Linked Brand', '')).strip() or GLOBAL_DATA.get('brand_settings', {}).get(brand_value.lower(), ''),
             'weekday': combined_weekday,
-            'categories': str(base_row.get('Categories', '')).strip(),
+            'categories': str(get_col(base_row, ['[Category]', 'Categories'], '')).strip(),  # v12.27.0
             'discount': discount_value,
             'vendor_contrib': vendor_value,
             'locations': find_locations_value(base_row, google_df.columns),
-            'rebate_type': str(base_row.get('Rebate Type', '')).strip(),
+            'rebate_type': resolve_rebate_type(base_row),  # v12.27.0
             'after_wholesale': after_wholesale_value,
             # v12.12.12: Section-specific data
             'section_type': section_type,
@@ -25393,7 +25823,7 @@ def api_mis_compare_to_sheet():
             print(f"[COMPARE-TO-SHEET] Multi-day: {multi_day_info['total_days']}-day deal ({', '.join(multi_day_info['weekdays'])})")
         # v12.19: INJECT CHECKLIST BANNER IN COMPARE MODE
         # Instead of just returning JSON, inject the banner directly
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Injecting checklist banner in 'compare' mode")
+        print(f"[COMPARE-TO-SHEET] ⏳ Injecting checklist banner in 'compare' mode")
         inject_checklist_banner(driver, expected_data, mode='compare')
         
         # v12.21: CRITICAL FIX - Return expected_data and mode='automation' so frontend activates
@@ -25405,7 +25835,7 @@ def api_mis_compare_to_sheet():
         })
     
     except Exception as e:
-        print(f"[COMPARE-TO-SHEET] [EMOJI] Error: {e}")
+        print(f"[COMPARE-TO-SHEET] ❌ Error: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)})
 
@@ -25806,7 +26236,7 @@ def send_validation_message(driver, action='manual', mis_id=None, expected_data=
     }
     message_json = json.dumps(message)
     
-    print(f"[V2] [EMOJI] Sending message: action={action}, has_data={expected_data is not None}")
+    print(f"[V2] 📤 Sending message: action={action}, has_data={expected_data is not None}")
     
     try:
         driver.execute_script(f"""
@@ -25816,9 +26246,9 @@ def send_validation_message(driver, action='manual', mis_id=None, expected_data=
                 console.error('[V2] ERROR: Validator not initialized! Call inject_mis_validation first.');
             }}
         """)
-        print(f"[V2] [EMOJI] Message sent successfully")
+        print(f"[V2] ✅ Message sent successfully")
     except Exception as e:
-        print(f"[V2] [EMOJI] Failed to send message: {e}")
+        print(f"[V2] ❌ Failed to send message: {e}")
 
 
 def inject_mis_browser_click_listeners(driver):
@@ -25836,11 +26266,11 @@ def inject_mis_browser_click_listeners(driver):
         }
         window.MIS_BROWSER_LISTENERS_ACTIVE = true;
         
-        console.log('[V2] [EMOJI] Setting up MIS Browser click detection');
+        console.log('[V2] 🔍 Setting up MIS Browser click detection');
         
         // Function to send lookup request to backend
         window.sendMISLookupRequest = async function(misId) {
-            console.log('[V2] [EMOJI] Sending lookup request for MIS ID:', misId);
+            console.log('[V2] 🔍 Sending lookup request for MIS ID:', misId);
             
             try {
                 const response = await fetch('/api/mis/validate-lookup', {
@@ -25864,7 +26294,7 @@ def inject_mis_browser_click_listeners(driver):
                 return false;
             }
             
-            console.log('[V2] [EMOJI] Found MIS datatable, attaching listeners');
+            console.log('[V2] 🔍 Found MIS datatable, attaching listeners');
             
             table.addEventListener('click', function(e) {
                 // Check if clicked element is in a row
@@ -25897,7 +26327,7 @@ def inject_mis_browser_click_listeners(driver):
                     }
                     
                     if (misId) {
-                        console.log('[V2] [EMOJI] Detected MIS Browser click, MIS ID:', misId);
+                        console.log('[V2] 🎯 Detected MIS Browser click, MIS ID:', misId);
                         window.sendMISLookupRequest(misId);
                     }
                 }
@@ -25911,7 +26341,7 @@ def inject_mis_browser_click_listeners(driver):
             // Retry after 2 seconds if table not found
             setTimeout(() => {
                 if (!attachListeners()) {
-                    console.log('[V2] [EMOJI] Could not find MIS datatable after retry');
+                    console.log('[V2] ❌ Could not find MIS datatable after retry');
                 }
             }, 2000);
         }
@@ -25921,9 +26351,9 @@ def inject_mis_browser_click_listeners(driver):
     
     try:
         driver.execute_script(listener_js)
-        print("[V2] [EMOJI] MIS Browser listeners injected")
+        print("[V2] ✅ MIS Browser listeners injected")
     except Exception as e:
-        print(f"[V2] [EMOJI] Failed to inject listeners: {e}")
+        print(f"[V2] ❌ Failed to inject listeners: {e}")
 
 
 # ============================================
@@ -25972,7 +26402,7 @@ def inject_mis_validation(driver, expected_data=None):
     try:
         is_active = driver.execute_script("return window.VALIDATOR_V2_ACTIVE === true;")
         if is_active and expected_data is not None:
-            print("[V2] [EMOJI] Validator already active, sending message instead of re-injecting")
+            print("[V2] ✅ Validator already active, sending message instead of re-injecting")
             message = {
                 'action': 'automation' if expected_data else 'manual',
                 'expected_data': expected_data
@@ -26013,21 +26443,21 @@ def inject_mis_validation(driver, expected_data=None):
         // V2 MESSAGE RECEIVER
         // ============================================
         window.receiveValidationMessage = function(message) {{
-            console.log('[V2] [EMOJI] Received message:', message);
+            console.log('[V2] 📨 Received message:', message);
             
             if (message.action === 'manual') {{
                 VALIDATION_MODE = 'manual';
                 EXPECTED_DATA = null;
-                console.log('[V2] [EMOJI] Switched to MANUAL mode');
+                console.log('[V2] 🔄 Switched to MANUAL mode');
             }}
             else if (message.action === 'automation') {{
                 VALIDATION_MODE = 'automation';
                 EXPECTED_DATA = message.expected_data;
-                console.log('[V2] [EMOJI] Switched to AUTOMATION mode');
+                console.log('[V2] 🔄 Switched to AUTOMATION mode');
                 console.log('[V2] Expected data:', message.expected_data);
             }}
             else if (message.action === 'lookup') {{
-                console.log('[V2] [EMOJI] LOOKUP mode - backend will send automation or manual');
+                console.log('[V2] 🔄 LOOKUP mode - backend will send automation or manual');
             }}
             
             // Clear existing banner and warnings
@@ -26144,12 +26574,12 @@ def inject_mis_validation(driver, expected_data=None):
             
             // Method 1: Find all buttons with data-dismiss="modal" attribute
             // This catches: <button data-dismiss="modal">Close</button>
-            //           and: <button data-dismiss="modal">[EMOJI]</button>
+            //           and: <button data-dismiss="modal">✕</button>
             const dismissButtons = modal.querySelectorAll('[data-dismiss="modal"]');
             
             // Method 2: Find by specific class names
             // This catches: <button class="btn-modal-close">...</button>
-            //           and: <button class="close">[EMOJI]</button>
+            //           and: <button class="close">✕</button>
             const closeButtons = modal.querySelectorAll('.btn-modal-close, .close');
             
             // Combine both sets (use Set to avoid duplicates)
@@ -27075,28 +27505,28 @@ def inject_mis_validation(driver, expected_data=None):
             
             // Add orange boxes for warnings
             if (warnings.brand) {{
-                addOrangeBox(CONFIG.brandId, true, `[EMOJI] ${{warnings.brand.message}}`);
+                addOrangeBox(CONFIG.brandId, true, `⚠️ ${{warnings.brand.message}}`);
             }}
             if (warnings.linked_brand) {{
-                addOrangeBox(CONFIG.linkedBrandId, true, `[EMOJI] ${{warnings.linked_brand.message}}`);
+                addOrangeBox(CONFIG.linkedBrandId, true, `⚠️ ${{warnings.linked_brand.message}}`);
             }}
             if (warnings.weekday) {{
-                addOrangeBox(CONFIG.weekdayId, true, `[EMOJI] ${{warnings.weekday.message}}`);
+                addOrangeBox(CONFIG.weekdayId, true, `⚠️ ${{warnings.weekday.message}}`);
             }}
             if (warnings.categories) {{
-                addOrangeBox(CONFIG.categoryId, true, `[EMOJI] ${{warnings.categories.message}}`);
+                addOrangeBox(CONFIG.categoryId, true, `⚠️ ${{warnings.categories.message}}`);
             }}
             if (warnings.stores) {{
-                addOrangeBox(CONFIG.storeId, true, `[EMOJI] ${{warnings.stores.message}}`);
+                addOrangeBox(CONFIG.storeId, true, `⚠️ ${{warnings.stores.message}}`);
             }}
             if (warnings.discount) {{
-                addOrangeBox(CONFIG.discountId, false, `[EMOJI] ${{warnings.discount.message}}`);
+                addOrangeBox(CONFIG.discountId, false, `⚠️ ${{warnings.discount.message}}`);
             }}
             if (warnings.vendor_contrib) {{
-                addOrangeBox(CONFIG.vendorContribId, false, `[EMOJI] ${{warnings.vendor_contrib.message}}`);
+                addOrangeBox(CONFIG.vendorContribId, false, `⚠️ ${{warnings.vendor_contrib.message}}`);
             }}
             if (warnings.after_wholesale) {{
-                addOrangeBox(CONFIG.afterWholesaleId, false, `[EMOJI] ${{warnings.after_wholesale.message}}`);
+                addOrangeBox(CONFIG.afterWholesaleId, false, `⚠️ ${{warnings.after_wholesale.message}}`);
             }}
         }}
         
@@ -27136,7 +27566,7 @@ def inject_mis_validation(driver, expected_data=None):
                     background: rgba(255,255,255,0.1);
                 ">
                     <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.95em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px;">
-                        [EMOJI] [EMOJI] Other Entries Expected
+                        ℹ️📋 Other Entries Expected
                     </div>
                     <div style="font-weight: normal; font-size: 0.85em; margin-bottom: 8px;">
                         ${{otherEntries.length}} more MIS ${{otherEntries.length === 1 ? 'entry' : 'entries'}} needed:
@@ -27193,7 +27623,7 @@ def inject_mis_validation(driver, expected_data=None):
                     mainContent = `
                         <div style="flex: 1;">
                             <div style="font-size: 1.1em;">
-                                [EMOJI] All Fields Correct - Ready to Save!
+                                ✅ All Fields Correct - Ready to Save!
                             </div>
                             <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
                                 Automation mode: Validating against Google Sheet
@@ -27204,7 +27634,7 @@ def inject_mis_validation(driver, expected_data=None):
                     mainContent = `
                         <div style="flex: 1;">
                             <div style="font-size: 1.1em;">
-                                [EMOJI] Critical Fields Filled - Ready to Save!
+                                ✅ Critical Fields Filled - Ready to Save!
                             </div>
                             <div style="font-weight: normal; font-size: 0.85em; margin-top: 5px;">
                                 Manual mode: Validating Rebate Type + Weekday only
@@ -27249,12 +27679,12 @@ def inject_mis_validation(driver, expected_data=None):
                 if (hasCritical) {{
                     // RED banner - has critical errors
                     const blockingText = criticalCount === 1 ? '1 error blocking' : `${{criticalCount}} errors blocking`;
-                    headerText = `[EMOJI] ${{totalIssues}} Issue${{plural}} Found (${{blockingText}} save)`;
-                    subtitleText = 'Check the Deal Entry Checklist panel for details [EMOJI]';
+                    headerText = `❌ ${{totalIssues}} Issue${{plural}} Found (${{blockingText}} save)`;
+                    subtitleText = 'Check the Deal Entry Checklist panel for details 👇';
                 }} else {{
                     // ORANGE banner - advisory only
-                    headerText = `[EMOJI] ${{totalIssues}} Field${{plural}} May Need Review`;
-                    subtitleText = 'See Deal Entry Checklist panel for details [EMOJI]';
+                    headerText = `⚠️ ${{totalIssues}} Field${{plural}} May Need Review`;
+                    subtitleText = 'See Deal Entry Checklist panel for details 👇';
                 }}
                 
                 // v12.19: Extract deal metadata from EXPECTED_DATA if available
@@ -27268,7 +27698,7 @@ def inject_mis_validation(driver, expected_data=None):
                     
                     dealMetadata = `
                         <div style="font-size: 0.85em; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); text-align: center;">
-                            [EMOJI] ${{dealType.toUpperCase()}} | ${{duration}} | ${{brandName}}
+                            📋 ${{dealType.toUpperCase()}} | ${{duration}} | ${{brandName}}
                         </div>
                     `;
                 }}
@@ -27341,8 +27771,8 @@ def inject_mis_validation(driver, expected_data=None):
                 text-align: center;
             `;
             errorBox.innerHTML = `
-                [EMOJI] CRITICAL ERROR - Cannot Save<br>
-                <small style="font-weight: normal;">[EMOJI] Rebate Type must be selected (Wholesale or Retail)</small>
+                ❌ CRITICAL ERROR - Cannot Save<br>
+                <small style="font-weight: normal;">⚠️ Rebate Type must be selected (Wholesale or Retail)</small>
             `;
             
             saveBtn.parentNode.insertBefore(errorBox, saveBtn);
@@ -27456,10 +27886,10 @@ def inject_mis_validation(driver, expected_data=None):
         function enterListeningMode(btn) {{
             listeningMode = true;
             notFoundMode = false;  // v12.12.8: Reset not-found flag when entering listening mode
-            log('[EMOJI] Entering LISTENING MODE - Click a row in the datatable', 'INFO');
+            log('👆 Entering LISTENING MODE - Click a row in the datatable', 'INFO');
             
             // Update button appearance
-            btn.textContent = '[EMOJI] Click a Row...';
+            btn.textContent = '👆 Click a Row...';
             btn.style.background = '#ffc107';
             btn.style.color = '#000';
             btn.style.border = '2px solid #e0a800';
@@ -27513,12 +27943,12 @@ def inject_mis_validation(driver, expected_data=None):
             const datatable = document.querySelector('#daily-discount-table, .dataTable, table.table, #DataTables_Table_0');
             
             if (!datatable) {{
-                log('[EMOJI] Could not find datatable to attach listener', 'WARN');
+                log('❌ Could not find datatable to attach listener', 'WARN');
                 alert('Could not find datatable. Make sure you are on the Daily Discount page.');
                 return;
             }}
             
-            log('[EMOJI] Attaching click listener to datatable', 'DEBUG');
+            log('🔍 Attaching click listener to datatable', 'DEBUG');
             
             datatableClickHandler = async function(event) {{
                 // Check if we clicked on a MIS ID link or Edit button
@@ -27606,14 +28036,14 @@ def inject_mis_validation(driver, expected_data=None):
                 }}
                 
                 if (misId) {{
-                    log(`[EMOJI] Captured MIS ID: ${{misId}} - calling backend`, 'INFO');
+                    log(`🎯 Captured MIS ID: ${{misId}} - calling backend`, 'INFO');
                     await compareToGoogleSheet(misId);
                     exitListeningMode(validationState.compareButton);
                 }}
             }};
             
             datatable.addEventListener('click', datatableClickHandler);
-            log('[EMOJI] Datatable click listener attached', 'DEBUG');
+            log('✅ Datatable click listener attached', 'DEBUG');
         }}
         
         function removeDatatableListener() {{
@@ -27628,7 +28058,7 @@ def inject_mis_validation(driver, expected_data=None):
         }}
         
         async function compareToGoogleSheet(misId) {{
-            log(`[EMOJI] Comparing MIS ID ${{misId}} to Google Sheet...`, 'INFO');
+            log(`🔍 Comparing MIS ID ${{misId}} to Google Sheet...`, 'INFO');
             
             const btn = validationState.compareButton;
             if (btn) {{
@@ -27646,14 +28076,14 @@ def inject_mis_validation(driver, expected_data=None):
                 const result = await response.json();
                 
                 if (result.success) {{
-                    log(`[EMOJI] ${{result.message}}`, 'SUCCESS');
+                    log(`✅ ${{result.message}}`, 'SUCCESS');
                     
                     if (result.mode === 'automation' && result.expected_data) {{
                         // v12.12.6: DIRECTLY UPDATE validation mode and expected data
                         VALIDATION_MODE = 'automation';
                         EXPECTED_DATA = result.expected_data;
                         
-                        log('[EMOJI] DIRECTLY SET AUTOMATION MODE', 'INFO');
+                        log('✅ DIRECTLY SET AUTOMATION MODE', 'INFO');
                         log(`Expected Data: Brand=${{EXPECTED_DATA.brand}}, Weekday=${{EXPECTED_DATA.weekday}}`, 'DEBUG');
                         log(`Expected Data: Discount=${{EXPECTED_DATA.discount}}, Vendor=${{EXPECTED_DATA.vendor_contrib}}`, 'DEBUG');
                         log(`Expected Data: Rebate Type=${{EXPECTED_DATA.rebate_type}}`, 'DEBUG');
@@ -27672,7 +28102,7 @@ def inject_mis_validation(driver, expected_data=None):
                         setTimeout(() => {{
                             const checklistBanner = document.getElementById('checklist-banner-v18');
                             if (checklistBanner) {{
-                                log('[EMOJI] Checklist banner FOUND in DOM', 'SUCCESS');
+                                log('✅ Checklist banner FOUND in DOM', 'SUCCESS');
                                 log(`Banner display: ${{checklistBanner.style.display}}, opacity: ${{checklistBanner.style.opacity}}`, 'DEBUG');
                                 
                                 // Force visibility with multiple styles
@@ -27687,9 +28117,9 @@ def inject_mis_validation(driver, expected_data=None):
                                 // Scroll banner into view if needed
                                 checklistBanner.scrollIntoView({{ behavior: 'smooth', block: 'nearest' }});
                                 
-                                log('[EMOJI] Checklist should now be VISIBLE in top-right corner', 'SUCCESS');
+                                log('✅ Checklist should now be VISIBLE in top-right corner', 'SUCCESS');
                             }} else {{
-                                log('[EMOJI] WARNING: Checklist banner NOT FOUND in DOM', 'WARN');
+                                log('⚠️ WARNING: Checklist banner NOT FOUND in DOM', 'WARN');
                                 log('Searching all elements with id containing "checklist"...', 'DEBUG');
                                 const allChecklistElements = document.querySelectorAll('[id*="checklist"]');
                                 log(`Found ${{allChecklistElements.length}} elements with "checklist" in ID`, 'DEBUG');
@@ -27715,7 +28145,7 @@ def inject_mis_validation(driver, expected_data=None):
                         
                         // Change button to RED to alert user
                         if (btn) {{
-                            btn.textContent = '[EMOJI] Not Found - Manual Mode';
+                            btn.textContent = '❌ Not Found - Manual Mode';
                             btn.style.background = '#dc3545';  // RED
                             btn.style.color = '#000';  // BLACK text
                             btn.style.border = '2px solid #c82333';
@@ -27736,11 +28166,11 @@ def inject_mis_validation(driver, expected_data=None):
                         }}
                     }}
                 }} else {{
-                    log(`[EMOJI] ${{result.error}}`, 'ERROR');
+                    log(`❌ ${{result.error}}`, 'ERROR');
                     alert(result.error || 'Failed to compare with Google Sheet');
                 }}
             }} catch (error) {{
-                log(`[EMOJI] Compare request failed: ${{error}}`, 'ERROR');
+                log(`❌ Compare request failed: ${{error}}`, 'ERROR');
                 alert('Failed to connect to backend. Is the Flask server running?');
             }} finally {{
                 if (btn) {{
@@ -27845,7 +28275,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     log('Rebate Type is INVALID', 'ERROR');
                     addRedBox(CONFIG.rebateTypeId, CONFIG.rebateTypeContainerId, 
-                        '[EMOJI] Rebate Type is required! Must be Wholesale or Retail');
+                        '⚠️ Rebate Type is required! Must be Wholesale or Retail');
                 }}
             }}
             
@@ -27858,7 +28288,7 @@ def inject_mis_validation(driver, expected_data=None):
                 }} else {{
                     log('Weekday is INVALID', 'ERROR');
                     addRedBox(CONFIG.weekdayId, null,
-                        '[EMOJI] Weekday is required! Must select at least one day');
+                        '⚠️ Weekday is required! Must select at least one day');
                 }}
             }}
             
@@ -27960,19 +28390,19 @@ def inject_mis_validation(driver, expected_data=None):
         try:
             with open(debug_file, 'w', encoding='utf-8') as f:
                 f.write(validation_js)
-            print(f"[VALIDATION-INJECT] [EMOJI] Saved JavaScript to: {debug_file}")
+            print(f"[VALIDATION-INJECT] 💾 Saved JavaScript to: {debug_file}")
         except Exception as e:
-            print(f"[VALIDATION-INJECT] [EMOJI] Could not save debug file: {e}")
+            print(f"[VALIDATION-INJECT] ⚠️ Could not save debug file: {e}")
         
         driver.execute_script(validation_js)
         print("[MIS-VALIDATION] v12.10 JavaScript injected successfully")
-        print("[VALIDATION-INJECT] [EMOJI] Injection completed successfully")
+        print("[VALIDATION-INJECT] ✅ Injection completed successfully")
         
     except Exception as e:
         # ENHANCED ERROR LOGGING
         import traceback
         error_details = traceback.format_exc()
-        print(f"[VALIDATION-INJECT] [EMOJI] JavaScript execution FAILED!")
+        print(f"[VALIDATION-INJECT] ❌ JavaScript execution FAILED!")
         print(f"[VALIDATION-INJECT] Error type: {type(e).__name__}")
         print(f"[VALIDATION-INJECT] Error message: {str(e)}")
         print(f"[VALIDATION-INJECT] Full traceback:\n{error_details}")
@@ -28302,7 +28732,7 @@ def api_mis_create_deal():
                         actions.move_to_element(option)
                         actions.click()
                         actions.perform()
-                        log(f"  [{field_name}] [EMOJI] Selected '{value}'", "SUCCESS")
+                        log(f"  [{field_name}] ✅ Selected '{value}'", "SUCCESS")
                     else:
                         raise Exception(f"Could not find option '{value}'")
                         
@@ -28316,7 +28746,7 @@ def api_mis_create_deal():
                         ActionChains(driver).send_keys(Keys.ARROW_DOWN).perform()
                         time.sleep(0.1)
                         ActionChains(driver).send_keys(Keys.ENTER).perform()
-                    log(f"  [{field_name}] [EMOJI] Selected '{value}' via keyboard", "SUCCESS")
+                    log(f"  [{field_name}] ✅ Selected '{value}' via keyboard", "SUCCESS")
                 
                 time.sleep(0.1)
                 
@@ -28426,7 +28856,7 @@ def api_mis_create_deal():
                     
                     log(f"  [{field_name}] ({i+1}/{len(values)}) Selecting '{value}'...", "DEBUG")
                     
-                    # v12.26.4: Retry loop — verify selection stuck before moving on
+                    # v12.26.4: Retry loop â€” verify selection stuck before moving on
                     MAX_RETRIES = 3
                     selection_confirmed = False
                     
@@ -28502,7 +28932,7 @@ def api_mis_create_deal():
                             selected_texts = []
                             for pill in pills:
                                 pill_text = pill.text.strip()
-                                # Strip the × remove button text
+                                # Strip the Ã— remove button text
                                 if pill_text.startswith('\u00d7'):
                                     pill_text = pill_text[1:].strip()
                                 elif pill_text.endswith('\u00d7'):
@@ -28516,7 +28946,7 @@ def api_mis_create_deal():
                             else:
                                 log(f"  [{field_name}] '{value}' NOT found in pills: {selected_texts}", "WARN")
                         except Exception as ve:
-                            # Can't read pills — trust the click
+                            # Can't read pills â€” trust the click
                             selection_confirmed = True
                             log(f"  [{field_name}] Could not verify pills ({ve}), trusting click", "DEBUG")
                         
@@ -28656,14 +29086,14 @@ def api_mis_create_deal():
             stores = [s.strip() for s in text.split(',') if s.strip()]
             
             # v12.21.3: Apply STORE_MAPPING to convert Settings tab names to MIS names
-            # Example: "Fresno (Palm)" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ "Fresno"
+            # Example: "Fresno (Palm)" ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ "Fresno"
             mapped_stores = []
             for store in stores:
-                mapped = STORE_NAME_MAP.get(store, store)  # v12.26.1: Clean→MIS dropdown name
+                mapped = STORE_NAME_MAP.get(store, store)  # v12.26.1: Cleanâ†’MIS dropdown name
                 if mapped:
                     mapped_stores.append(mapped)
                     if mapped != store:
-                        log(f"  Store mapping: '{store}' ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ '{mapped}'", "DEBUG")
+                        log(f"  Store mapping: '{store}' ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ '{mapped}'", "DEBUG")
             
             log(f"Store logic: Specific stores = {mapped_stores}", "DEBUG")
             return mapped_stores
@@ -28739,7 +29169,7 @@ def api_mis_create_deal():
                 val_str = str(val).strip().upper()
                 log(f"Found wholesale column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
                 # Google Sheets checkboxes return TRUE/FALSE as strings
-                if val_str in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']:
                     wholesale_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     wholesale_checked = False
@@ -28747,7 +29177,7 @@ def api_mis_create_deal():
                 retail_col_found = True
                 val_str = str(val).strip().upper()
                 log(f"Found retail column: '{key}' = '{val}' (normalized: '{val_str}')", "DEBUG")
-                if val_str in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']:
+                if val_str in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']:
                     retail_checked = True
                 elif val_str in ['FALSE', 'NO', '0', '', 'UNCHECKED']:
                     retail_checked = False
@@ -28764,7 +29194,7 @@ def api_mis_create_deal():
         rebate_type_error = False
         
         if wholesale_checked and retail_checked:
-            warnings.append('[EMOJI] REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
+            warnings.append('⚠️ REBATE TYPE ERROR: Both Wholesale AND Retail are TRUE - only one can be selected!')
             log("REBATE TYPE ERROR: Both checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -28781,7 +29211,7 @@ def api_mis_create_deal():
                 pass
                 
         elif not wholesale_checked and not retail_checked:
-            warnings.append('[EMOJI] REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
+            warnings.append('⚠️ REBATE TYPE ERROR: Neither Wholesale nor Retail is TRUE - one must be selected!')
             log("REBATE TYPE ERROR: Neither checked!", "WARN")
             rebate_type_error = True
             # Highlight the Rebate Type field with red border
@@ -28834,67 +29264,67 @@ def api_mis_create_deal():
         # 1. WEEKDAY (multi-select)
         if weekdays_to_select:
             if not atomic_multi_select("Weekday", weekdays_to_select, "Weekday"):
-                warnings.append('[EMOJI] Could not fill Weekday')
+                warnings.append('⚠️ Could not fill Weekday')
         
         # 2. STORE (multi-select) - only if specific stores needed
         if stores_to_select:
             if not atomic_multi_select("Store", stores_to_select, "Store"):
-                warnings.append('[EMOJI] Could not fill Store')
+                warnings.append('⚠️ Could not fill Store')
         
         # 3. BRAND (single-select)
         if primary_brand:
             if not atomic_single_select("Brand", primary_brand, "Brand"):
-                warnings.append('[EMOJI] Could not fill Brand')
+                warnings.append('⚠️ Could not fill Brand')
         
         # 4. LINKED BRAND (single-select)
         if linked_brand:
             if not atomic_single_select("Linked Brand", linked_brand, "Linked Brand"):
-                warnings.append('[EMOJI] Could not fill Linked Brand')
+                warnings.append('⚠️ Could not fill Linked Brand')
         
         # 5. CATEGORY (multi-select)
         if categories_to_select:
             if not atomic_multi_select("Category", categories_to_select, "Category"):
-                warnings.append('[EMOJI] Could not fill Category')
+                warnings.append('⚠️ Could not fill Category')
         
         # 6. DISCOUNT RATE (text input)
         if discount is not None and str(discount).strip() != '':
             if not atomic_text_input("discount_rate", discount, "Discount Rate"):
-                warnings.append('[EMOJI] Could not fill Discount Rate')
+                warnings.append('⚠️ Could not fill Discount Rate')
         
         # 7. REBATE TYPE (single-select)
         if rebate_type:
             if not atomic_single_select("Rebate Type", rebate_type, "Rebate Type"):
-                warnings.append('[EMOJI] Could not fill Rebate Type')
+                warnings.append('⚠️ Could not fill Rebate Type')
         
         # 8. VENDOR REBATE % (text input)
         if vendor_contrib is not None and str(vendor_contrib).strip() != '':
             if not atomic_text_input("rebate_percent", vendor_contrib, "Vendor Rebate"):
-                warnings.append('[EMOJI] Could not fill Vendor Rebate')
+                warnings.append('⚠️ Could not fill Vendor Rebate')
         
         # 9. TOGGLE: After Wholesale
         if after_wholesale:
             if not atomic_toggle("rebate_wholesale_discount", True, "After Wholesale"):
-                warnings.append('[EMOJI] Could not toggle After Wholesale')
+                warnings.append('⚠️ Could not toggle After Wholesale')
         
         # 10. START DATE (text input)
         if start_date:
             if not atomic_text_input("date_start", start_date, "Start Date"):
-                warnings.append('[EMOJI] Could not fill Start Date')
+                warnings.append('⚠️ Could not fill Start Date')
         
         # 11. END DATE (text input)
         if end_date:
             if not atomic_text_input("date_end", end_date, "End Date"):
-                warnings.append('[EMOJI] Could not fill End Date')
+                warnings.append('⚠️ Could not fill End Date')
         
         # 12. MIN WEIGHT (text input)
         if min_weight is not None:
             if not atomic_text_input("min_weight", min_weight, "Min Weight"):
-                warnings.append('[EMOJI] Could not fill Min Weight')
+                warnings.append('⚠️ Could not fill Min Weight')
         
         # 13. MAX WEIGHT (text input)
         if max_weight is not None:
             if not atomic_text_input("max_weight", max_weight, "Max Weight"):
-                warnings.append('[EMOJI] Could not fill Max Weight')
+                warnings.append('⚠️ Could not fill Max Weight')
         
         # ============================================
         # FORM FILL COMPLETE
@@ -28925,19 +29355,19 @@ def api_mis_create_deal():
             
             inject_mis_validation(driver, expected_data)
             log("Validation system injected with Phase 2 field comparison", "SUCCESS")
-            print("[VALIDATION-DIAGNOSTIC] [EMOJI] Validation injection successful!")
+            print("[VALIDATION-DIAGNOSTIC] ✅ Validation injection successful!")
             
         except Exception as e:
             # ENHANCED ERROR LOGGING
             import traceback
             error_details = traceback.format_exc()
-            print(f"[VALIDATION-DIAGNOSTIC] [EMOJI] Validation injection FAILED!")
+            print(f"[VALIDATION-DIAGNOSTIC] ❌ Validation injection FAILED!")
             print(f"[VALIDATION-DIAGNOSTIC] Error type: {type(e).__name__}")
             print(f"[VALIDATION-DIAGNOSTIC] Error message: {str(e)}")
             print(f"[VALIDATION-DIAGNOSTIC] Full traceback:\n{error_details}")
             
             log(f"Warning: Could not inject validation: {e}", "WARN")
-            warnings.append(f'[EMOJI] Validation system not loaded: {type(e).__name__}')
+            warnings.append(f'⚠️ Validation system not loaded: {type(e).__name__}')
         
         # Clear automation flag
         GLOBAL_DATA['automation_in_progress'] = False
@@ -29096,7 +29526,7 @@ def api_gsheet_conflict_audit():
             processed_groups = set()
 
             for idx, row in section_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand: continue
                 
                 unique_brands.add(brand)
@@ -29106,13 +29536,13 @@ def api_gsheet_conflict_audit():
                 # --- EXTRACT DATA ---
                 # v12.25.6: Updated column detection for Monthly section
                 if section_key == 'weekly':
-                    weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
+                    weekday_raw = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '-')).strip()
                 elif section_key == 'monthly':
                     weekday_raw = get_monthly_day_of_month(row) or '-'
                 else:  # sale
-                    weekday_raw = str(get_col(row, ['Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
-                discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
-                vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
+                    weekday_raw = str(get_col(row, ['[Weekday]', 'Sale Runs:', 'Contracted Duration', 'Weekday/ Day of Month', 'Day of Week', 'Weekday'], '-')).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
+                vendor_contrib = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
                 special_notes = str(row.get('SPECIAL NOTES', '')).strip()
                 
@@ -29148,7 +29578,7 @@ def api_gsheet_conflict_audit():
                 row_detail = {
                     'section': section_key,
                     'row_num': true_row,
-                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] [EMOJI][EMOJI]  MISSING' else '-',
+                    'weekday_raw': weekday_raw if weekday_raw and weekday_raw != '[!] ⚠️⚠️  MISSING' else '-',
                     'discount': discount,
                     'vendor_contrib': vendor_contrib,
                     'locations': locations,
@@ -29564,7 +29994,7 @@ def api_split_audit_planning():
             processed_groups = set()
             
             for idx, row in weekly_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand:
                     continue
                 
@@ -29572,9 +30002,9 @@ def api_split_audit_planning():
                 group_id = row_to_group.get(true_row)
                 
                 # v12.22.4: Weekly uses Column A ('Weekday')
-                weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
-                discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
-                vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
+                weekday_raw = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '-')).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
+                vendor_contrib = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
                 
                 loc_raw, exc_raw = resolve_location_columns(row)
@@ -29615,9 +30045,9 @@ def api_split_audit_planning():
                     print(f"[CHECKBOX DEBUG] Row {true_row} ({brand}): wholesale='{wholesale_val}', retail='{retail_val}', after_wholesale='{after_wholesale_val}'")
                 
                 # Convert checkbox values to boolean strings
-                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
-                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
-                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
+                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
+                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
                 
                 weekly_deals.append({
                     'brand': brand,
@@ -29653,7 +30083,7 @@ def api_split_audit_planning():
             print(f"[DEBUG] Processing {section_key} section: {len(section_df)} rows")
             
             for idx, row in section_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand:
                     continue
                 
@@ -29670,8 +30100,8 @@ def api_split_audit_planning():
                 
                 print(f"[DEBUG] {section_key.upper()} - Brand: {brand}, Date Raw: {date_raw}")
                 
-                discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
-                vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
+                vendor_contrib = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 
                 loc_raw, exc_raw = resolve_location_columns(row)
                 locations = format_location_display(loc_raw, exc_raw)
@@ -29692,7 +30122,7 @@ def api_split_audit_planning():
                 # v12.18.2: Get weekday for Sale (Column A) or calculate for Monthly
                 if section_key == 'sale':
                     # Sale deals: weekday is in Column A (same as Weekly)
-                    weekday_val = str(get_col(row, ['Weekday', 'Day', 'Day of Week'], '')).strip()
+                    weekday_val = str(get_col(row, ['[Weekday]', 'Weekday', 'Day', 'Day of Week'], '')).strip()
                 else:
                     # Monthly deals: weekday needs to be calculated from dates
                     # For now store the day-of-month info, frontend will calculate actual weekday
@@ -29704,9 +30134,9 @@ def api_split_audit_planning():
                 after_wholesale_val = get_col(row, ['Rebate After Wholesale Discount?', 'After Wholesale', 'After Wholesale?'], '')
                 
                 # Convert checkbox values to boolean strings
-                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
-                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
-                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '[EMOJI]', 'CHECKED']
+                is_wholesale = str(wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
+                is_retail = str(retail_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
+                is_after_wholesale = str(after_wholesale_val).upper() in ['TRUE', 'YES', '1', 'X', '✔', 'CHECKED']
                 
                 print(f"[DEBUG] {section_key.upper()} - Weekday: '{weekday_val}', Wholesale: {is_wholesale}, Retail: {is_retail}")
                 
@@ -29841,7 +30271,7 @@ def api_split_audit_gap_check():
             df = sections_data.get(sec, pd.DataFrame())
             if not df.empty:
                 for idx, row in df.iterrows():
-                    brand = str(row.get('Brand', '')).strip()
+                    brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                     if not brand: continue
                     # v12.13: Section-aware column detection
                     if sec == 'sale':
@@ -29862,7 +30292,7 @@ def api_split_audit_gap_check():
             multi_day_groups, row_to_group = detect_multi_day_groups(weekly_df, 'weekly')
             processed_groups = set()
             for idx, row in weekly_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand: continue
                 true_row = int(row.get('_SHEET_ROW_NUM', idx + 2))
                 group_id = row_to_group.get(true_row)
@@ -29874,7 +30304,7 @@ def api_split_audit_gap_check():
                     wk_str = ', '.join(multi_day_groups[group_id].get('weekdays', []))
                 else:
                     # v12.22.4: Weekly uses Column A ('Weekday')
-                    wk_str = str(get_col(row, ['Weekday', 'Day of Week'], '')).strip()
+                    wk_str = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '')).strip()
                     dates = expand_weekday_to_dates(wk_str, target_month, target_year)
                 
                 if dates:
@@ -29986,7 +30416,7 @@ def api_split_audit_final():
             df = sections_data.get(sec, pd.DataFrame())
             if df.empty: continue
             for _, row in df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand: continue
                 if sec == 'sale':
                     # v12.25.6: Sale uses 'Contracted Duration' columns for date ranges
@@ -30958,7 +31388,7 @@ def api_split_audit_final_check():
             processed_groups = set()
             
             for idx, row in weekly_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand:
                     continue
                 
@@ -30966,9 +31396,9 @@ def api_split_audit_final_check():
                 group_id = row_to_group.get(true_row)
                 
                 # v12.22.4: Weekly uses Column A ('Weekday')
-                weekday_raw = str(get_col(row, ['Weekday', 'Day of Week'], '-')).strip()
-                discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
-                vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
+                weekday_raw = str(get_col(row, ['[Weekday]', 'Weekday', 'Day of Week'], '-')).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
+                vendor_contrib = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 mis_id_raw = str(get_col(row, ['MIS ID', 'ID'], '')).strip()
                 
                 loc_raw, exc_raw = resolve_location_columns(row)
@@ -31013,7 +31443,7 @@ def api_split_audit_final_check():
                 continue
             
             for idx, row in section_df.iterrows():
-                brand = str(row.get('Brand', '')).strip()
+                brand = str(get_col(row, ['[Brand]', 'Brand'], '')).strip()  # v12.27.0
                 if not brand:
                     continue
                 
@@ -31027,8 +31457,8 @@ def api_split_audit_final_check():
                     # Sale: Read from Column C (dates like "01/16/26, 01/23/26")
                     date_raw = str(get_col(row, ['Contracted Duration (MM/DD/YY - MM/DD/YY)', 'Contracted Duration', 'Sale Runs:'], '-')).strip()
                 
-                discount = str(get_col(row, ['Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
-                vendor_contrib = str(get_col(row, ['Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
+                discount = str(get_col(row, ['[Daily Deal Discount]', 'Deal Discount Value/Type', 'Deal Discount'], '-')).strip()
+                vendor_contrib = str(get_col(row, ['[Discount paid by vendor]', 'Brand Contribution % (Credit)', 'Vendor Contribution'], '-')).strip()
                 
                 loc_raw, exc_raw = resolve_location_columns(row)
                 locations = format_location_display(loc_raw, exc_raw)
@@ -31617,7 +32047,7 @@ def api_blaze_zombie_disable():
                 # Verify it's now unchecked
                 is_checked_after = status_toggle.get_attribute('checked')
                 if is_checked_after:
-                    print("[ZOMBIE] [!] [EMOJI][EMOJI] Toggle may not have changed - trying direct input click")
+                    print("[ZOMBIE] [!] ⚠️⚠️ Toggle may not have changed - trying direct input click")
                     driver.execute_script("arguments[0].click();", status_toggle)
                     time.sleep(0.5)
             else:
@@ -31714,7 +32144,7 @@ def api_blaze_zombie_disable():
             print("[ZOMBIE] [OK] Save completed")
             
         except Exception as e:
-            print(f"[ZOMBIE] [!] [EMOJI][EMOJI] Save wait issue: {e}, but proceeding...")
+            print(f"[ZOMBIE] [!] ⚠️⚠️ Save wait issue: {e}, but proceeding...")
         
         # Small delay before next operation
         time.sleep(1)
@@ -32305,7 +32735,7 @@ def api_blaze_ecom_sync() -> dict:
     
     Flow:
         1. Get Blaze credentials (from request or GLOBAL_DATA)
-        2. Authenticate with Ecom API ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ get JWT token
+        2. Authenticate with Ecom API ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ get JWT token
         3. Load store UUID from sync_keys.json
         4. POST sync request with token + UUID
     """
@@ -32315,13 +32745,13 @@ def api_blaze_ecom_sync() -> dict:
         
         # Validate store name
         if not store_name:
-            print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ No store name provided")
+            print("[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No store name provided")
             return jsonify({
                 'success': False,
                 'error': 'No store name provided. Please select a store.'
             })
         
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
         print(f"[ECOM-SYNC] Starting sync for store: {store_name}")
         
         # Step 1: Get Blaze credentials
@@ -32335,7 +32765,7 @@ def api_blaze_ecom_sync() -> dict:
             password = password or blaze_creds.get('password', '')
         
         if not email or not password:
-            print("[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ No Blaze credentials available")
+            print("[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ No Blaze credentials available")
             return jsonify({
                 'success': False,
                 'error': 'Blaze credentials required. Please enter email/password in Blaze Config.'
@@ -32345,7 +32775,7 @@ def api_blaze_ecom_sync() -> dict:
         store_data = load_sync_keys(store_name)
         if store_data is None:
             error_msg = f'No UUID found for {store_name}. Add it to secrets/sync_keys.json'
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ {error_msg}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ {error_msg}")
             return jsonify({
                 'success': False,
                 'error': error_msg
@@ -32359,7 +32789,7 @@ def api_blaze_ecom_sync() -> dict:
         token, auth_error = get_ecom_token(email, password)
         
         if token is None:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Authentication failed: {auth_error}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Authentication failed: {auth_error}")
             return jsonify({
                 'success': False,
                 'error': f'Authentication failed: {auth_error}'
@@ -32370,22 +32800,22 @@ def api_blaze_ecom_sync() -> dict:
         success, message = trigger_ecom_sync(store_uuid, token)
         
         if success:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Sync complete for {store_name}")
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Sync complete for {store_name}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return jsonify({
                 'success': True,
                 'message': f'{store_name} sync triggered successfully'
             })
         else:
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Sync failed: {message}")
-            print(f"[ECOM-SYNC] ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Sync failed: {message}")
+            print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢Ãƒâ€šÃ‚Â")
             return jsonify({
                 'success': False,
                 'error': message
             })
     
     except Exception as e:
-        print(f"[ECOM-SYNC] ÃƒÂ¢Ã‚ÂÃ…â€™ Unexpected error: {e}")
+        print(f"[ECOM-SYNC] ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Unexpected error: {e}")
         traceback.print_exc()
         return jsonify({
             'success': False,
@@ -32806,7 +33236,7 @@ def navigate_to_product():
                         time.sleep(1)
                         
                         # Extract location part from store name (text after " - ")
-                        # "The Artist Tree - Koreatown" ->[EMOJI] "Koreatown"
+                        # "The Artist Tree - Koreatown" → "Koreatown"
                         if ' - ' in store_name:
                             location_part = store_name.split(' - ')[-1].strip()
                         else:
@@ -32844,7 +33274,7 @@ def navigate_to_product():
                                 print(f"[NAVIGATE] [OK] Store changed successfully to: '{current_store}'")
                                 break
                             else:
-                                print(f"[NAVIGATE] [OK][EMOJI][EMOJI] Store change failed, retrying...")
+                                print(f"[NAVIGATE] [OK]⚠️⚠️ Store change failed, retrying...")
                                 
                         except NoSuchElementException:
                             return jsonify({
@@ -32894,10 +33324,10 @@ def navigate_to_product():
 def convert_store_name_to_data_cy(store_name):
     """
     Convert store display name to data-cy format.
-    Example: "The Artist Tree - Koreatown" ->[EMOJI] "lbl-TheArtistTree-Koreatown"
+    Example: "The Artist Tree - Koreatown" → "lbl-TheArtistTree-Koreatown"
     """
     # Remove spaces and hyphens between words
-    # "The Artist Tree - Koreatown" ->[EMOJI] "TheArtistTree-Koreatown"
+    # "The Artist Tree - Koreatown" → "TheArtistTree-Koreatown"
     parts = store_name.split(' - ')
     if len(parts) == 2:
         company_part = parts[0].replace(' ', '')  # "TheArtistTree"
@@ -32951,7 +33381,7 @@ def background_validation_monitor():
                 if not is_active:
                     # Inject validation in manual mode (no expected data)
                     inject_mis_validation(driver, expected_data=None)
-                    print("[VALIDATION-MONITOR] [EMOJI] Injected manual validation (was missing)")
+                    print("[VALIDATION-MONITOR] ✅ Injected manual validation (was missing)")
                     
             except Exception:
                 # Silently skip on any error (don't crash the monitor)
@@ -32959,7 +33389,7 @@ def background_validation_monitor():
                 
         except Exception as e:
             # Log but don't crash
-            print(f"[VALIDATION-MONITOR] [EMOJI] Error: {e}")
+            print(f"[VALIDATION-MONITOR] ❌ Error: {e}")
             time.sleep(30)  # Wait longer on error
 
 def open_browser_to_dashboard():
@@ -33143,7 +33573,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
     - Vendor Rebate validates with proper percentage normalization
     - Weekday validated properly
     
-    Each field shows: [EMOJI] (green) if correct, [EMOJI] (red) if incorrect, [EMOJI] (gray) if empty
+    Each field shows: ✅ (green) if correct, ❌ (red) if incorrect, ⬜ (gray) if empty
     Blocks save if Weekday or Rebate Type is empty.
     """
     import json
@@ -33199,11 +33629,11 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
         `;
         
         // Header - mode-aware title
-        const headerTitle = MODE === 'compare' ? '[EMOJI] Compare to Sheet' : '[EMOJI] Deal Entry Checklist';
+        const headerTitle = MODE === 'compare' ? '🔍 Compare to Sheet' : '📋 Deal Entry Checklist';
         // v12.26.0: Multi-day deal indicator
         const multiDayBanner = EXPECTED.multi_day_info && EXPECTED.multi_day_info.is_multi_day
             ? `<div style="background: #2d3a5e; border: 1px solid #4a90d9; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; font-size: 12px;">
-                <span style="color: #ffc107;">[EMOJI]</span> <strong style="color: #ffc107;">Multi-Day Deal:</strong>
+                <span style="color: #ffc107;">ℹ️</span> <strong style="color: #ffc107;">Multi-Day Deal:</strong>
                 <span style="color: #ccc;">${{EXPECTED.multi_day_info.total_days}}-day deal (${{EXPECTED.multi_day_info.weekdays.join(', ')}})</span>
                </div>`
             : '';
@@ -33211,11 +33641,11 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
         header.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #4a90d9;">
                 <span style="font-size: 16px; font-weight: 600; color: #4a90d9;">${{headerTitle}}</span>
-                <button id="checklist-close-btn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px;">[EMOJI]</button>
+                <button id="checklist-close-btn" style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px;">✕</button>
             </div>
             ${{multiDayBanner}}
             <div style="font-size: 11px; color: #888; margin-bottom: 10px;">
-                [EMOJI] = Correct | [EMOJI] = Mismatch | [EMOJI] = Empty | [EMOJI] = Partial
+                ✅ = Correct | ❌ = Mismatch | ⬜ = Empty | 🟡 = Partial
             </div>
         `;
         banner.appendChild(header);
@@ -33237,7 +33667,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 // Empty string means "no value expected" (e.g., no linked brand)
                 if (expectedKey === 'linked_brand') {{
                     displayExpected = '(none - leave empty)';
-                // v12.26.4: For discount/vendor, empty means 0% — display "0" not "(not specified)"
+                // v12.26.4: For discount/vendor, empty means 0% â€” display "0" not "(not specified)"
                 }} else if (expectedKey === 'discount' || expectedKey === 'vendor_contrib') {{
                     displayExpected = '0';
                 }} else {{
@@ -33272,7 +33702,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             `;
             
             row.innerHTML = `
-                <span class="status-icon" style="font-size: 16px; margin-right: 10px; min-width: 20px;">[EMOJI]</span>
+                <span class="status-icon" style="font-size: 16px; margin-right: 10px; min-width: 20px;">⬜</span>
                 <div style="flex: 1;">
                     <div style="font-weight: 500; font-size: 13px; color: #fff;">${{label}}</div>
                     ${{expectedRowHTML}}
@@ -33445,7 +33875,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             const actualLower = actualArr.map(s => s.toLowerCase());
             const expectedLower = expectedArr.map(s => s.toLowerCase());
             
-            // v12.26.7: Normalize store names — strip parens for comparison
+            // v12.26.7: Normalize store names â€” strip parens for comparison
             // Sheet uses "Fresno (Shaw)" but MIS pill shows "Fresno Shaw"
             function normStore(s) {{
                 return s.replace(/[()]/g, '').replace(/\\s+/g, ' ').trim().toLowerCase();
@@ -33521,7 +33951,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 return (actualNorm === expectedNorm) ? 'correct' : 'mismatch';
             }}
             
-            // v12.26.5: Handle date fields — normalize leading zeros
+            // v12.26.5: Handle date fields â€” normalize leading zeros
             // "03/31/2026" (pre-flight) == "3/31/2026" (MIS input)
             if (expectedKey === 'start_date' || expectedKey === 'end_date') {{
                 const actualVal = Array.isArray(actual) ? (actual[0] || '') : (actual || '');
@@ -33607,8 +34037,8 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                         if (status === 'partial') {{
                             progressInfo.style.display = 'block';
                             progressInfo.innerHTML = `
-                                <span style="color: #28a745;">[EMOJI] ${{result.matched.join(', ')}}</span><br>
-                                <span style="color: #ffc107;">[EMOJI] Need: ${{result.missing.join(', ')}}</span>
+                                <span style="color: #28a745;">✅ ${{result.matched.join(', ')}}</span><br>
+                                <span style="color: #ffc107;">⚠️ Need: ${{result.missing.join(', ')}}</span>
                                 <span style="color: #aaa;"> (${{matchedCount}}/${{total}})</span>
                             `;
                         }} else if (status === 'correct') {{
@@ -33620,7 +34050,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                         
                         if (result.extra.length > 0) {{
                             progressInfo.style.display = 'block';
-                            progressInfo.innerHTML += `<br><span style="color: #dc3545;">[EMOJI] Extra: ${{result.extra.join(', ')}}</span>`;
+                            progressInfo.innerHTML += `<br><span style="color: #dc3545;">❌ Extra: ${{result.extra.join(', ')}}</span>`;
                         }}
                     }} else {{
                         progressInfo.style.display = 'none';
@@ -33643,25 +34073,25 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                 
                 // Update status icon and styling
                 if (status === 'correct') {{
-                    icon.textContent = '[EMOJI]';
+                    icon.textContent = '✅';
                     icon.style.color = '#28a745';
                     row.style.borderLeftColor = '#28a745';
                     row.style.background = 'rgba(40, 167, 69, 0.1)';
                     correctCount++;
                 }} else if (status === 'partial') {{
-                    icon.textContent = '[EMOJI]';
+                    icon.textContent = '🟡';
                     icon.style.color = '#ffc107';
                     row.style.borderLeftColor = '#ffc107';
                     row.style.background = 'rgba(255, 193, 7, 0.1)';
                     partialCount++;
                 }} else if (status === 'mismatch') {{
-                    icon.textContent = '[EMOJI]';
+                    icon.textContent = '❌';
                     icon.style.color = '#dc3545';
                     row.style.borderLeftColor = '#dc3545';
                     row.style.background = 'rgba(220, 53, 69, 0.1)';
                     mismatchCount++;
                 }} else {{
-                    icon.textContent = '[EMOJI]';
+                    icon.textContent = '⬜';
                     icon.style.color = '#888';
                     row.style.borderLeftColor = '#666';
                     row.style.background = 'rgba(255,255,255,0.05)';
@@ -33680,20 +34110,20 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
             // Update summary
             const summary = document.getElementById('checklist-summary');
             if (mismatchCount > 0) {{
-                summary.innerHTML = `<span style="color: #dc3545;">[EMOJI] ${{mismatchCount}} field(s) don't match</span>`;
+                summary.innerHTML = `<span style="color: #dc3545;">❌ ${{mismatchCount}} field(s) don't match</span>`;
             }} else if (partialCount > 0) {{
-                summary.innerHTML = `<span style="color: #ffc107;">[EMOJI] ${{partialCount}} field(s) partially filled</span>`;
+                summary.innerHTML = `<span style="color: #ffc107;">🟡 ${{partialCount}} field(s) partially filled</span>`;
             }} else if (emptyCount > 0) {{
-                summary.innerHTML = `<span style="color: #888;">[EMOJI] ${{emptyCount}} field(s) need to be filled</span>`;
+                summary.innerHTML = `<span style="color: #888;">⬜ ${{emptyCount}} field(s) need to be filled</span>`;
             }} else {{
-                summary.innerHTML = `<span style="color: #28a745;">[EMOJI] All fields validated!</span>`;
+                summary.innerHTML = `<span style="color: #28a745;">✅ All fields validated!</span>`;
             }}
             
             // Critical warning for Weekday and Rebate Type
             const criticalWarning = document.getElementById('critical-warning');
             if (criticalMissing.length > 0) {{
                 criticalWarning.style.display = 'block';
-                criticalWarning.innerHTML = `[EMOJI] <strong>CANNOT SAVE:</strong> ${{criticalMissing.join(' and ')}} must be selected!`;
+                criticalWarning.innerHTML = `❌ <strong>CANNOT SAVE:</strong> ${{criticalMissing.join(' and ')}} must be selected!`;
             }} else {{
                 criticalWarning.style.display = 'none';
             }}
@@ -33715,7 +34145,7 @@ def inject_checklist_banner(driver, expected_data: dict, mode: str = 'create'):
                     if (result.criticalMissing.length > 0) {{
                         e.preventDefault();
                         e.stopPropagation();
-                        alert('[EMOJI] Cannot save: ' + result.criticalMissing.join(' and ') + ' must be selected!');
+                        alert('❌ Cannot save: ' + result.criticalMissing.join(' and ') + ' must be selected!');
                         return false;
                     }}
                     if (originalOnClick) return originalOnClick.call(this, e);
@@ -34147,7 +34577,7 @@ def api_mis_automate_create_deal():
                         actions.perform()
                         log(f"  [{field_name}] Selected '{value}'", "SUCCESS")
                     else:
-                        # v12.26.3: Enhanced fallback — try clicking first highlighted/visible option
+                        # v12.26.3: Enhanced fallback â€” try clicking first highlighted/visible option
                         fallback_clicked = False
                         try:
                             highlighted = driver.find_element(By.CSS_SELECTOR, 
@@ -34202,7 +34632,7 @@ def api_mis_automate_create_deal():
             if isinstance(values, str):
                 val_lower = values.lower().strip()
                 
-                # v12.26.3: Store field — resolve "All Locations Except" to specific store list
+                # v12.26.3: Store field â€” resolve "All Locations Except" to specific store list
                 if field_name == 'Store':
                     if val_lower in ['all locations', 'all', '']:
                         log(f"Skipping Store ('All Locations' = leave blank)", "SKIP")
@@ -34218,7 +34648,7 @@ def api_mis_automate_create_deal():
                         else:
                             values = [v.strip() for v in values.split(',') if v.strip()]
                     else:
-                        # Specific store list — map names to MIS dropdown format
+                        # Specific store list â€” map names to MIS dropdown format
                         raw_stores = [v.strip() for v in values.split(',') if v.strip()]
                         values = [STORE_NAME_MAP.get(normalize_store_name(s), normalize_store_name(s)) for s in raw_stores]
                 
@@ -34272,7 +34702,7 @@ def api_mis_automate_create_deal():
                 
                 time.sleep(0.3)
                 
-                # Find search field — try multiple selectors
+                # Find search field â€” try multiple selectors
                 si = None
                 
                 # Method 1: Global dropdown search (works for most Select2 multi-selects)
@@ -34352,7 +34782,7 @@ def api_mis_automate_create_deal():
                     for attempt in range(1, MAX_RETRIES + 1):
                         if attempt > 1:
                             log(f"  [{field_name}] Retry {attempt}/{MAX_RETRIES} for '{val_clean}'...", "WARN")
-                            # Full reopen on retry — dropdown may have closed
+                            # Full reopen on retry â€” dropdown may have closed
                             search_input = open_dropdown_and_get_search()
                         
                         # Type value to filter dropdown
@@ -34452,13 +34882,13 @@ def api_mis_automate_create_deal():
                     
                     # After clicking an option, Select2 may have closed/reopened the dropdown.
                     # Re-acquire search field for next value using the SAME dropdown
-                    # (don't close and reopen — just re-find the field)
+                    # (don't close and reopen â€” just re-find the field)
                     if search_input:
                         try:
                             search_input.clear()
                             time.sleep(0.1)
                         except:
-                            # Search field went stale — re-acquire
+                            # Search field went stale â€” re-acquire
                             try:
                                 search_input = driver.find_element(By.CSS_SELECTOR, ".select2-dropdown .select2-search__field")
                             except:
@@ -34561,7 +34991,7 @@ def api_mis_automate_create_deal():
 
         # =========================================================
         # v12.26.3: AUTOMATE WEEKDAY, STORE, AND CATEGORY FIELDS
-        # (Previously checklist-only — now fully automated with set resolution)
+        # (Previously checklist-only â€” now fully automated with set resolution)
         # =========================================================
         
         # MIS dropdown store names (what appears in the Select2 dropdown)
