@@ -7407,6 +7407,13 @@ HTML_TEMPLATE = r"""
                                             <i class="bi bi-funnel"></i> Download Filtered
                                         </button>
                                     </div>
+                                    <div class="inactive-toggle-container">
+                                        <span class="inactive-toggle-label"><i class="bi bi-eye-slash"></i> Hide Inactive</span>
+                                        <label class="inactive-toggle-switch">
+                                            <input type="checkbox" id="hideInactiveToggle">
+                                            <span class="inactive-toggle-slider"></span>
+                                        </label>
+                                    </div>
                                     <div class="mt-2 d-flex gap-2 align-items-center">
                                         <div class="zombie-toggle-container">
                                             <span class="zombie-toggle-label"> Zombie</span>
@@ -18829,7 +18836,33 @@ function showOtdModal(rowIndex) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         }, 300);
+        // HIDE INACTIVE TOGGLE LOGIC
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            // Ensure we are only applying this filter to the main promotions table
+            if (settings.nTable.id !== 'promotionsTable') {
+                return true;
+            }
 
+            const hideInactive = document.getElementById('hideInactiveToggle');
+            // Ensure the toggle exists before checking its state
+            if (hideInactive && hideInactive.checked) {
+                // Dynamically get the exact status column index using your existing helper
+                const statusColIdx = getBlazeColumnIndex('status');
+                const statusValue = data[statusColIdx] ? data[statusColIdx].toString().toLowerCase() : '';
+                
+                // If the toggle is ON and the row contains 'inactive', hide it
+                if (statusValue.includes('inactive')) {
+                    return false; 
+                }
+            }
+            return true; 
+        });
+
+        // Listener to instantly redraw the table when the toggle is clicked
+        document.getElementById('hideInactiveToggle').addEventListener('change', function() {
+            $('#promotionsTable').DataTable().draw();
+        });
+        // --- END HIDE INACTIVE TOGGLE LOGIC ---
         // 2. SETUP DYNAMIC FILTER COUNTER
         table.on('draw', function () {
             const filteredData = table.rows({ search: 'applied' }).data();
