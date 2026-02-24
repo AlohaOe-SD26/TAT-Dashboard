@@ -18309,19 +18309,25 @@ function showOtdModal(rowIndex) {
     } else {
         applicableStores = locRaw.split(',').map(l => l.trim()).filter(l => l);
     }
-
+    
 // --- MARKETING AUDIT SETUP ---
     let targetOtd = null;
     let skipAudit = false;
-    
-    // Check for Exclusion Verbiage
-    if (/BOGO|B2G1/i.test(row.Name)) {
-        skipAudit = true;
+
+    // Check for BOGO, B2G1, B1G2 logic first
+    if (/BOGO|B2G1|B1G2/i.test(row.Name)) {
+        // Look for exact bracketed price e.g., [$40] or [$40.50]
+        const bracketMatch = row.Name.match(/\[\$([0-9.]+)\]/);
+        if (bracketMatch) {
+            targetOtd = parseFloat(bracketMatch[1]);
+        } else {
+            skipAudit = true; // Skip if it's BOGO but missing the bracketed target
+        }
     } else {
-        // Regex for "4 for $20", "2 for 30", etc.
+        // Regex for standard bulk deals like "4 for $20", "2 for 30", etc.
         const bulkMatch = row.Name.match(/(\d+)\s+for\s+\$([0-9.]+)/i);
         if (bulkMatch) {
-            // FIX: Use total price directly (Group 2)
+            // Use total price directly (Group 2)
             targetOtd = parseFloat(bulkMatch[2]);
         }
     }
@@ -18650,51 +18656,88 @@ function showOtdModal(rowIndex) {
                 const discType = row['Discount Value Type'] || '';
                 const isFinalPrice = discType.toLowerCase().includes('final');
                 
-                // IF FINAL PRICE: RENDER BUTTON WITH AUDIT
+            // IF FINAL PRICE: RENDER BUTTON WITH AUDIT
                 if (isFinalPrice && discountValueContent && discountValueContent !== '-') {
-                    
                     // --- AUDIT LOGIC START ---
                     // Default Style: Blue Text, Blue Border, Tag Emoji
-                    let btnStyle = "color:#0d6efd; border:1px solid #0d6efd;"; 
+                    let btnStyle = "color:#0d6efd; border:1px solid #0d6efd;";
                     let btnEmoji = "";
+
+                    // 1. Determine Target OTD Price
+                    let targetOtd = null;
                     
-                    // 1. Check for bulk deal pattern in Name (e.g. "4 for $20")
-                    const bulkMatch = row.Name.match(/(\d+)\s+for\s+\$([0-9.]+)/i);
-                    const isBogo = /BOGO|B2G1/i.test(row.Name);
-                    
-                    if (!isBogo && bulkMatch && Object.keys(TAX_RATES).length > 0) {
-                        // FIX: Use total price directly from Regex Group 2
-                        const targetOtd = parseFloat(bulkMatch[2]);
+                    // Check for BOGO/B2G1/B1G2 pattern
+                    if (/BOGO|B2G1|B1G2/i.test(row.Name)) {
+                        const bracketMatch = row.Name.match(/\[\$([0-9.]+)\]/);
+                        if (bracketMatch) {
+                            targetOtd = parseFloat(bracketMatch[1]);
+                        }
+                    } else {
+                        // Check for standard bulk pattern ("4 for $20")
+                        const bulkMatch = row.Name.match(/(\d+)\s+for\s+\$([0-9.]+)/i);
+                        if (bulkMatch) {
+                            targetOtd = parseFloat(bulkMatch[2]);
+                        }
+                    }
+
+                    // 2. Perform the Variance Audit if a target price was found
+                    if (targetOtd !== null && Object.keys(TAX_RATES).length > 0) {
                         const discValue = parseFloat(String(discountValueContent).replace(/[^0-9.-]/g, ''));
                         
-                        let maxDiff = 0;
-                        
+                        // To track the highest severity across multiple stores
+                        // 0 = Match, 1 = Lower by .01, 2 = Higher by .01, 3 = Off by > .01
+                        let worstState = 0; 
+
                         // Check applicable STRICT stores
                         STRICT_OTD_STORES.forEach(strictStore => {
-                            // Check if this strict store is in the applicable list for this row
                             const isApplicable = applicableStores.some(loc => 
                                 loc.includes(strictStore) || strictStore.includes(loc)
                             );
-                            
+
                             if (isApplicable && TAX_RATES[strictStore]) {
                                 const rate = TAX_RATES[strictStore];
                                 const calculatedOtd = discValue * rate;
-                                // FIX: Round to 2 decimals before comparing
-                                const calculatedRounded = parseFloat(calculatedOtd.toFixed(2));
-                                const diff = Math.abs(calculatedRounded - targetOtd);
-                                if (diff > maxDiff) maxDiff = diff;
+                                
+                                // Round to exactly 2 decimals before math to prevent floating point errors
+                                const calculatedRounded = Math.round(calculatedOtd * 100) / 100;
+                                const targetRounded = Math.round(targetOtd * 100) / 100;
+                                
+                                // Calculate exact difference in cents (Calculated - Target)
+                                const diffCents = Math.round((calculatedRounded - targetRounded) * 100);
+
+                                let currentState = 0;
+                                if (diffCents === 0) {
+                                    currentState = 0; // 100% Match
+                                } else if (diffCents === -1) {
+                                    currentState = 1; // Lower by exactly $0.01
+                                } else if (diffCents === 1) {
+                                    currentState = 2; // Higher by exactly $0.01
+                                } else {
+                                    currentState = 3; // Higher or Lower by > $0.01
+                                }
+
+                                // Store the worst state found across all applicable stores
+                                if (currentState > worstState) worstState = currentState;
                             }
                         });
-                        
-                        // Determine Style based on worst variance found
-                        if (maxDiff >= 0.02) {
-                            // Mismatch (> 2 cents): RED TEXT + CAUTION
-                            btnStyle = "color:#dc3545; border:1px solid #dc3545;"; 
-                            btnEmoji = "[!] ⚠️⚠️";
-                        } else if (maxDiff > 0.009) {
-                            // Penny Variance: ORANGE TEXT + CAUTION
-                            btnStyle = "color:#fd7e14; border:1px solid #fd7e14;"; 
-                            btnEmoji = "[!] ⚠️⚠️";
+
+                        // Determine Style based on the worst state evaluated
+                        if (worstState === 3) {
+                            // HIGHER OR LOWER > .01: RED TEXT + 2 ERROR SYMBOLS
+                            btnStyle = "color:#dc3545; border:1px solid #dc3545;";
+                            btnEmoji = " ⚠️⚠️";
+                        } else if (worstState === 2) {
+                            // HIGHER BY .01: ORANGE TEXT + 1 ERROR SYMBOL
+                            btnStyle = "color:#fd7e14; border:1px solid #fd7e14;";
+                            btnEmoji = " ⚠️";
+                        } else if (worstState === 1) {
+                            // LOWER BY .01: GREEN TEXT + 1 ERROR SYMBOL
+                            btnStyle = "color:#198754; border:1px solid #198754;";
+                            btnEmoji = " ⚠️";
+                        } else {
+                            // 100% MATCH: GREEN TEXT + GREEN CHECKBOX
+                            btnStyle = "color:#198754; border:1px solid #198754;";
+                            btnEmoji = " ✅";
                         }
                     }
                     // --- AUDIT LOGIC END ---
